@@ -1,4 +1,4 @@
-### **Student Portal - Backend Documentation**
+# **Student Portal - Backend Documentation**
 
 ## **Overview**
 ...
