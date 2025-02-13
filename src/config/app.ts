@@ -29,7 +29,7 @@ const limiter = rateLimit({
 
 app.use('/api', limiter);
 
-app.all('*', (req, res, next) => {
+app.all('*', (req, res, _) => {
   res.status(404).json({
     status: 'fail',
     message: `Can't find ${req.originalUrl} on this server!`,

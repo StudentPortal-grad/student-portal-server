@@ -8,7 +8,8 @@
     "dev": "nodemon src/server.ts",
     "start": "node dist/index.js",
     "build": "tsc",
-    "lint": "eslint src --ext .ts",
+    "lint:all": "eslint .",
+    "lint": "eslint",
     "test": "jest"
   },
   "keywords": [],
