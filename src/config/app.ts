@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import errorHandler from '../middlewares/errorHandler';
+import routes from '../routes/index'; 
 
 const app: Express = express();
 
@@ -28,7 +29,7 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again in an hour!',
 });
 
-app.use('/api', limiter);
+app.use('/api', routes, limiter);
 
 // Handle errors after all routes have been checked.
 app.use(errorHandler);
