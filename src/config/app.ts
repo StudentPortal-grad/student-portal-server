@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import errorHandler from '../middlewares/errorHandler';
 
 const app: Express = express();
 
@@ -28,6 +29,9 @@ const limiter = rateLimit({
 });
 
 app.use('/api', limiter);
+
+// Handle errors after all routes have been checked.
+app.use(errorHandler);
 
 app.all('*', (req, res, _) => {
   res.status(404).json({
