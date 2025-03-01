@@ -1,3 +1,14 @@
+# Student Portal Database Design Schema
+
+## Overview
+
+This document outlines the database schema for a comprehensive student portal platform. The design uses MongoDB as the database system, leveraging its document-oriented structure for flexible schema design.
+
+## Database Models
+
+### User Collection
+
+```javascript
 User {
   _id: ObjectId,
   name: String (Required, 255 characters),
@@ -43,7 +54,11 @@ User {
   createdAt: Date (Auto-generated),
   updatedAt: Date (Auto-updated)
 }
+```
 
+### Community Collection
+
+```javascript
 Community {
   _id: ObjectId,
   owner: ObjectId (References User._id, Required),
@@ -62,7 +77,11 @@ Community {
   createdAt: Date (Auto-generated),
   updatedAt: Date (Auto-updated)
 }
+```
 
+### Role Collection
+
+```javascript
 Role {
   _id: ObjectId,
   communityId: ObjectId (References Community._id, Required),
@@ -72,7 +91,11 @@ Role {
   mentionable: Boolean (Default: false),
   createdAt: Date (Auto-generated)
 }
+```
 
+### Discussion Collection
+
+```javascript
 Discussion {
   _id: ObjectId,
   communityId: ObjectId (References Community._id, Required),
@@ -102,7 +125,11 @@ Discussion {
   createdAt: Date (Auto-generated),
   updatedAt: Date (Auto-updated)
 }
+```
 
+### Conversation Collection
+
+```javascript
 Conversation {
   _id: ObjectId,
   type: String (Required, Enum["DM", "GroupDM"]),
@@ -115,7 +142,11 @@ Conversation {
   createdAt: Date (Auto-generated),
   updatedAt: Date (Auto-updated)
 }
+```
 
+### Message Collection
+
+```javascript
 Message {
   _id: ObjectId,
   senderId: ObjectId (References User._id, Required),
@@ -128,7 +159,11 @@ Message {
   status: String (Enum["sent", "delivered", "read"], Default: "sent"),
   createdAt: Date (Auto-generated)
 }
+```
 
+### Resource Collection
+
+```javascript
 Resource {
   _id: ObjectId,
   title: String (Required, 255 characters),
@@ -157,7 +192,11 @@ Resource {
   createdAt: Date (Auto-generated),
   updatedAt: Date (Auto-updated)
 }
+```
 
+### Event Collection
+
+```javascript
 Event {
   _id: ObjectId,
   title: String (Required, 255 characters),
@@ -174,7 +213,11 @@ Event {
   createdAt: Date (Auto-generated),
   updatedAt: Date (Auto-updated)
 }
+```
 
+### RSVP Collection
+
+```javascript
 RSVP {
   _id: ObjectId,
   eventId: ObjectId (References Event._id, Required),
@@ -183,7 +226,11 @@ RSVP {
   createdAt: Date (Auto-generated),
   updatedAt: Date (Auto-updated)
 }
+```
 
+### Notification Collection
+
+```javascript
 Notification {
   _id: ObjectId,
   user_id: ObjectId (References User._id, Required),
@@ -196,3 +243,4 @@ Notification {
     // Other relevant metadata fields
   } (Optional)
 }
+```
