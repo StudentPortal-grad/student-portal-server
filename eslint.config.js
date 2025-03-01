@@ -12,4 +12,13 @@ export default [
       'no-undef': 'warn',
     },
   },
+  {
+    files: ['**/__tests__/**/*.{js,ts}'],
+    rules: {
+      'no-undef': 'off',
+    },
+    env: {
+      jest: true,
+    },
+  },
 ];

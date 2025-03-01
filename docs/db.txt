@@ -1,0 +1,198 @@
+User {
+  _id: ObjectId,
+  name: String (Required, 255 characters),
+  email: String (Unique, Required, 320 characters),
+  password: String (Required, Encrypted, 60 characters),
+  role: String (Required, Enum["Student", "Faculty", "Admin"]),
+  profile: {
+    bio: String,
+    interests: [String]
+  } (Optional),
+  addresses: [{
+    street: String,
+    city: String,
+    country: String
+  }] (Optional, items have no _id),
+  friends: [{
+    userId: ObjectId (References User._id),
+    messageId: ObjectId (References Message._id)
+  }] (Optional, items have no _id),
+  level: Number (Required, Min: 1, Max: 5),
+  gpa: Float (Optional),
+  universityEmail: String (Optional, 320 characters),
+  mfa_settings: {
+    enabled: Boolean (Default: false),
+    methods: [String]
+  } (Optional),
+  dashboards: {
+    academic_progress: Number,
+    event_stats: {
+      attended: Number
+    }
+  } (Optional),
+  confirmEmail: Boolean (Default: false),
+  otp: {
+    code: String,
+    expiresAt: Date
+  } (Optional),
+  roles: [{
+    communityId: ObjectId (References Community._id),
+    role: String
+  }] (Optional, items have no _id),
+  status: String (Required, Enum["online", "offline", "idle", "dnd"], Default: "offline"),
+  createdAt: Date (Auto-generated),
+  updatedAt: Date (Auto-updated)
+}
+
+Community {
+  _id: ObjectId,
+  owner: ObjectId (References User._id, Required),
+  name: String (Required, Unique, 255 characters),
+  description: String (Optional, 1000 characters),
+  type: String (Required, Enum["Official", "Community"], Default: "Community"),
+  icon: String (Optional, 2000 characters),
+  members: [{
+    userId: ObjectId (References User._id),
+    roleIds: [ObjectId] (References Role._id),
+    joinedAt: Date (Auto-generated)
+  }] (Optional, items have no _id),
+  roles: [ObjectId] (References Role._id, Optional),
+  discussions: [ObjectId] (References Discussion._id, Optional),
+  inviteLink: String (Optional, Unique per community, 500 characters),
+  createdAt: Date (Auto-generated),
+  updatedAt: Date (Auto-updated)
+}
+
+Role {
+  _id: ObjectId,
+  communityId: ObjectId (References Community._id, Required),
+  name: String (Required, Unique within community, 100 characters),
+  color: Number (Optional, RGB integer, 4 bytes),
+  permissions: Number (Required, Bitwise integer, 4 bytes),
+  mentionable: Boolean (Default: false),
+  createdAt: Date (Auto-generated)
+}
+
+Discussion {
+  _id: ObjectId,
+  communityId: ObjectId (References Community._id, Required),
+  title: String (Required, 255 characters),
+  content: String (Required),
+  creator: ObjectId (References User._id, Required),
+  attachments: [{
+    type: String (Enum["document", "file", "poll", etc.]),
+    resource: String (URL)
+  }] (Optional, items have no _id),
+  replies: [{
+    id: ObjectId,
+    content: String (Required),
+    creator: ObjectId (References User._id),
+    createdAt: Date (Auto-generated),
+    attachments: [{
+      type: String,
+      resource: String
+    }] (Optional)
+  }] (Optional, items have no _id),
+  votes: [{
+    userId: ObjectId (References User._id),
+    voteType: String (Enum["upvote", "downvote"]),
+    createdAt: Date (Auto-generated)
+  }] (Optional, items have no _id),
+  status: String (Enum["open", "closed", "archived"], Default: "open"),
+  createdAt: Date (Auto-generated),
+  updatedAt: Date (Auto-updated)
+}
+
+Conversation {
+  _id: ObjectId,
+  type: String (Required, Enum["DM", "GroupDM"]),
+  participants: [ObjectId] (References User._id, Required, Min: 2 for GroupDM),
+  name: String (Optional, Only for GroupDM, 255 characters),
+  createdBy: ObjectId (References User._id, Required),
+  messages: [ObjectId] (References Message._id, Optional),
+  inviteLink: String (Optional, Only for GroupDM, 500 characters),
+  status: String (Enum["active", "archived"], Default: "active"),
+  createdAt: Date (Auto-generated),
+  updatedAt: Date (Auto-updated)
+}
+
+Message {
+  _id: ObjectId,
+  senderId: ObjectId (References User._id, Required),
+  content: String (Optional),
+  attachments: [{
+    type: String (Enum["document", "file", "poll", "thread"]),
+    resource: String (URL, Required for file-based),
+    thread: ObjectId (References Conversation._id, Optional)
+  }] (Optional, items have no _id),
+  status: String (Enum["sent", "delivered", "read"], Default: "sent"),
+  createdAt: Date (Auto-generated)
+}
+
+Resource {
+  _id: ObjectId,
+  title: String (Required, 255 characters),
+  description: String (Optional, 1000 characters),
+  fileUrl: String (Required, 2000 characters),
+  tags: [String] (Optional),
+  visibility: String (Enum["public", "private", "community"], Default: "public"),
+  communityId: ObjectId (References Community._id, Optional, Required if visibility="community"),
+  category: String (Optional, 50 characters),
+  interactions: {
+    downloads: Number (Non-negative),
+    ratings: [{
+      userId: ObjectId (References User._id),
+      rating: Number,
+      createdAt: Date
+    }],
+    comments: [{
+      id: ObjectId,
+      userId: ObjectId (References User._id),
+      content: String,
+      createdAt: Date,
+      attachments: [String]
+    }]
+  } (Optional),
+  uploaderId: ObjectId (References User._id, Required),
+  createdAt: Date (Auto-generated),
+  updatedAt: Date (Auto-updated)
+}
+
+Event {
+  _id: ObjectId,
+  title: String (Required, 255 characters),
+  description: String (Optional, 1000 characters),
+  dateTime: Date (Required),
+  location: String (Optional, 255 characters),
+  capacity: Number (Optional, 32-bit integer),
+  visibility: String (Enum["public", "private", "community"], Default: "public"),
+  attendees: [ObjectId] (References RSVP._id, Optional),
+  creatorId: ObjectId (References User._id, Required),
+  status: String (Enum["upcoming", "ongoing", "completed", "cancelled"], Default: "upcoming"),
+  recommendations: [ObjectId] (References Event._id, Optional),
+  communityId: ObjectId (References Community._id, Optional),
+  createdAt: Date (Auto-generated),
+  updatedAt: Date (Auto-updated)
+}
+
+RSVP {
+  _id: ObjectId,
+  eventId: ObjectId (References Event._id, Required),
+  userId: ObjectId (References User._id, Required),
+  status: String (Required, Enum["attending", "not_attending", "interested"], Default: "interested"),
+  createdAt: Date (Auto-generated),
+  updatedAt: Date (Auto-updated)
+}
+
+Notification {
+  _id: ObjectId,
+  user_id: ObjectId (References User._id, Required),
+  type: String (Required, 50 characters),
+  content: String (Required, 500 characters),
+  status: String (Required, Enum["read", "unread"], Default: "unread"),
+  timestamp: Date (Auto-generated),
+  metadata: {
+    event_id: ObjectId,
+    // Other relevant metadata fields
+  } (Optional)
+}
