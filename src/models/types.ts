@@ -1,18 +1,27 @@
 import { Document, Types } from 'mongoose';
 
 export interface IUser extends Document {
+  _id: Types.ObjectId;
   name: string;
+  username: string;
+  gender: 'male' | 'female';
+  phoneNumber: string;
+  dateOfBirth: Date;
+  university: string;
+  college: string;
   email: string;
   password: string;
   role: 'Student' | 'Faculty' | 'Admin';
+  signupStep: 'initial' | 'verified' | 'password_set' | 'completed';
+  profilePicture: string;
   profile?: {
     bio?: string;
     interests?: string[];
   };
   addresses?: {
-    street: string;
-    city: string;
-    country: string;
+    street?: string;
+    city?: string;
+    country?: string;
   }[];
   friends?: {
     userId: Types.ObjectId;
@@ -26,12 +35,12 @@ export interface IUser extends Document {
     methods: string[];
   };
   dashboards?: {
-    academic_progress: number;
-    event_stats: {
+    academic_progress?: number;
+    event_stats?: {
       attended: number;
     };
   };
-  confirmEmail: boolean;
+  emailVerified: boolean;
   otp?: {
     code: string;
     expiresAt: Date;
@@ -41,8 +50,18 @@ export interface IUser extends Document {
     role: string;
   }[];
   status: 'online' | 'offline' | 'idle' | 'dnd';
+  isGraduated?: boolean;
+  graduationYear?: number;
+  tempEmail?: string;
+  universityEmailVerified?: boolean;
   createdAt: Date;
   updatedAt: Date;
+
+  // Instance methods
+  generateAuthToken(): string;
+  comparePassword(candidatePassword: string): Promise<boolean>;
+  generateResetToken(): Promise<string>;
+  updateStatus(status: 'online' | 'offline' | 'idle' | 'dnd'): Promise<void>;
 }
 
 export interface IConversation extends Document {
@@ -135,4 +154,4 @@ export interface IRole extends Document {
   permissions: number;
   mentionable: boolean;
   createdAt: Date;
-} 
+}

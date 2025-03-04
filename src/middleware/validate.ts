@@ -1,37 +1,38 @@
 import { Request, Response, NextFunction } from 'express';
-import { AnySchema } from 'joi'; // Import Joi schema type
+import { Schema } from 'joi';
 import { AppError, ErrorCodes } from '../utils/appError';
+
+type ValidateSource = 'body' | 'query' | 'params';
 
 /**
  * @description Middleware function to validate incoming data using a Joi schema.
- * @param {AnySchema} schema - The Joi schema to validate against.
+ * @param {Schema} schema - The Joi schema to validate against.
+ * @param {ValidateSource} source - The source of the data to validate (body, query, or params).
  * @returns {function} Express middleware function that will validate incoming data.
  */
-export const validate =
-  (schema: AnySchema) => (req: Request, res: Response, next: NextFunction) => {
-    // Combine all data from the request body, query, and params into one object.
-    const allData = { ...req.body, ...req.query, ...req.params };
-
-    // Validate the data.
-    const { error } = schema.validate(allData, { abortEarly: false });
+export const validate = (schema: Schema, source: ValidateSource = 'body') => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const { error } = schema.validate(req[source], {
+      abortEarly: false,
+      stripUnknown: true,
+    });
 
     if (error) {
-      // If there are validation errors, extract the details of each error and return a 400 error with the details.
-      const errors = error.details.map((detail) => ({
-        field: detail.path[0],
-        message: detail.message.replace(/['"]/g, ''), // Remove quotes from error messages
+      const details = error.details.map((err) => ({
+        field: err.path.join('.'),
+        message: err.message,
       }));
 
       return next(
         new AppError(
-          'Validation error',
+          'Validation failed',
           400,
           ErrorCodes.VALIDATION_ERROR,
-          errors
+          details
         )
       );
     }
 
-    // If validation passes, proceed to the next middleware or controller.
     next();
   };
+};

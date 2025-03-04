@@ -8,7 +8,6 @@ import { AppError, ErrorCodes } from './appError';
  * @param fn The async route handler function
  */
 export default function asyncHandler(
-  // eslint-disable-next-line
   fn: (req: Request, res: Response, next: NextFunction) => Promise<void>
 ) {
   return async (req: Request, res: Response, next: NextFunction) => {

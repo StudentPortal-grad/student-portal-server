@@ -1,4 +1,4 @@
-import { IRole } from '../models/Role';
+import { IRole } from '../models/types';
 import Role from '../models/Role';
 
 export class RoleRepository {

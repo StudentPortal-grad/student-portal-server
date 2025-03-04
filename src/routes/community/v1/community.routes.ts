@@ -1,15 +1,15 @@
 import express from 'express';
-import asyncHandler from '../../utils/asyncHandler';
-import { validate } from '../../middleware/validate';
+import asyncHandler from '@utils/asyncHandler';
+import { validate } from '@middleware/validate';
 import {
   createCommunitySchema,
   joinCommunitySchema,
-} from '../../validators/communityValidator';
+} from '@validators/communityValidator';
 import {
   createCommunity,
   getAllCommunities,
   joinCommunity,
-} from '../../controllers/community.controller';
+} from '@controllers/community.controller';
 
 const router = express.Router();
 

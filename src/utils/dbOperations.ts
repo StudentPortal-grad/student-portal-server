@@ -17,15 +17,30 @@ type PopulateField = {
  * Generic database operations with TypeScript support and error handling
  */
 export class DbOperations {
+  static async create<T>(model: Model<T>, data: Partial<T>): Promise<T>;
+  static async create<T>(model: Model<T>, data: Partial<T>[]): Promise<T[]>;
+
   /**
-   * Create one or many documents
+   * Create one or more documents
+   * @example
+   * // Create single document
+   * const user = await DbOperations.create(User, { name: 'John' });
+   *
+   * // Create multiple documents
+   * const users = await DbOperations.create(User, [{ name: 'John' }, { name: 'Jane' }]);
+   *
+   * // Create with options
+   * const users = await DbOperations.create(User, [{ name: 'John' }], { session });
    */
   static async create<T>(
     model: Model<T>,
     data: Partial<T> | Partial<T>[]
   ): Promise<T | T[]> {
     try {
-      return await model.create(data);
+      if (Array.isArray(data)) {
+        return (await model.create(data)) as T[];
+      }
+      return (await model.create(data)) as T;
     } catch (error) {
       throw new AppError(
         'Database operation failed',

@@ -17,7 +17,9 @@
       "@controllers/*": ["controllers/*"],
       "@services/*": ["services/*"],
       "@repositories/*": ["repositories/*"],
-      "@utils/*": ["utils/*"]
+      "@utils/*": ["utils/*"],
+      "@middleware/*": ["middleware/*"],
+      "@validators/*": ["validators/*"]
     }
   },
   "include": ["src"],

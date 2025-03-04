@@ -1,0 +1,509 @@
+import { Types } from 'mongoose';
+import User from '../models/User';
+import { AppError, ErrorCodes } from '../utils/appError';
+import { EmailService } from '../utils/emailService';
+import { DbOperations } from '../utils/dbOperations';
+import crypto from 'crypto';
+import { generateHashedOTP } from '@utils/helpers';
+import { IUser } from '../models/types';
+import { UserRepository } from '../repositories/user.repo';
+
+export class AuthService {
+  /**
+   * Register a new user
+   */
+  static async signup(userData: {
+    name: string;
+    email: string;
+    password: string;
+    role: 'Student' | 'Faculty' | 'Admin';
+    level?: number;
+  }) {
+    const existingUser = await UserRepository.findByEmail(userData.email);
+
+    if (existingUser) {
+      throw new AppError(
+        'Email already registered',
+        400,
+        ErrorCodes.ALREADY_EXISTS
+      );
+    }
+
+    // Set level only for students, remove for other roles
+    const userDataToSave = {
+      ...userData,
+      level: userData.role === 'Student' ? userData.level || 1 : undefined,
+    };
+
+    const user = await DbOperations.create(User, userDataToSave);
+
+    // Generate and send verification OTP
+    const { otp, hashedOtp } = generateHashedOTP();
+    user.otp = {
+      code: hashedOtp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+    };
+    await user.save();
+
+    await EmailService.sendVerificationOTP(user.email, otp);
+
+    const token = user.generateAuthToken();
+    return { user, token };
+  }
+
+  /**
+   * Login user
+   */
+  static async login(email: string, password: string) {
+    const user = await UserRepository.findByEmailWithPassword(email);
+    if (!user) {
+      throw new AppError(
+        'Invalid email or password',
+        401,
+        ErrorCodes.UNAUTHORIZED
+      );
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      throw new AppError(
+        'Invalid email or password',
+        401,
+        ErrorCodes.UNAUTHORIZED
+      );
+    }
+
+    // Update user status to online
+    await user.updateStatus('online');
+
+    const token = user.generateAuthToken();
+    return { user, token };
+  }
+
+  /**
+   * Get user by ID
+   */
+  static async getUserById(userId: Types.ObjectId) {
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+    return user;
+  }
+
+  /**
+   * Request password reset
+   */
+  static async forgotPassword(email: string) {
+    const user = await UserRepository.findByEmail(email);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    const { otp, hashedOtp } = generateHashedOTP();
+    user.otp = {
+      code: hashedOtp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+    };
+    await user.save();
+
+    await EmailService.sendPasswordResetOTP(email, otp);
+
+    return { message: 'Reset code sent to email' };
+  }
+
+  /**
+   * Verify forgot password OTP and generate reset token
+   */
+  static async verifyForgotPasswordOTP(email: string, otp: string) {
+    const user = await UserRepository.findByEmail(email);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+
+    if (
+      !user.otp ||
+      user.otp.code !== hashedOtp ||
+      user.otp.expiresAt < new Date()
+    ) {
+      throw new AppError(
+        'Invalid or expired verification code',
+        400,
+        ErrorCodes.INVALID_TOKEN
+      );
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.otp = {
+      code: crypto.createHash('sha256').update(resetToken).digest('hex'),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+    };
+    await user.save();
+
+    return { resetToken, message: 'OTP verified successfully' };
+  }
+
+  /**
+   * Reset password with reset token
+   */
+  static async resetPassword(resetToken: string, newPassword: string) {
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    const user = await UserRepository.findByOTPCode(hashedToken);
+
+    if (!user) {
+      throw new AppError(
+        'Invalid or expired reset token',
+        400,
+        ErrorCodes.INVALID_TOKEN
+      );
+    }
+
+    user.password = newPassword;
+    user.otp = undefined;
+    await user.save();
+
+    return { message: 'Password reset successful' };
+  }
+
+  /**
+   * Change password (when logged in)
+   */
+  static async changePassword(
+    userId: Types.ObjectId,
+    currentPassword: string,
+    newPassword: string
+  ) {
+    const user = await UserRepository.findByIdWithPassword(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      throw new AppError(
+        'Current password is incorrect',
+        401,
+        ErrorCodes.UNAUTHORIZED
+      );
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    return { message: 'Password changed successfully' };
+  }
+
+  /**
+   * Verify email with OTP
+   */
+  static async verifyEmail(otp: string) {
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+
+    const user = await User.findOne({
+      'otp.code': hashedOtp,
+      'otp.expiresAt': { $gt: new Date() },
+    });
+
+    if (!user) {
+      throw new AppError(
+        'Invalid or expired verification code',
+        400,
+        ErrorCodes.INVALID_TOKEN
+      );
+    }
+
+    user.emailVerified = true;
+    user.signupStep = 'verified';
+    user.otp = undefined;
+    await user.save();
+
+    const token = user.generateAuthToken();
+
+    return { user, token, message: 'Email verified successfully' };
+  }
+
+  /**
+   * Logout user
+   */
+  static async logout(userId: Types.ObjectId) {
+    const user = await UserRepository.findById(userId);
+    if (user) {
+      await user.updateStatus('offline');
+    }
+    return { message: 'Logged out successfully' };
+  }
+
+  /**
+   * Resend verification OTP
+   */
+  static async resendVerificationOTP(email: string) {
+    const user = await UserRepository.findByEmail(email);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    if (user.emailVerified) {
+      throw new AppError(
+        'Email already verified',
+        400,
+        ErrorCodes.INVALID_OPERATION
+      );
+    }
+
+    const { otp, hashedOtp } = generateHashedOTP();
+    user.otp = {
+      code: hashedOtp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+    };
+    await user.save();
+
+    await EmailService.sendVerificationOTP(email, otp);
+
+    return { message: 'Verification code resent successfully' };
+  }
+
+  /**
+   * Initial signup step - collect name and email
+   */
+  static async initiateSignup(userData: { name: string; email: string }) {
+    const existingUser = await UserRepository.findByEmail(userData.email);
+
+    if (existingUser) {
+      throw new AppError(
+        'Email already registered',
+        400,
+        ErrorCodes.ALREADY_EXISTS
+      );
+    }
+
+    const user = await DbOperations.create(User, {
+      ...userData,
+      signupStep: 'initial',
+    });
+
+    // Generate and send verification OTP
+    const { otp, hashedOtp } = generateHashedOTP();
+    user.otp = {
+      code: hashedOtp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+    };
+    await user.save();
+
+    await EmailService.sendVerificationOTP(user.email, otp);
+
+    return { user, message: 'Signup initiated. Please verify your email.' };
+  }
+
+  /**
+   * Set password after email verification
+   */
+  static async setPassword(user: IUser, password: string) {
+    if (user.signupStep !== 'verified') {
+      throw new AppError(
+        'Email must be verified before setting password',
+        400,
+        ErrorCodes.INVALID_OPERATION
+      );
+    }
+
+    user.password = password;
+    user.signupStep = 'password_set';
+    await user.save();
+
+    return { message: 'Password set successfully' };
+  }
+
+  /**
+   * Complete signup with additional user data
+   */
+  static async completeSignup(user: IUser, userData: Partial<IUser>) {
+    if (user.signupStep !== 'password_set') {
+      throw new AppError(
+        'Password must be set before completing signup',
+        400,
+        ErrorCodes.INVALID_OPERATION
+      );
+    }
+
+    // Handle role-specific validations
+    if (userData.role) {
+      if (userData.role === 'Student') {
+        if (!userData.level) {
+          throw new AppError(
+            'Level is required for students',
+            400,
+            ErrorCodes.VALIDATION_ERROR
+          );
+        }
+      } else {
+        // Remove student-specific fields for non-students
+        delete userData.level;
+        delete userData.gpa;
+      }
+    }
+
+    // Update all provided fields
+    Object.assign(user, userData);
+
+    user.signupStep = 'completed';
+    await user.save();
+
+    // Send welcome email after completion
+    await EmailService.sendWelcomeEmail(user.email, user.name);
+
+    return { user, message: 'Signup completed successfully' };
+  }
+
+  /**
+   * Initiate email change process
+   */
+  static async initiateEmailChange(userId: Types.ObjectId, newEmail: string) {
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    // Check if new email is already in use
+    const existingUser = await UserRepository.findByEmail(newEmail);
+    if (existingUser) {
+      throw new AppError(
+        'Email already registered',
+        400,
+        ErrorCodes.ALREADY_EXISTS
+      );
+    }
+
+    // Store new email temporarily and generate OTP
+    const { otp, hashedOtp } = generateHashedOTP();
+    user.otp = {
+      code: hashedOtp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+    };
+    user.set('tempEmail', newEmail);
+    await user.save();
+
+    // Send verification email to new address
+    await EmailService.sendVerificationOTP(newEmail, otp);
+
+    return { message: 'Verification code sent to new email' };
+  }
+
+  /**
+   * Verify and complete email change
+   */
+  static async verifyNewEmail(userId: Types.ObjectId, code: string) {
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    const hashedOtp = crypto.createHash('sha256').update(code).digest('hex');
+
+    if (!user.otp || !user.get('tempEmail')) {
+      throw new AppError(
+        'No email change in progress',
+        400,
+        ErrorCodes.INVALID_OPERATION
+      );
+    }
+
+    if (user.otp.code !== hashedOtp || user.otp.expiresAt < new Date()) {
+      throw new AppError(
+        'Invalid or expired verification code',
+        400,
+        ErrorCodes.INVALID_TOKEN
+      );
+    }
+
+    // Update email and clear temporary data
+    const oldEmail = user.email;
+    user.email = user.get('tempEmail')!;
+    user.set('tempEmail', undefined);
+    user.otp = undefined;
+    await user.save();
+
+    // Send confirmation emails
+    await EmailService.sendEmailChangeConfirmation(oldEmail, user.email);
+
+    return { message: 'Email changed successfully' };
+  }
+
+  /**
+   * Initiate university email verification
+   */
+  static async initiateUniversityEmailVerification(userId: Types.ObjectId) {
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    if (!user.universityEmail) {
+      throw new AppError(
+        'No university email set',
+        400,
+        ErrorCodes.INVALID_OPERATION
+      );
+    }
+
+    if (user.universityEmailVerified) {
+      throw new AppError(
+        'University email already verified',
+        400,
+        ErrorCodes.INVALID_OPERATION
+      );
+    }
+
+    // Generate and send OTP
+    const { otp, hashedOtp } = generateHashedOTP();
+    user.otp = {
+      code: hashedOtp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+    };
+    await user.save();
+
+    await EmailService.sendVerificationOTP(user.universityEmail, otp);
+
+    return { message: 'Verification code sent to university email' };
+  }
+
+  /**
+   * Verify university email
+   */
+  static async verifyUniversityEmail(userId: Types.ObjectId, code: string) {
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    const hashedOtp = crypto.createHash('sha256').update(code).digest('hex');
+
+    if (!user.otp || !user.universityEmail) {
+      throw new AppError(
+        'No university email verification in progress',
+        400,
+        ErrorCodes.INVALID_OPERATION
+      );
+    }
+
+    if (user.otp.code !== hashedOtp || user.otp.expiresAt < new Date()) {
+      throw new AppError(
+        'Invalid or expired verification code',
+        400,
+        ErrorCodes.INVALID_TOKEN
+      );
+    }
+
+    user.universityEmailVerified = true;
+    user.otp = undefined;
+    await user.save();
+
+    return { message: 'University email verified successfully' };
+  }
+}

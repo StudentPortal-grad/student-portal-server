@@ -1,4 +1,5 @@
 import { PaginationMetadata } from '../../utils/ApiResponse';
+import { IUser } from 'models/types';
 
 export {};
 
@@ -45,6 +46,16 @@ declare global {
       ): Response;
       /** @param message Optional error message */
       internalError(message?: string): Response;
+    }
+
+    interface Request {
+      user?: IUser;
+    }
+
+    namespace Multer {
+      interface File {
+        path: string;
+      }
     }
   }
 }
