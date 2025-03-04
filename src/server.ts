@@ -4,7 +4,8 @@ import connection from './config/db';
 
 config();
 
-// eslint-disable-next-line no-undef
+/* global process */
+
 const port = process.env.PORT || 3000;
 
 process.on('uncaughtException', (error: Error) => {

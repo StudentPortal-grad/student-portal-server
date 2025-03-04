@@ -1,6 +1,6 @@
 import express from 'express';
 import asyncHandler from '../../utils/asyncHandler';
-import { validate } from '../../middlewares/validate';
+import { validate } from '../../middleware/validate';
 import { createRoleSchema } from '../../validators/roleValidator';
 import { createRole, getAllRoles } from '../../controllers/role.controller';
 

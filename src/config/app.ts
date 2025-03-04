@@ -3,8 +3,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
-import errorHandler from '../middlewares/errorHandler';
+import { errorHandler } from '../middleware/errorHandler';
 import routes from '../routes/index';
+import { responseHandler } from 'middleware/responseHandler';
 
 const app: Express = express();
 
@@ -29,16 +30,15 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again in an hour!',
 });
 
+app.use(responseHandler);
+
 app.use('/', limiter, routes);
 
 // Handle errors after all routes have been checked.
 app.use(errorHandler);
 
 app.all('*', (req, res, _) => {
-  res.status(404).json({
-    status: 'fail',
-    message: `Can't find ${req.originalUrl} on this server!`,
-  });
+  res.notFound(`Can't find ${req.originalUrl} on this server!`);
 });
 
 export default app;

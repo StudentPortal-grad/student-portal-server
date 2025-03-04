@@ -16,7 +16,8 @@
       "@routes/*": ["routes/*"],
       "@controllers/*": ["controllers/*"],
       "@services/*": ["services/*"],
-      "@repositories/*": ["repositories/*"]
+      "@repositories/*": ["repositories/*"],
+      "@utils/*": ["utils/*"]
     }
   },
   "include": ["src"],

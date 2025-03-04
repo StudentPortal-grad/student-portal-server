@@ -41,6 +41,54 @@ Creates a new user account.
 }
 ```
 
+##### GET /auth/google
+Initiates Google OAuth2.0 authentication flow.
+
+**Description**: Starts the Google sign-in process
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Google authentication successful",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "60a3f2d94e6c2a1234567890",
+      "email": "student@university.edu",
+      "name": "Student Name",
+      "role": "Student",
+      "picture": "https://example.com/profile.jpg",
+      "createdAt": "2024-03-15T10:30:00Z"
+    }
+  }
+}
+```
+
+**Error Response (401 Unauthorized):**
+```json
+{
+  "success": false,
+  "message": "Google authentication failed",
+  "error": {
+    "code": "UNAUTHORIZED",
+    "details": "Invalid Google credentials"
+  }
+}
+```
+
+##### GET /auth/google/callback
+Callback endpoint for Google OAuth2.0 authentication.
+
+**Query Parameters:**
+- `code`: Authorization code from Google
+- `state`: CSRF token for security
+
+**Description**: Handles the OAuth2.0 callback from Google
+
+**Success Response**: Redirects to frontend with authentication token
+**Error Response**: Redirects to frontend login page with error message
+
 ##### POST /auth/verify-email
 Verifies a user's email address using the verification code.
 

@@ -1,70 +1,240 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import { Schema, model, Types } from 'mongoose';
+import { IDiscussion } from './types';
 
-export interface IDiscussion extends Document {
-  communityId: mongoose.Schema.Types.ObjectId; // Reference to the community
-  title: string;
-  content: string;
-  creator: mongoose.Schema.Types.ObjectId; // Reference to the user who created the discussion
-  attachments: Array<{
-    type: string; // Enum: 'document', 'file', 'poll', etc.
-    resource: string; 
-  }>;
-  replies: Array<{
-    id: mongoose.Schema.Types.ObjectId;
-    content: string;
-    creator: mongoose.Schema.Types.ObjectId; // Reference to the user who replied
-    createdAt: Date;
-    attachments: Array<{
-      type: string; // Enum: 'document', 'file', etc.
-      resource: string; 
-    }>;
-  }>;
-  votes: Array<{
-    userId: mongoose.Schema.Types.ObjectId; // Reference to the user who voted
-    voteType: string; // Enum: 'upvote', 'downvote'
-    createdAt: Date;
-  }>;
-  status: string; // Enum: 'open', 'closed', 'archived'
-  createdAt: Date;
-  updatedAt: Date;
+interface SearchQuery {
+  $text: { $search: string };
+  communityId?: Types.ObjectId;
 }
 
-const DiscussionSchema: Schema = new Schema(
+interface IVote {
+  userId: Types.ObjectId;
+  voteType: 'upvote' | 'downvote';
+  createdAt: Date;
+}
+
+const DiscussionSchema = new Schema<IDiscussion>(
   {
-    communityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Community', required: true },
-    title: { type: String, required: true },
-    content: { type: String, required: true },
-    creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    communityId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Community',
+      required: true,
+    },
+    title: {
+      type: String,
+      required: true,
+      maxlength: 255,
+      trim: true,
+    },
+    content: {
+      type: String,
+      required: true,
+    },
+    creator: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     attachments: [
       {
-        type: { type: String, required: true },
-        resource: { type: String, required: true },
+        _id: false,
+        type: {
+          type: String,
+          enum: ['document', 'file', 'poll'],
+          required: true,
+        },
+        resource: {
+          type: String,
+          required: true,
+          validate: {
+            validator: function (v: string) {
+              return /^https?:\/\/.+/.test(v);
+            },
+            message: 'Resource must be a valid URL',
+          },
+        },
       },
     ],
     replies: [
       {
-        id: { type: mongoose.Schema.Types.ObjectId, required: true },
-        content: { type: String, required: true },
-        creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-        createdAt: { type: Date, default: Date.now },
+        id: {
+          type: Schema.Types.ObjectId,
+          default: () => new Types.ObjectId(),
+        },
+        content: {
+          type: String,
+          required: true,
+        },
+        creator: {
+          type: Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
         attachments: [
           {
-            type: { type: String, required: true },
-            resource: { type: String, required: true },
+            _id: false,
+            type: {
+              type: String,
+              enum: ['document', 'file', 'poll'],
+              required: true,
+            },
+            resource: {
+              type: String,
+              required: true,
+              validate: {
+                validator: function (v: string) {
+                  return /^https?:\/\/.+/.test(v);
+                },
+                message: 'Resource must be a valid URL',
+              },
+            },
           },
         ],
       },
     ],
     votes: [
       {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-        voteType: { type: String, enum: ['upvote', 'downvote'], required: true },
-        createdAt: { type: Date, default: Date.now },
+        _id: false,
+        userId: {
+          type: Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        voteType: {
+          type: String,
+          enum: ['upvote', 'downvote'],
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
       },
     ],
-    status: { type: String, enum: ['open', 'closed', 'archived'], default: 'open' },
+    status: {
+      type: String,
+      enum: ['open', 'closed', 'archived'],
+      default: 'open',
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-export default mongoose.model<IDiscussion>('Discussion', DiscussionSchema);
+// Indexes
+DiscussionSchema.index({ communityId: 1, createdAt: -1 });
+DiscussionSchema.index({ creator: 1 });
+DiscussionSchema.index({ status: 1 });
+DiscussionSchema.index({ title: 'text', content: 'text' });
+
+// Methods
+DiscussionSchema.methods = {
+  // Add a reply
+  addReply: async function (
+    content: string,
+    creator: Types.ObjectId,
+    attachments: any[] = []
+  ) {
+    if (this.status === 'archived') {
+      throw new Error('Cannot reply to archived discussion');
+    }
+
+    this.replies.push({
+      content,
+      creator,
+      attachments,
+      createdAt: new Date(),
+    });
+
+    await this.save();
+    return this.replies[this.replies.length - 1];
+  },
+
+  // Add or update vote
+  vote: async function (
+    userId: Types.ObjectId,
+    voteType: 'upvote' | 'downvote'
+  ) {
+    const existingVote = this.votes.find((v: IVote) => v.userId.equals(userId));
+
+    if (existingVote) {
+      if (existingVote.voteType === voteType) {
+        // Remove vote if same type (toggle)
+        this.votes = this.votes.filter((v: IVote) => !v.userId.equals(userId));
+      } else {
+        // Update vote type
+        existingVote.voteType = voteType;
+        existingVote.createdAt = new Date();
+      }
+    } else {
+      // Add new vote
+      this.votes.push({
+        userId,
+        voteType,
+        createdAt: new Date(),
+      });
+    }
+
+    await this.save();
+  },
+
+  // Get vote counts
+  getVoteCounts: function () {
+    return {
+      upvotes: this.votes.filter((v: IVote) => v.voteType === 'upvote').length,
+      downvotes: this.votes.filter((v: IVote) => v.voteType === 'downvote')
+        .length,
+    };
+  },
+};
+
+// Statics
+DiscussionSchema.statics = {
+  // Find trending discussions
+  findTrending: function (communityId: Types.ObjectId, limit = 10) {
+    return this.aggregate([
+      { $match: { communityId, status: 'open' } },
+      {
+        $addFields: {
+          score: {
+            $subtract: [
+              {
+                $size: {
+                  $filter: {
+                    input: '$votes',
+                    cond: { $eq: ['$$this.voteType', 'upvote'] },
+                  },
+                },
+              },
+              {
+                $size: {
+                  $filter: {
+                    input: '$votes',
+                    cond: { $eq: ['$$this.voteType', 'downvote'] },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      { $sort: { score: -1, createdAt: -1 } },
+      { $limit: limit },
+    ]);
+  },
+
+  // Search discussions
+  search: function (query: string, communityId?: Types.ObjectId) {
+    const searchQuery: SearchQuery = { $text: { $search: query } };
+    if (communityId) {
+      searchQuery.communityId = communityId;
+    }
+    return this.find(searchQuery)
+      .select('title content creator createdAt')
+      .populate('creator', 'name');
+  },
+};
+
+export default model<IDiscussion>('Discussion', DiscussionSchema);
