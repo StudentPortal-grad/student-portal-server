@@ -126,26 +126,12 @@ export class AuthController {
 
   /**
    * @route   POST /v1/auth/signup/initiate
-   * @desc    Start signup process with name and email
+   * @desc    Start signup process with name, email and password
    */
   static initiateSignup = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
       const { user, message } = await AuthService.initiateSignup(req.body);
       res.success({ user }, message, 201);
-    }
-  );
-
-  /**
-   * @route   POST /v1/auth/signup/set-password
-   * @desc    Set password after email verification
-   */
-  static setPassword = asyncHandler(
-    async (req: Request, res: Response, _next: NextFunction) => {
-      const result = await AuthService.setPassword(
-        req.user!,
-        req.body.password
-      );
-      res.success(result, 'Password set successfully');
     }
   );
 

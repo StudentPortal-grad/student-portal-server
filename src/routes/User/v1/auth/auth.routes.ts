@@ -51,11 +51,6 @@ router.use(authenticate); // Apply authentication middleware to all routes below
 
 // Complete signup process (requires authentication)
 router.post(
-  '/signup/set-password',
-  validate(authValidation.setPassword),
-  AuthController.setPassword
-);
-router.post(
   '/signup/complete',
   uploadProfilePicture, // Handle file upload first
   validate(authValidation.completeSignup),

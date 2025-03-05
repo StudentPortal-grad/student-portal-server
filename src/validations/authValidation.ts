@@ -1,7 +1,7 @@
 import Joi from 'joi';
 
 const passwordPattern =
-  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
 
 export const authValidation = {
   signup: Joi.object({
@@ -16,19 +16,19 @@ export const authValidation = {
     password: Joi.string().min(8).pattern(passwordPattern).required().messages({
       'string.min': 'Password must be at least 8 characters',
       'string.pattern.base':
-        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (!@#$%^&*)',
       'any.required': 'Password is required',
     }),
     role: Joi.string()
       .valid('Student', 'Faculty', 'Admin')
-      .required()
+      .optional()
       .messages({
         'any.only': 'Invalid role',
         'any.required': 'Role is required',
       }),
     level: Joi.when('role', {
       is: 'Student',
-      then: Joi.number().min(1).max(5).required().messages({
+      then: Joi.number().min(1).max(5).messages({
         'number.min': 'Student level must be between 1 and 5',
         'number.max': 'Student level must be between 1 and 5',
         'any.required': 'Student level is required',
@@ -74,7 +74,7 @@ export const authValidation = {
     password: Joi.string().min(8).pattern(passwordPattern).required().messages({
       'string.min': 'Password must be at least 8 characters',
       'string.pattern.base':
-        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (!@#$%^&*)',
       'any.required': 'Password is required',
     }),
   }),
@@ -105,7 +105,7 @@ export const authValidation = {
       .messages({
         'string.min': 'New password must be at least 8 characters',
         'string.pattern.base':
-          'New password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+          'New password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (!@#$%^&*)',
         'any.required': 'New password is required',
         'any.invalid': 'New password must be different from current password',
       }),
@@ -120,19 +120,25 @@ export const authValidation = {
       'string.email': 'Please enter a valid email',
       'any.required': 'Email is required',
     }),
+    password: Joi.string().min(8).pattern(passwordPattern).required().messages({
+      'string.min': 'Password must be at least 8 characters',
+      'string.pattern.base':
+        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (!@#$%^&*)',
+      'any.required': 'Password is required',
+    }),
   }),
 
   setPassword: Joi.object({
     password: Joi.string().min(8).pattern(passwordPattern).required().messages({
       'string.min': 'Password must be at least 8 characters',
       'string.pattern.base':
-        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (!@#$%^&*)',
       'any.required': 'Password is required',
     }),
   }),
 
   completeSignup: Joi.object({
-    username: Joi.string().required().min(3).max(30).trim().messages({
+    username: Joi.string().optional().min(3).max(30).trim().messages({
       'string.empty': 'Username is required',
       'string.min': 'Username must be at least 3 characters long',
       'string.max': 'Username cannot exceed 30 characters',

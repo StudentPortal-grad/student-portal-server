@@ -19,20 +19,19 @@ const UserSchema = new Schema<IUser>(
     },
     username: {
       type: String,
-      required: true,
-      unique: true,
+      required: false,
       trim: true,
-      minlength: 3,
-      maxlength: 30,
+      minlength: [3, 'Username must be at least 3 characters long'],
+      maxlength: [30, 'Username cannot exceed 30 characters'],
     },
     gender: {
       type: String,
-      required: true,
+      required: false,
       enum: ['male', 'female'],
     },
     phoneNumber: {
       type: String,
-      required: true,
+      required: false,
       validate: {
         validator: function (v: string) {
           return /^\+\d{1,3}\s\(\d{3}\)\s\d{3}-\d{4}$/.test(v);
@@ -63,26 +62,15 @@ const UserSchema = new Schema<IUser>(
     },
     password: {
       type: String,
-      required: function (this: IUser) {
-        return this.signupStep === 'completed';
-      },
+      required: true,
       maxlength: 60,
       minlength: 8,
       select: false,
-      validate: {
-        validator: function (v: string) {
-          return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(
-            v
-          );
-        },
-        message:
-          'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
-      },
     },
     signupStep: {
       type: String,
       required: true,
-      enum: ['initial', 'verified', 'password_set', 'completed'],
+      enum: ['initial', 'verified', 'completed'],
       default: 'initial',
     },
     role: {
@@ -190,12 +178,30 @@ const UserSchema = new Schema<IUser>(
 
 // Indexes
 UserSchema.index({ universityEmail: 1 }, { sparse: true, unique: true });
+UserSchema.index(
+  { username: 1 },
+  {
+    unique: true,
+    sparse: true,
+    collation: { locale: 'en', strength: 2 }, // Case-insensitive unique index
+  }
+);
 
-// Pre-save middleware for password hashing
+// Pre-save middleware for password validation and hashing
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
 
   try {
+    // Validate password before hashing
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
+    if (!passwordRegex.test(this.password)) {
+      throw new Error(
+        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (!@#$%^&*)'
+      );
+    }
+
+    // Hash password if validation passes
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
     next();

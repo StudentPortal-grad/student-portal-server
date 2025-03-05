@@ -4,7 +4,7 @@ import { AppError, ErrorCodes } from '../utils/appError';
 import { EmailService } from '../utils/emailService';
 import { DbOperations } from '../utils/dbOperations';
 import crypto from 'crypto';
-import { generateHashedOTP } from '@utils/helpers';
+import { generateHashedOTP, generateUsernameFromEmail } from '@utils/helpers';
 import { IUser } from '../models/types';
 import { UserRepository } from '../repositories/user.repo';
 
@@ -267,9 +267,13 @@ export class AuthService {
   }
 
   /**
-   * Initial signup step - collect name and email
+   * Initial signup step - collect name, email and password
    */
-  static async initiateSignup(userData: { name: string; email: string }) {
+  static async initiateSignup(userData: {
+    name: string;
+    email: string;
+    password: string;
+  }) {
     const existingUser = await UserRepository.findByEmail(userData.email);
 
     if (existingUser) {
@@ -280,8 +284,12 @@ export class AuthService {
       );
     }
 
+    // Generate a username from email
+    const username = generateUsernameFromEmail(userData.email);
+
     const user = await DbOperations.create(User, {
       ...userData,
+      username,
       signupStep: 'initial',
     });
 
@@ -291,39 +299,23 @@ export class AuthService {
       code: hashedOtp,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
     };
-    await user.save();
+    await DbOperations.saveDocument(user);
 
     await EmailService.sendVerificationOTP(user.email, otp);
 
-    return { user, message: 'Signup initiated. Please verify your email.' };
-  }
-
-  /**
-   * Set password after email verification
-   */
-  static async setPassword(user: IUser, password: string) {
-    if (user.signupStep !== 'verified') {
-      throw new AppError(
-        'Email must be verified before setting password',
-        400,
-        ErrorCodes.INVALID_OPERATION
-      );
-    }
-
-    user.password = password;
-    user.signupStep = 'password_set';
-    await user.save();
-
-    return { message: 'Password set successfully' };
+    return {
+      user,
+      message: 'Signup initiated. Please verify your email.',
+    };
   }
 
   /**
    * Complete signup with additional user data
    */
   static async completeSignup(user: IUser, userData: Partial<IUser>) {
-    if (user.signupStep !== 'password_set') {
+    if (user.signupStep !== 'verified') {
       throw new AppError(
-        'Password must be set before completing signup',
+        'Email must be verified before completing signup',
         400,
         ErrorCodes.INVALID_OPERATION
       );
@@ -350,7 +342,7 @@ export class AuthService {
     Object.assign(user, userData);
 
     user.signupStep = 'completed';
-    await user.save();
+    await DbOperations.saveDocument(user, true);
 
     // Send welcome email after completion
     await EmailService.sendWelcomeEmail(user.email, user.name);
