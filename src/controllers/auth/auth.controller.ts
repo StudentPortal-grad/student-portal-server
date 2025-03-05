@@ -32,7 +32,7 @@ export class AuthController {
    */
   static logout = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      const result = await AuthService.logout(req.user!._id);
+      const result = await AuthService.logout(req.user!);
       res.success(result, 'Logout successful');
     }
   );

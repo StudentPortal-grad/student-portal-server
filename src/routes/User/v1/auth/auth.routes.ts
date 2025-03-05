@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { AuthController } from '../../../../controllers/auth/auth.controller';
-import { authenticate } from '../../../../middleware/auth';
-import { validate } from '../../../../middleware/validate';
-import { authValidation } from '../../../../validations/authValidation';
-import { uploadProfilePicture } from '../../../../utils/uploadService';
+import { AuthController } from '@controllers/auth/auth.controller';
+import { authenticate } from '@middleware/auth';
+import { validate } from '@middleware/validate';
+import { authValidation } from '@validations/authValidation';
+import { uploadProfilePicture } from '@utils/uploadService';
 
 const router = Router();
 
@@ -84,7 +84,6 @@ router.post(
 );
 
 // User management
-router.get('/me', AuthController.getMe);
 router.post('/logout', AuthController.logout);
 router.post(
   '/change-password',

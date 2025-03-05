@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
+/* global process */
 interface IFriend {
   userId: Types.ObjectId;
   messageId: Types.ObjectId;
@@ -209,7 +210,6 @@ UserSchema.methods = {
   generateAuthToken: function (): string {
     return jwt.sign(
       { id: this._id, role: this.role },
-      /* global process */
       process.env.JWT_SECRET || 'sfjsd65gfsdf-sdgsdgsdg-dsgsdgsdg',
       { expiresIn: '24h' }
     );
@@ -229,7 +229,7 @@ UserSchema.methods = {
       code: crypto.createHash('sha256').update(resetToken).digest('hex'),
       expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
     };
-    await this.save();
+    await this.save({ validateBeforeSave: false });
     return resetToken;
   },
 
@@ -238,7 +238,7 @@ UserSchema.methods = {
     status: 'online' | 'offline' | 'idle' | 'dnd'
   ): Promise<void> {
     this.status = status;
-    await this.save();
+    await this.save({ validateBeforeSave: false });
   },
 
   // Add friend
@@ -250,7 +250,7 @@ UserSchema.methods = {
       !this.friends?.some((friend: IFriend) => friend.userId.equals(friendId))
     ) {
       this.friends = [...(this.friends || []), { userId: friendId, messageId }];
-      await this.save();
+      await this.save({ validateBeforeSave: false });
     }
   },
 
@@ -260,7 +260,7 @@ UserSchema.methods = {
       this.friends = this.friends.filter(
         (friend: IFriend) => !friend.userId.equals(friendId)
       );
-      await this.save();
+      await this.save({ validateBeforeSave: false });
     }
   },
 };

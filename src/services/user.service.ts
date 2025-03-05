@@ -4,6 +4,8 @@ import { IUser } from '../models/types';
 import { UserRepository } from '../repositories/user.repo';
 import { EmailService } from '../utils/emailService';
 import { generateHashedOTP } from '@utils/helpers';
+import { DbOperations } from '../utils/dbOperations';
+import User from '../models/User';
 
 export class UserService {
   /**
@@ -20,12 +22,7 @@ export class UserService {
     delete sanitizedData.otp;
     delete sanitizedData.roles;
 
-    const updatedUser = await UserRepository.update(user._id, sanitizedData);
-    if (!updatedUser) {
-      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
-    }
-
-    return { user: updatedUser };
+    return { user: await DbOperations.updateDocument(user, sanitizedData) };
   }
 
   /**
@@ -41,8 +38,17 @@ export class UserService {
   /**
    * Update user password
    */
-  static async updatePassword(user: IUser, currentPassword: string, newPassword: string) {
-    const userWithPassword = await UserRepository.findByIdWithPassword(user._id);
+  static async updatePassword(
+    user: IUser,
+    currentPassword: string,
+    newPassword: string
+  ) {
+    const userWithPassword = await DbOperations.findOne(
+      User,
+      { _id: user._id },
+      { password: 1 }
+    );
+
     if (!userWithPassword) {
       throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
     }
@@ -57,7 +63,7 @@ export class UserService {
     }
 
     userWithPassword.password = newPassword;
-    await userWithPassword.save();
+    await DbOperations.saveDocument(userWithPassword);
 
     return { message: 'Password updated successfully' };
   }
@@ -67,8 +73,11 @@ export class UserService {
    */
   static async updateUniversityEmail(user: IUser, universityEmail: string) {
     // Check if email is already in use
-    const existingUser = await UserRepository.findByUniversityEmail(universityEmail);
-    if (existingUser && existingUser._id.toString() !== user._id.toString()) {
+    const isEmailTaken = await UserRepository.isUniversityEmailTaken(
+      universityEmail,
+      user._id
+    );
+    if (isEmailTaken) {
       throw new AppError(
         'University email already registered',
         400,
@@ -77,30 +86,21 @@ export class UserService {
     }
 
     // Update university email and reset verification
-    const updatedUser = await UserRepository.update(user._id, {
-      universityEmail,
-      universityEmailVerified: false,
-    });
-
-    if (!updatedUser) {
-      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
-    }
-
-    return { user: updatedUser };
+    return {
+      user: await DbOperations.updateDocument(user, {
+        universityEmail,
+        universityEmailVerified: false,
+      }),
+    };
   }
 
   /**
    * Initiate email change
    */
-  static async initiateEmailChange(userId: Types.ObjectId, newEmail: string) {
-    const user = await UserRepository.findById(userId);
-    if (!user) {
-      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
-    }
-
+  static async initiateEmailChange(user: IUser, newEmail: string) {
     // Check if new email is already in use
-    const existingUser = await UserRepository.findByEmail(newEmail);
-    if (existingUser) {
+    const isEmailTaken = await UserRepository.isEmailTaken(newEmail, user._id);
+    if (isEmailTaken) {
       throw new AppError(
         'Email already registered',
         400,
@@ -115,11 +115,16 @@ export class UserService {
       expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
     };
     user.set('tempEmail', newEmail);
-    await user.save();
+    await DbOperations.saveDocument(user);
 
     // Send verification email
     await EmailService.sendVerificationOTP(newEmail, otp);
 
     return { message: 'Verification code sent to new email' };
+  }
+
+  static async deleteProfile(user: IUser) {
+    await DbOperations.deleteDocument(user);
+    return { message: 'User deleted successfully' };
   }
 }

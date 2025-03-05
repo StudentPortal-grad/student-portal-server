@@ -19,7 +19,8 @@
       "@repositories/*": ["repositories/*"],
       "@utils/*": ["utils/*"],
       "@middleware/*": ["middleware/*"],
-      "@validators/*": ["validators/*"]
+      "@validators/*": ["validators/*"],
+      "@validations/*": ["validations/*"]
     }
   },
   "include": ["src"],

@@ -232,11 +232,8 @@ export class AuthService {
   /**
    * Logout user
    */
-  static async logout(userId: Types.ObjectId) {
-    const user = await UserRepository.findById(userId);
-    if (user) {
-      await user.updateStatus('offline');
-    }
+  static async logout(user: IUser) {
+    await user.updateStatus('offline');
     return { message: 'Logged out successfully' };
   }
 

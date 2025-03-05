@@ -4,6 +4,7 @@ import {
   UpdateQuery,
   QueryOptions,
   PopulateOptions,
+  Document,
 } from 'mongoose';
 import { AppError, ErrorCodes } from './appError';
 
@@ -440,5 +441,70 @@ export class DbOperations {
     }
 
     return config;
+  }
+
+  /**
+   * Update an existing document directly without querying
+   * @example
+   * // Update user document directly
+   * const updatedUser = await DbOperations.updateDocument(userDoc, { name: 'John' });
+   */
+  static async updateDocument<T extends Document>(
+    doc: T,
+    update: UpdateQuery<T>,
+    options: QueryOptions = { new: true, runValidators: true }
+  ): Promise<T> {
+    try {
+      Object.assign(doc, update);
+      if (options.runValidators === false) {
+        return await doc.save({ validateBeforeSave: false });
+      }
+      return await doc.save();
+    } catch (error) {
+      throw new AppError(
+        'Database operation failed',
+        500,
+        ErrorCodes.DB_ERROR,
+        error
+      );
+    }
+  }
+
+  /**
+   * Delete an existing document directly without querying
+   */
+  static async deleteDocument<T extends Document>(doc: T): Promise<T> {
+    try {
+      return await doc.deleteOne();
+    } catch (error) {
+      throw new AppError(
+        'Database operation failed',
+        500,
+        ErrorCodes.DB_ERROR,
+        error
+      );
+    }
+  }
+
+  /**
+   * Save document with option to skip validation
+   */
+  static async saveDocument<T extends Document>(
+    doc: T,
+    skipValidation: boolean = false
+  ): Promise<T> {
+    try {
+      if (skipValidation) {
+        return await doc.save({ validateBeforeSave: false });
+      }
+      return await doc.save();
+    } catch (error) {
+      throw new AppError(
+        'Database operation failed',
+        500,
+        ErrorCodes.DB_ERROR,
+        error
+      );
+    }
   }
 }
