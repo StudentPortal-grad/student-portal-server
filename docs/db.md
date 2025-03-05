@@ -12,9 +12,17 @@ This document outlines the database schema for a comprehensive student portal pl
 User {
   _id: ObjectId,
   name: String (Required, 255 characters),
-  email: String (Unique, Required, 320 characters),
-  password: String (Required, Encrypted, 60 characters),
-  role: String (Required, Enum["Student", "Faculty", "Admin"]),
+  username: String (Optional, Unique with case-insensitive collation, Min: 3, Max: 30 characters, Trimmed),
+  gender: String (Optional, Enum["male", "female"]),
+  phoneNumber: String (Optional, Pattern: /^\+\d{1,3}\s\(\d{3}\)\s\d{3}-\d{4}$/),
+  dateOfBirth: Date (Optional),
+  university: String (Required if signupStep is "completed"),
+  college: String (Required if signupStep is "completed"),
+  email: String (Required, Unique, 320 characters),
+  password: String (Required, Min: 8, Pattern: one uppercase, lowercase, number, special char, Encrypted, Select: false),
+  signupStep: String (Required, Enum["initial", "verified", "completed"], Default: "initial"),
+  role: String (Required if signupStep is "completed", Enum["Student", "Faculty", "Admin"]),
+  profilePicture: String (Default: "https://via.placeholder.com/150"),
   profile: {
     bio: String,
     interests: [String]
@@ -28,9 +36,11 @@ User {
     userId: ObjectId (References User._id),
     messageId: ObjectId (References Message._id)
   }] (Optional, items have no _id),
-  level: Number (Required, Min: 1, Max: 5),
-  gpa: Float (Optional),
-  universityEmail: String (Optional, 320 characters),
+  level: Number (Min: 1, Max: 5, Required for Students),
+  gpa: Number (Optional, Min: 0, Max: 4, Only for Students),
+  universityEmail: String (Optional, 320 characters, Unique with sparse index),
+  universityEmailVerified: Boolean (Default: false),
+  tempEmail: String (Optional, Select: false),
   mfa_settings: {
     enabled: Boolean (Default: false),
     methods: [String]
@@ -41,7 +51,7 @@ User {
       attended: Number
     }
   } (Optional),
-  confirmEmail: Boolean (Default: false),
+  emailVerified: Boolean (Default: false),
   otp: {
     code: String,
     expiresAt: Date
@@ -51,6 +61,8 @@ User {
     role: String
   }] (Optional, items have no _id),
   status: String (Required, Enum["online", "offline", "idle", "dnd"], Default: "offline"),
+  isGraduated: Boolean (Default: false),
+  graduationYear: Number (Optional, Min: 1900, Max: current year),
   createdAt: Date (Auto-generated),
   updatedAt: Date (Auto-updated)
 }
