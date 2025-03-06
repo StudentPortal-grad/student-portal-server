@@ -1,5 +1,5 @@
 import { CommunityRepository } from '../repositories/community.repo';
-import { ICommunity } from '../models/Community';
+import { ICommunity } from '../models/types';
 
 export class CommunityService {
   private communityRepository: CommunityRepository;
