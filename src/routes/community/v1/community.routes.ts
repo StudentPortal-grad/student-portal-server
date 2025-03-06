@@ -4,7 +4,7 @@ import { validate } from '@middleware/validate';
 import {
   createCommunitySchema,
   joinCommunitySchema,
-} from '@validators/communityValidator';
+} from '@validations/communityValidation';
 import {
   createCommunity,
   getAllCommunities,

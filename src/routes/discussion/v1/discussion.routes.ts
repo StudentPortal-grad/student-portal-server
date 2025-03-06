@@ -1,7 +1,7 @@
 import express from 'express';
 import asyncHandler from '@utils/asyncHandler';
 import { validate } from '@middleware/validate';
-import { createDiscussionSchema } from '@validators/discussionValidator';
+import { createDiscussionSchema } from '@validations/discussionValidation';
 import {
   createDiscussion,
   getDiscussionById,
