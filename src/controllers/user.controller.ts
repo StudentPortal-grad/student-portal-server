@@ -59,7 +59,7 @@ export class UserController {
   static updateMyEmail = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
       const { newEmail } = req.body;
-      const result = await UserService.initiateEmailChange(req.user!._id, newEmail);
+      const result = await UserService.initiateEmailChange(req.user!, newEmail);
       res.success(result, 'Email change initiated successfully');
     }
   );
@@ -71,7 +71,10 @@ export class UserController {
   static updateUniversityEmail = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
       const { universityEmail } = req.body;
-      const result = await UserService.updateUniversityEmail(req.user!, universityEmail);
+      const result = await UserService.updateUniversityEmail(
+        req.user!,
+        universityEmail
+      );
       res.success(result, 'University email updated successfully');
     }
   );

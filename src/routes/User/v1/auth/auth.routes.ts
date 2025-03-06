@@ -80,10 +80,5 @@ router.post(
 
 // User management
 router.post('/logout', AuthController.logout);
-router.post(
-  '/change-password',
-  validate(authValidation.changePassword),
-  AuthController.changePassword
-);
 
 export default router;

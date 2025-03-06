@@ -227,46 +227,6 @@ Updates the current user's profile.
 }
 ```
 
-##### PATCH /users/me/status
-Updates a user's status.
-
-**Request Body:**
-```json
-{
-  "status": "idle"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "message": "Status updated",
-  "status": "idle"
-}
-```
-
-##### PUT /users/me/mfa
-Updates a user's MFA settings.
-
-**Request Body:**
-```json
-{
-  "enabled": true,
-  "methods": ["app", "sms"]
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "message": "MFA settings updated",
-  "mfa_settings": {
-    "enabled": true,
-    "methods": ["app", "sms"]
-  }
-}
-```
-
 ##### GET /users/:userId
 Retrieves another user's public profile.
 
