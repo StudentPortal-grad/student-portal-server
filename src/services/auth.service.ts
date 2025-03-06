@@ -293,6 +293,8 @@ export class AuthService {
       signupStep: 'initial',
     });
 
+    console.log('Created user', user);
+
     // Generate and send verification OTP
     const { otp, hashedOtp } = generateHashedOTP();
     user.otp = {
@@ -339,6 +341,7 @@ export class AuthService {
     }
 
     // Update all provided fields
+    delete userData.password;
     Object.assign(user, userData);
 
     user.signupStep = 'completed';

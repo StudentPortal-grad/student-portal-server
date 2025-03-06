@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../../services/auth.service';
 import asyncHandler from '../../utils/asyncHandler';
 
+/* global process */
+
 export class AuthController {
   /**
    * @route   POST /v1/auth/signup
@@ -22,7 +24,11 @@ export class AuthController {
     async (req: Request, res: Response, _next: NextFunction) => {
       const { email, password } = req.body;
       const { user, token } = await AuthService.login(email, password);
-      res.success({ user, token }, 'Login successful');
+
+      res.success(
+        { user: { ...user.toObject(), password: undefined }, token },
+        'Login successful'
+      );
     }
   );
 
@@ -141,17 +147,32 @@ export class AuthController {
    */
   static completeSignup = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      // Get the uploaded file URL from multer-cloudinary
-      const profilePicture = req.file?.path;
+      try {
+        // Get the uploaded file URL from multer-cloudinary
+        const profilePicture = req.file?.path;
 
-      // Combine file data with other user data
-      const userData = {
-        ...req.body,
-        ...(profilePicture && { profilePicture }),
-      };
+        // Log upload details for debugging
+        console.log('File upload details:', {
+          file: req.file,
+          cloudinaryConfig: {
+            cloudName: process.env.CLOUDINARY_CLOUD_NAME ? 'Set' : 'Not set',
+            apiKey: process.env.CLOUDINARY_API_KEY ? 'Set' : 'Not set',
+            apiSecret: process.env.CLOUDINARY_API_SECRET ? 'Set' : 'Not set',
+          },
+        });
 
-      const result = await AuthService.completeSignup(req.user!, userData);
-      res.success(result, 'Signup completed successfully');
+        // Combine file data with other user data
+        const userData = {
+          ...req.body,
+          ...(profilePicture && { profilePicture }),
+        };
+
+        const result = await AuthService.completeSignup(req.user!, userData);
+        res.success(result, 'Signup completed successfully');
+      } catch (error) {
+        console.error('Complete signup error:', error);
+        throw error;
+      }
     }
   );
 

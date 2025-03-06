@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 
+/* global process */
+
 const connection = async () => {
   try {
     await mongoose.connect(

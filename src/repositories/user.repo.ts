@@ -13,7 +13,7 @@ export class UserRepository {
    */
   static async findByEmail(email: string) {
     return DbOperations.findOne(User, {
-      $or: [{ email }, { universityEmail: email }]
+      $or: [{ email }, { universityEmail: email }],
     });
   }
 
@@ -37,11 +37,7 @@ export class UserRepository {
    * Find user by email with password field
    */
   static async findByEmailWithPassword(email: string) {
-    return DbOperations.findOne(
-      User,
-      { email },
-      { password: 1 }
-    );
+    return DbOperations.findOneWithSelect(User, { email }, '+password');
   }
 
   /**
@@ -52,7 +48,7 @@ export class UserRepository {
       User,
       {
         'otp.code': otpCode,
-        'otp.expiresAt': { $gt: new Date() }
+        'otp.expiresAt': { $gt: new Date() },
       },
       { password: 1 }
     );
@@ -61,8 +57,14 @@ export class UserRepository {
   /**
    * Update user document directly without querying
    */
-  static async updateDocument(user: IUser, updateData: Partial<IUser>, skipValidation: boolean = false) {
-    return DbOperations.updateDocument(user, updateData, { runValidators: !skipValidation });
+  static async updateDocument(
+    user: IUser,
+    updateData: Partial<IUser>,
+    skipValidation: boolean = false
+  ) {
+    return DbOperations.updateDocument(user, updateData, {
+      runValidators: !skipValidation,
+    });
   }
 
   /**
@@ -82,8 +84,15 @@ export class UserRepository {
   /**
    * Update user status directly without validation
    */
-  static async updateStatus(user: IUser, status: 'online' | 'offline' | 'idle' | 'dnd') {
-    return DbOperations.updateDocument(user, { status }, { runValidators: false });
+  static async updateStatus(
+    user: IUser,
+    status: 'online' | 'offline' | 'idle' | 'dnd'
+  ) {
+    return DbOperations.updateDocument(
+      user,
+      { status },
+      { runValidators: false }
+    );
   }
 
   /**
@@ -101,21 +110,24 @@ export class UserRepository {
    * Check if email is already in use by another user
    */
   static async isEmailTaken(email: string, excludeUserId?: Types.ObjectId) {
-    const query = excludeUserId 
+    const query = excludeUserId
       ? { email, _id: { $ne: excludeUserId } }
       : { email };
-    
+
     return DbOperations.findOne(User, query) !== null;
   }
 
   /**
    * Check if university email is already in use by another user
    */
-  static async isUniversityEmailTaken(email: string, excludeUserId?: Types.ObjectId) {
-    const query = excludeUserId 
+  static async isUniversityEmailTaken(
+    email: string,
+    excludeUserId?: Types.ObjectId
+  ) {
+    const query = excludeUserId
       ? { universityEmail: email, _id: { $ne: excludeUserId } }
       : { universityEmail: email };
-    
+
     return DbOperations.findOne(User, query) !== null;
   }
 }

@@ -2,16 +2,45 @@ import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import { AppError, ErrorCodes } from './appError';
-import { Request, Express } from 'express';
+import { Request, Response, NextFunction, Express } from 'express';
+import { config } from 'dotenv';
+
+config();
 
 /* global process */
 
+// Validate Cloudinary credentials
+const validateCloudinaryConfig = () => {
+  const requiredEnvVars = {
+    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+    CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+    CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
+  };
+
+  const missingVars = Object.entries(requiredEnvVars)
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+
+  if (missingVars.length > 0) {
+    throw new AppError(
+      `Missing required environment variables: ${missingVars.join(', ')}`,
+      500,
+      ErrorCodes.CONFIG_ERROR
+    );
+  }
+};
+
 // Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+try {
+  validateCloudinaryConfig();
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+} catch (error) {
+  console.error('Cloudinary configuration error:', error);
+}
 
 // Configure Multer storage with Cloudinary
 const storage = new CloudinaryStorage({
@@ -21,28 +50,57 @@ const storage = new CloudinaryStorage({
     allowed_formats: ['jpg', 'jpeg', 'png'],
     transformation: [
       { width: 500, height: 500, crop: 'limit' },
-      { quality: 'auto' }
+      { quality: 'auto' },
     ],
-  } as any
+  } as any,
 });
 
 // File filter function
-const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) => {
   if (!file.mimetype.startsWith('image/')) {
-    cb(new AppError('Only image files are allowed!', 400, ErrorCodes.INVALID_FILE_TYPE));
+    cb(
+      new AppError(
+        'Only image files are allowed!',
+        400,
+        ErrorCodes.INVALID_FILE_TYPE
+      )
+    );
     return;
   }
   cb(null, true);
 };
 
-// Create multer upload instance for profile pictures
-export const uploadProfilePicture = multer({
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  },
-  fileFilter: fileFilter,
-}).single('profilePicture');
+// Create multer upload instance for profile pictures with error handling
+const createProfilePictureUpload = () => {
+  try {
+    validateCloudinaryConfig();
+    return multer({
+      storage: storage,
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+      },
+      fileFilter: fileFilter,
+    }).single('profilePicture');
+  } catch (error) {
+    console.error('File upload service configuration error:', error);
+    // Return middleware that always errors
+    return (req: Request, _res: Response, next: NextFunction) => {
+      next(
+        new AppError(
+          'File upload service is not configured properly',
+          500,
+          ErrorCodes.CONFIG_ERROR
+        )
+      );
+    };
+  }
+};
+
+export const uploadProfilePicture = createProfilePictureUpload();
 
 export class UploadService {
   /**

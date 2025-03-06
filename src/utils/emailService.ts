@@ -28,7 +28,6 @@ export class EmailService {
     from?: string;
   }): Promise<void> {
     try {
-      console.log(process.env.MAILER_USER, this.transporter);
       const info = await this.transporter.sendMail({
         from: options.from || process.env.MAILER_USER,
         to: options.to,
@@ -37,7 +36,7 @@ export class EmailService {
         text: options.text,
       });
 
-      console.log('Message sent: %s', info);
+      console.log('Message sent: %s', info.envelope);
     } catch (error) {
       throw new AppError(
         'Failed to send email',
@@ -158,7 +157,10 @@ export class EmailService {
   /**
    * Send email change confirmation
    */
-  static async sendEmailChangeConfirmation(oldEmail: string, newEmail: string): Promise<void> {
+  static async sendEmailChangeConfirmation(
+    oldEmail: string,
+    newEmail: string
+  ): Promise<void> {
     const oldEmailHtml = `
       <h1>Email Change Notification</h1>
       <p>Your email has been changed from ${oldEmail} to ${newEmail}.</p>

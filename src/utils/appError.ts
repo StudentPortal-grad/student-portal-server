@@ -63,6 +63,9 @@ export const ErrorCodes = {
   // Email errors
   EMAIL_ERROR: 'EMAIL_ERROR',
   EMAIL_NOT_SENT: 'EMAIL_NOT_SENT',
+
+  // Config errors
+  CONFIG_ERROR: 'CONFIG_ERROR',
 } as const;
 
 export type ErrorCode = keyof typeof ErrorCodes;

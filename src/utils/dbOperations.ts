@@ -157,6 +157,26 @@ export class DbOperations {
   }
 
   /**
+   * Find a single document
+   */
+  static async findOneWithSelect<T>(
+    model: Model<T>,
+    filter: FilterQuery<T>,
+    projection: string = ''
+  ): Promise<T | null> {
+    try {
+      return await model.findOne(filter).select(projection);
+    } catch (error) {
+      throw new AppError(
+        'Database operation failed',
+        500,
+        ErrorCodes.DB_ERROR,
+        error
+      );
+    }
+  }
+
+  /**
    * Find multiple documents
    */
   static async findMany<T>(
@@ -224,7 +244,7 @@ export class DbOperations {
 
     const [results, total] = await Promise.all([
       queryBuilder.skip(skip).limit(limit).exec(),
-      model.countDocuments(query)
+      model.countDocuments(query),
     ]);
 
     return {
@@ -234,7 +254,7 @@ export class DbOperations {
       limit,
       totalPages: Math.ceil(total / limit),
       hasNextPage: page < Math.ceil(total / limit),
-      hasPrevPage: page > 1
+      hasPrevPage: page > 1,
     };
   }
 

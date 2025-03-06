@@ -83,7 +83,7 @@ export const authorizeOwner = (userIdPath: string) => {
       .reduce((obj: any, key) => obj[key], req);
 
     if (
-      req.user.role !== 'Admin' &&
+      req.user.role !== 'admin' &&
       req.user._id.toString() !== resourceUserId?.toString()
     ) {
       return next(
