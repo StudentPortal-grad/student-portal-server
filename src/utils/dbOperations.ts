@@ -7,6 +7,7 @@ import {
   Document,
 } from 'mongoose';
 import { AppError, ErrorCodes } from './appError';
+import { PaginationOptions } from './pagination';
 
 type PopulateField = {
   path: string;
@@ -197,51 +198,44 @@ export class DbOperations {
   /**
    * Find documents with pagination
    */
-  static async paginate<T>(
+  static async paginate<T extends Document>(
     model: Model<T>,
-    filter: FilterQuery<T>,
-    options: {
-      page?: number;
-      limit?: number;
-      sort?: any;
-      projection?: any;
-    } = {}
-  ): Promise<{
-    docs: T[];
-    total: number;
-    page: number;
-    limit: number;
-    pages: number;
-  }> {
-    try {
-      const page = Math.max(1, options.page || 1);
-      const limit = Math.min(100, Math.max(1, options.limit || 10));
-      const skip = (page - 1) * limit;
+    query: Record<string, any>,
+    options: PaginationOptions
+  ) {
+    const page = options.page || 1;
+    const limit = options.limit || 10;
+    const skip = (page - 1) * limit;
 
-      const [docs, total] = await Promise.all([
-        model
-          .find(filter, options.projection)
-          .sort(options.sort)
-          .skip(skip)
-          .limit(limit),
-        model.countDocuments(filter),
-      ]);
+    const queryBuilder = model.find(query);
 
-      return {
-        docs,
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
-      };
-    } catch (error) {
-      throw new AppError(
-        'Database operation failed',
-        500,
-        ErrorCodes.DB_ERROR,
-        error
-      );
+    if (options.populate) {
+      queryBuilder.populate(options.populate);
     }
+
+    if (options.select) {
+      queryBuilder.select(options.select);
+    }
+
+    if (options.sortBy) {
+      const sortOrder = options.sortOrder === 'desc' ? -1 : 1;
+      queryBuilder.sort({ [options.sortBy]: sortOrder });
+    }
+
+    const [results, total] = await Promise.all([
+      queryBuilder.skip(skip).limit(limit).exec(),
+      model.countDocuments(query)
+    ]);
+
+    return {
+      docs: results,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      hasNextPage: page < Math.ceil(total / limit),
+      hasPrevPage: page > 1
+    };
   }
 
   /**

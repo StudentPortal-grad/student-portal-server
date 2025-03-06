@@ -3,6 +3,16 @@ export interface PaginationOptions {
   limit?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  populate?: {
+    path: string;
+    select?: string;
+    populate?: any;
+  } | Array<{
+    path: string;
+    select?: string;
+    populate?: any;
+  }>;
+  select?: string | Record<string, number | boolean | object>;
 }
 
 export const getPaginationOptions = (query: any): PaginationOptions => {

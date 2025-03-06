@@ -1,32 +1,65 @@
-import { ICommunity } from '../models/Community';
+import { Types } from 'mongoose';
+import { ICommunity } from '../models/types';
 import Community from '../models/Community';
+import { PaginationOptions } from '../utils/pagination';
+import { DbOperations } from '../utils/dbOperations';
 
 export class CommunityRepository {
   async create(community: Partial<ICommunity>): Promise<ICommunity> {
-    return Community.create(community);
+    return DbOperations.create(Community, community);
   }
 
-  async findAll(): Promise<ICommunity[]> {
-    return Community.find().exec();
+  async findAllPaginated(options: PaginationOptions) {
+    return DbOperations.paginate(Community, {}, options);
   }
 
   async findById(id: string): Promise<ICommunity | null> {
-    return Community.findById(id).exec();
+    return DbOperations.findOne(Community, { _id: id });
   }
 
   async update(id: string, community: Partial<ICommunity>): Promise<ICommunity | null> {
-    return Community.findByIdAndUpdate(id, community, { new: true }).exec();
+    return DbOperations.updateOne(Community, { _id: id }, community);
   }
 
   async delete(id: string): Promise<void> {
-    await Community.findByIdAndDelete(id).exec();
+    await DbOperations.deleteOne(Community, { _id: id });
   }
 
   async joinCommunity(communityId: string, userId: string): Promise<ICommunity | null> {
-    return Community.findByIdAndUpdate(
-      communityId,
-      { $addToSet: { members: { userId } } },
-      { new: true }
-    ).exec();
+    return DbOperations.updateOne(
+      Community,
+      { _id: communityId },
+      {
+        $addToSet: {
+          members: {
+            userId: new Types.ObjectId(userId),
+            roleIds: [],
+            joinedAt: new Date()
+          }
+        }
+      }
+    );
+  }
+
+  async findMembersPaginated(communityId: string, options: PaginationOptions) {
+    return DbOperations.paginate(
+      Community,
+      { _id: communityId },
+      {
+        ...options,
+        populate: {
+          path: 'members.userId',
+          select: 'name email profilePicture'
+        }
+      }
+    );
+  }
+
+  async findCommunityRoles(communityId: string) {
+    const community = await Community.findById(communityId)
+      .populate('roles')
+      .select('roles')
+      .lean();
+    return community?.roles || [];
   }
 }

@@ -83,3 +83,29 @@ export const joinCommunitySchema = Joi.object({
     'any.required': 'communityId is required',
   }),
 });
+
+export const addMemberSchema = Joi.object({
+  userId: Joi.string().hex().length(24).required().messages({
+    'string.hex': 'userId must be a valid ObjectId',
+    'string.length': 'userId must be 24 characters long',
+    'any.required': 'userId is required',
+  }),
+  roleIds: Joi.array().items(
+    Joi.string().hex().length(24)
+  ).default([]).messages({
+    'array.base': 'roleIds must be an array',
+    'string.hex': 'Each roleId must be a valid ObjectId',
+    'string.length': 'Each roleId must be 24 characters long',
+  }),
+});
+
+export const resourceQuerySchema = Joi.object({
+  category: Joi.string(),
+  tags: Joi.string().custom((value, helpers) => {
+    return value.split(',').map((tag: string) => tag.trim());
+  }),
+  uploader: Joi.string().hex().length(24),
+  query: Joi.string().min(2),
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20)
+});

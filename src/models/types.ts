@@ -129,22 +129,49 @@ export interface INotification extends Document {
   };
 }
 
+export interface IMember {
+  userId: Types.ObjectId;
+  roleIds: Types.ObjectId[];
+  joinedAt: Date;
+}
+
 export interface ICommunity extends Document {
   owner: Types.ObjectId;
   name: string;
+  handle: string;
   description?: string;
   type: 'Official' | 'Community';
   icon?: string;
-  members?: {
-    userId: Types.ObjectId;
-    roleIds: Types.ObjectId[];
-    joinedAt: Date;
-  }[];
-  roles?: Types.ObjectId[];
-  discussions?: Types.ObjectId[];
-  inviteLink?: string;
+  banner?: string;
+  members: IMember[];
+  roles: Types.ObjectId[];
+  discussions: Types.ObjectId[];
+  resources: Types.ObjectId[];
+  invite: {
+    code?: string;
+    expiresAt?: Date;
+  };
+  stats: {
+    membersCount: number;
+    discussionsCount: number;
+    resourcesCount: number;
+  };
+  settings: {
+    isPrivate: boolean;
+    requiresApproval: boolean;
+    allowDiscussions: boolean;
+    allowResourceSharing: boolean;
+  };
   createdAt: Date;
   updatedAt: Date;
+
+  // Methods
+  isMember(userId: Types.ObjectId): boolean;
+  hasRole(userId: Types.ObjectId, roleId: Types.ObjectId): boolean;
+  addMember(userId: Types.ObjectId, roleIds?: Types.ObjectId[]): Promise<void>;
+  removeMember(userId: Types.ObjectId): Promise<void>;
+  generateInvite(): Promise<string>;
+  getInviteLink(): string | null;
 }
 
 export interface IRole extends Document {
@@ -155,3 +182,26 @@ export interface IRole extends Document {
   mentionable: boolean;
   createdAt: Date;
 }
+
+export interface IResource {
+  _id: Types.ObjectId;
+  title: string;
+  description?: string;
+  fileUrl: string;
+  fileSize: number;
+  tags: string[];
+  visibility: 'public' | 'community' | 'private';
+  category: string;
+  uploader: Types.ObjectId;
+  community: Types.ObjectId;
+  interactionStats: {
+    downloads: number;
+    rating: number;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Methods
+  isAccessibleBy(userId: Types.ObjectId, userCommunities: Types.ObjectId[]): boolean;
+  incrementDownloads(): Promise<void>;
+  }
