@@ -17,7 +17,7 @@ router.patch(
 router.delete('/', UserController.deleteMe);
 
 // Password management
-router.post(
+router.put(
   '/password',
   validate(authValidation.changePassword),
   AuthController.changePassword

@@ -1,8 +1,139 @@
 import { Request, Response, NextFunction } from 'express';
 import asyncHandler from '../utils/asyncHandler';
 import { UserService } from '../services/user.service';
-
+import { Types } from 'mongoose';
 export class UserController {
+  /**
+   * @route   GET /v1/users
+   * @desc    Get users with filtering, sorting, and pagination
+   * @access  Admin, Faculty
+   */
+  static getUsers = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const { data, pagination } = await UserService.getUsers(req.query);
+      res.paginated(data, pagination, 'Users retrieved successfully');
+    }
+  );
+
+  /**
+   * @route   GET /v1/users/:userId
+   * @desc    Get user by ID
+   * @access  Admin, Faculty
+   */
+  static getUserById = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const result = await UserService.getUserById(
+        new Types.ObjectId(req.params.userId)
+      );
+      res.success(result, 'User retrieved successfully');
+    }
+  );
+
+  /**
+   * @route   POST /v1/users
+   * @desc    Create new user
+   * @access  Admin
+   */
+  static createUser = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const result = await UserService.createUser(req.body);
+      res.success(result, 'User created successfully', 201);
+    }
+  );
+
+  /**
+   * @route   PATCH /v1/users/:userId
+   * @desc    Update user
+   * @access  Admin
+   */
+  static updateUser = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const result = await UserService.updateUser(
+        new Types.ObjectId(req.params.userId),
+        req.body
+      );
+      res.success(result, 'User updated successfully');
+    }
+  );
+
+  /**
+   * @route   DELETE /v1/users/:userId
+   * @desc    Delete user
+   * @access  Admin
+   */
+  static deleteUser = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      await UserService.deleteUser(new Types.ObjectId(req.params.userId));
+      res.success(null, 'User deleted successfully');
+    }
+  );
+
+  /**
+   * @route   POST /v1/users/bulk/create
+   * @desc    Bulk create users
+   * @access  Admin
+   */
+  static bulkCreateUsers = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const result = await UserService.bulkCreateUsers(req.body.users);
+      res.success(result, 'Users created successfully', 201);
+    }
+  );
+
+  /**
+   * @route   PATCH /v1/users/bulk/update
+   * @desc    Bulk update users
+   * @access  Admin
+   */
+  static bulkUpdateUsers = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const result = await UserService.bulkUpdateUsers(req.body.updates);
+      res.success(result, 'Users updated successfully');
+    }
+  );
+
+  /**
+   * @route   DELETE /v1/users/bulk/delete
+   * @desc    Bulk delete users
+   * @access  Admin
+   */
+  static bulkDeleteUsers = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      await UserService.bulkDeleteUsers(req.body.userIds);
+      res.success(null, 'Users deleted successfully');
+    }
+  );
+
+  /**
+   * @route   PATCH /v1/users/:userId/status
+   * @desc    Update user status
+   * @access  Admin
+   */
+  static updateUserStatus = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const result = await UserService.updateUserStatus(
+        new Types.ObjectId(req.params.userId),
+        req.body.status
+      );
+      res.success(result, 'User status updated successfully');
+    }
+  );
+
+  /**
+   * @route   PATCH /v1/users/:userId/role
+   * @desc    Update user role
+   * @access  Admin
+   */
+  static updateUserRole = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const result = await UserService.updateUserRole(
+        new Types.ObjectId(req.params.userId),
+        req.body.role
+      );
+      res.success(result, 'User role updated successfully');
+    }
+  );
+
   /**
    * @route   GET /v1/users/me
    * @desc    Get current user profile

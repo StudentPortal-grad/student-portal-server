@@ -7,7 +7,7 @@ import {
   Document,
 } from 'mongoose';
 import { AppError, ErrorCodes } from './appError';
-import { PaginationOptions } from './pagination';
+import { PaginationOptions, getPaginationMetadata } from './pagination';
 
 type PopulateField = {
   path: string;
@@ -520,5 +520,40 @@ export class DbOperations {
         error
       );
     }
+  }
+
+  static async findWithPagination<T>(
+    model: Model<T>,
+    query: FilterQuery<T>,
+    options: PaginationOptions
+  ) {
+    const page = options.page || 1;
+    const limit = options.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = model.find(query);
+
+    if (options.sortBy) {
+      const sortOrder = options.sortOrder === 'desc' ? -1 : 1;
+      queryBuilder.sort({ [options.sortBy]: sortOrder });
+    }
+
+    if (options.select) {
+      queryBuilder.select(options.select);
+    }
+
+    if (options.populate) {
+      queryBuilder.populate(options.populate);
+    }
+
+    const [data, total] = await Promise.all([
+      queryBuilder.skip(skip).limit(limit).exec(),
+      model.countDocuments(query),
+    ]);
+
+    return {
+      data,
+      pagination: getPaginationMetadata(total, options),
+    };
   }
 }

@@ -111,13 +111,12 @@ export class AuthService {
     const { otp, hashedOtp } = generateHashedOTP();
     user.otp = {
       code: hashedOtp,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     };
     await user.save();
 
     await EmailService.sendPasswordResetOTP(email, otp);
-
-    return { message: 'Reset code sent to email' };
+    return {};
   }
 
   /**
@@ -151,7 +150,7 @@ export class AuthService {
     };
     await user.save();
 
-    return { resetToken, message: 'OTP verified successfully' };
+    return { resetToken };
   }
 
   /**
@@ -163,7 +162,10 @@ export class AuthService {
       .update(resetToken)
       .digest('hex');
 
-    const user = await UserRepository.findByOTPCode(hashedToken);
+    const user = await User.findOne({
+      'otp.code': hashedToken,
+      'otp.expiresAt': { $gt: new Date() },
+    }).select('+password');
 
     if (!user) {
       throw new AppError(
@@ -176,8 +178,7 @@ export class AuthService {
     user.password = newPassword;
     user.otp = undefined;
     await user.save();
-
-    return { message: 'Password reset successful' };
+    return {};
   }
 
   /**
@@ -204,8 +205,7 @@ export class AuthService {
 
     user.password = newPassword;
     await user.save();
-
-    return { message: 'Password changed successfully' };
+    return {};
   }
 
   /**
@@ -241,8 +241,8 @@ export class AuthService {
    * Logout user
    */
   static async logout(user: IUser) {
-    await user.updateStatus('offline');
-    return { message: 'Logged out successfully' };
+      await user.updateStatus('offline');
+    return {};
   }
 
   /**
@@ -270,8 +270,7 @@ export class AuthService {
     await user.save();
 
     await EmailService.sendVerificationOTP(email, otp);
-
-    return { message: 'Verification code resent successfully' };
+    return {};
   }
 
   /**
@@ -370,9 +369,8 @@ export class AuthService {
       throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
     }
 
-    // Check if new email is already in use
-    const existingUser = await UserRepository.findByEmail(newEmail);
-    if (existingUser) {
+    const isEmailTaken = await UserRepository.isEmailTaken(newEmail, user._id);
+    if (isEmailTaken) {
       throw new AppError(
         'Email already registered',
         400,
@@ -380,7 +378,6 @@ export class AuthService {
       );
     }
 
-    // Store new email temporarily and generate OTP
     const { otp, hashedOtp } = generateHashedOTP();
     user.otp = {
       code: hashedOtp,
@@ -389,10 +386,8 @@ export class AuthService {
     user.set('tempEmail', newEmail);
     await user.save();
 
-    // Send verification email to new address
     await EmailService.sendVerificationOTP(newEmail, otp);
-
-    return { message: 'Verification code sent to new email' };
+    return {};
   }
 
   /**
@@ -432,7 +427,7 @@ export class AuthService {
     // Send confirmation emails
     await EmailService.sendEmailChangeConfirmation(oldEmail, user.email);
 
-    return { message: 'Email changed successfully' };
+    return {};
   }
 
   /**

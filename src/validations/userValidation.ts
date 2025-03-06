@@ -61,4 +61,67 @@ export const userValidation = {
       'any.required': 'University email is required',
     }),
   }),
+
+  // New schemas for user management
+  getUsersQuery: Joi.object({
+    page: Joi.number().min(1),
+    limit: Joi.number().min(1).max(100),
+    sort: Joi.string(),
+    role: Joi.string().valid('student', 'faculty', 'admin'),
+    status: Joi.string().valid('online', 'offline', 'idle', 'dnd'),
+    search: Joi.string(),
+  }),
+
+  getUserById: Joi.object({
+    userId: Joi.string().required(),
+  }),
+
+  createUser: Joi.object({
+    name: Joi.string().required(),
+    email: Joi.string().email().required(),
+    password: Joi.string().min(8).required(),
+    role: Joi.string().valid('student', 'faculty', 'admin').required(),
+  }),
+
+  updateUser: Joi.object({
+    name: Joi.string(),
+    role: Joi.string().valid('student', 'faculty', 'admin'),
+    status: Joi.string().valid('online', 'offline', 'idle', 'dnd'),
+  }).min(1),
+
+  deleteUser: Joi.object({
+    userId: Joi.string().required(),
+  }),
+
+  bulkCreateUsers: Joi.object({
+    users: Joi.array().items(Joi.object({
+      name: Joi.string().required(),
+      email: Joi.string().email().required(),
+      password: Joi.string().min(8).required(),
+      role: Joi.string().valid('student', 'faculty', 'admin').required(),
+    })).min(1).required(),
+  }),
+
+  bulkUpdateUsers: Joi.object({
+    updates: Joi.array().items(Joi.object({
+      userId: Joi.string().required(),
+      data: Joi.object({
+        name: Joi.string(),
+        role: Joi.string().valid('student', 'faculty', 'admin'),
+        status: Joi.string().valid('online', 'offline', 'idle', 'dnd'),
+      }).min(1).required(),
+    })).min(1).required(),
+  }),
+
+  bulkDeleteUsers: Joi.object({
+    userIds: Joi.array().items(Joi.string()).min(1).required(),
+  }),
+
+  updateUserStatus: Joi.object({
+    status: Joi.string().valid('online', 'offline', 'idle', 'dnd').required(),
+  }),
+
+  updateUserRole: Joi.object({
+    role: Joi.string().valid('student', 'faculty', 'admin').required(),
+  }),
 };

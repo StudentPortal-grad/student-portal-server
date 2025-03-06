@@ -6,8 +6,176 @@ import { EmailService } from '../utils/emailService';
 import { generateHashedOTP } from '@utils/helpers';
 import { DbOperations } from '../utils/dbOperations';
 import User from '../models/User';
+import { getPaginationOptions } from '@utils/pagination';
 
 export class UserService {
+  /**
+   * Get users with filtering, sorting, and pagination
+   */
+  static async getUsers(query: any) {
+    const {
+      role,
+      search,
+      status,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+      ...filters
+    } = query;
+
+    // Build query
+    const queryObj = { ...filters };
+    if (role) queryObj.role = role;
+    if (status) queryObj.status = status;
+    if (search) {
+      queryObj.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { username: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const paginationOptions = getPaginationOptions({
+      ...query,
+      sortBy,
+      sortOrder,
+    });
+
+    // Add field selection
+    paginationOptions.select = '-password';
+
+    return await DbOperations.findWithPagination(
+      User,
+      queryObj,
+      paginationOptions
+    );
+  }
+
+  /**
+   * Get user by ID
+   */
+  static async getUserById(userId: Types.ObjectId) {
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+    return { user };
+  }
+
+  /**
+   * Create new user
+   */
+  static async createUser(userData: Partial<IUser>) {
+    const existingUser = await UserRepository.findByEmail(userData.email!);
+    if (existingUser) {
+      throw new AppError(
+        'Email already registered',
+        400,
+        ErrorCodes.ALREADY_EXISTS
+      );
+    }
+
+    const user = await DbOperations.create(User, userData);
+    return { user };
+  }
+
+  /**
+   * Update user
+   */
+  static async updateUser(userId: Types.ObjectId, updateData: Partial<IUser>) {
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    // Remove sensitive fields
+    const sanitizedData = { ...updateData };
+    delete sanitizedData.password;
+    delete sanitizedData.emailVerified;
+    delete sanitizedData.otp;
+
+    const updatedUser = await DbOperations.updateDocument(user, sanitizedData);
+    return { user: updatedUser };
+  }
+
+  /**
+   * Delete user
+   */
+  static async deleteUser(userId: Types.ObjectId) {
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    await DbOperations.deleteDocument(user);
+  }
+
+  /**
+   * Bulk create users
+   */
+  static async bulkCreateUsers(users: Partial<IUser>[]) {
+    const createdUsers = await DbOperations.create(User, users);
+    return { users: createdUsers };
+  }
+
+  /**
+   * Bulk update users
+   */
+  static async bulkUpdateUsers(
+    updates: { userId: Types.ObjectId; data: Partial<IUser> }[]
+  ) {
+    const operations = updates.map((update) => ({
+      updateOne: {
+        filter: { _id: update.userId },
+        update: { $set: update.data },
+      },
+    }));
+
+    await User.bulkWrite(operations);
+    return { count: updates.length };
+  }
+
+  /**
+   * Bulk delete users
+   */
+  static async bulkDeleteUsers(userIds: string[]) {
+    const result = await User.deleteMany({ _id: { $in: userIds } });
+    return { count: result.deletedCount };
+  }
+
+  /**
+   * Update user status
+   */
+  static async updateUserStatus(
+    userId: Types.ObjectId,
+    status: 'online' | 'offline' | 'idle' | 'dnd'
+  ) {
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    user.status = status;
+    await DbOperations.saveDocument(user);
+    return { user };
+  }
+
+  /**
+   * Update user role
+   */
+  static async updateUserRole(
+    userId: Types.ObjectId,
+    role: 'student' | 'faculty' | 'admin'
+  ) {
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    user.role = role;
+    await DbOperations.saveDocument(user);
+    return { user };
+  }
+
   /**
    * Update user profile
    */
@@ -125,6 +293,6 @@ export class UserService {
 
   static async deleteProfile(user: IUser) {
     await DbOperations.deleteDocument(user);
-    return { message: 'User deleted successfully' };
+    return {};
   }
 }

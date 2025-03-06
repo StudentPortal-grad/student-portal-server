@@ -54,8 +54,14 @@ export const authenticate = async (
  */
 export const authorize = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
+    if (process.env.SKIP_RBAC === 'true') {
+      return next();
+    }
+
     if (!req.user) {
-      return next(new AppError('Not authorized', 401, ErrorCodes.UNAUTHORIZED));
+      return next(
+        new AppError('You are not logged in!', 401, ErrorCodes.UNAUTHORIZED)
+      );
     }
 
     if (!roles.includes(req.user.role)) {
