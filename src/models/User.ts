@@ -34,9 +34,10 @@ const UserSchema = new Schema<IUser>(
       required: false,
       validate: {
         validator: function (v: string) {
-          return /^\+\d{1,3}\s\(\d{3}\)\s\d{3}-\d{4}$/.test(v);
+          return /^\+\d{1,4}[\s-]?(\d[\s-]?){6,14}\d$/.test(v);
         },
-        message: (props) => `${props.value} is not a valid phone number!`,
+        message: (props) =>
+          `${props.value} is not a valid international phone number!`,
       },
     },
     dateOfBirth: {
@@ -78,7 +79,7 @@ const UserSchema = new Schema<IUser>(
       required: function (this: IUser) {
         return this.signupStep === 'completed';
       },
-      enum: ['Student', 'Faculty', 'Admin'],
+      enum: ['student', 'faculty', 'admin'],
     },
     profilePicture: {
       type: String,

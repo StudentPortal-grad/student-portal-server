@@ -11,7 +11,7 @@ export interface IUser extends Document {
   college: string;
   email: string;
   password: string;
-  role: 'Student' | 'Faculty' | 'Admin';
+  role: 'student' | 'faculty' | 'admin';
   signupStep: 'initial' | 'verified' | 'password_set' | 'completed';
   profilePicture: string;
   profile?: {

@@ -20,14 +20,14 @@ export const authValidation = {
       'any.required': 'Password is required',
     }),
     role: Joi.string()
-      .valid('Student', 'Faculty', 'Admin')
+      .valid('student', 'faculty', 'admin')
       .optional()
       .messages({
         'any.only': 'Invalid role',
         'any.required': 'Role is required',
       }),
     level: Joi.when('role', {
-      is: 'Student',
+      is: 'student',
       then: Joi.number().min(1).max(5).messages({
         'number.min': 'Student level must be between 1 and 5',
         'number.max': 'Student level must be between 1 and 5',
@@ -149,10 +149,10 @@ export const authValidation = {
     }),
     phoneNumber: Joi.string()
       .required()
-      .pattern(/^\+\d{1,3}\s\(\d{3}\)\s\d{3}-\d{4}$/)
+      .pattern(/^\+\d{1,4}[\s-]?(\d[\s-]?){6,14}\d$/)
       .messages({
         'string.pattern.base':
-          'Phone number must be in format: +1 (555) 000-0000',
+          'Please enter a valid international phone number starting with + and country code (e.g., +20 1234567890)',
         'any.required': 'Phone number is required',
       }),
     dateOfBirth: Joi.date().required().max('now').messages({
@@ -175,14 +175,14 @@ export const authValidation = {
       }),
     }),
     role: Joi.string()
-      .valid('Student', 'Faculty', 'Admin')
+      .valid('student', 'faculty', 'admin')
       .required()
       .messages({
         'any.only': 'Invalid role',
         'any.required': 'Role is required',
       }),
     level: Joi.when('role', {
-      is: 'Student',
+      is: 'student',
       then: Joi.number().min(1).max(5).required().messages({
         'number.min': 'Student level must be between 1 and 5',
         'number.max': 'Student level must be between 1 and 5',
@@ -209,7 +209,7 @@ export const authValidation = {
       })
     ),
     gpa: Joi.when('role', {
-      is: 'Student',
+      is: 'student',
       then: Joi.number().min(0).max(4).messages({
         'number.min': 'GPA must be between 0 and 4',
         'number.max': 'GPA must be between 0 and 4',

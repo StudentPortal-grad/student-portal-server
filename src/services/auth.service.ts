@@ -16,7 +16,7 @@ export class AuthService {
     name: string;
     email: string;
     password: string;
-    role: 'Student' | 'Faculty' | 'Admin';
+    role: 'student' | 'faculty' | 'admin';
     level?: number;
   }) {
     const existingUser = await UserRepository.findByEmail(userData.email);
@@ -32,7 +32,7 @@ export class AuthService {
     // Set level only for students, remove for other roles
     const userDataToSave = {
       ...userData,
-      level: userData.role === 'Student' ? userData.level || 1 : undefined,
+      level: userData.role === 'student' ? userData.level || 1 : undefined,
     };
 
     const user = await DbOperations.create(User, userDataToSave);
@@ -323,7 +323,7 @@ export class AuthService {
 
     // Handle role-specific validations
     if (userData.role) {
-      if (userData.role === 'Student') {
+      if (userData.role === 'student') {
         if (!userData.level) {
           throw new AppError(
             'Level is required for students',
