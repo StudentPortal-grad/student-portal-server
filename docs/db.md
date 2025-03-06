@@ -75,17 +75,22 @@ Community {
   _id: ObjectId,
   owner: ObjectId (References User._id, Required),
   name: String (Required, Unique, 255 characters),
+  handle: String (Required, Unique, 100 characters), 
   description: String (Optional, 1000 characters),
   type: String (Required, Enum["Official", "Community"], Default: "Community"),
   icon: String (Optional, 2000 characters),
+  banner: String (Optional, 2000 characters),
   members: [{
-    userId: ObjectId (References User._id),
+    userId: ObjectId (References User._id), // The name will populated dynamically from User collection
     roleIds: [ObjectId] (References Role._id),
     joinedAt: Date (Auto-generated)
   }] (Optional, items have no _id),
   roles: [ObjectId] (References Role._id, Optional),
   discussions: [ObjectId] (References Discussion._id, Optional),
+  resources: [ObjectId] (References Resource._id, Optional), 
   inviteLink: String (Optional, Unique per community, 500 characters),
+  membersCount: Number (Default: 0), 
+  postsCount: Number (Default: 0), 
   createdAt: Date (Auto-generated),
   updatedAt: Date (Auto-updated)
 }
@@ -116,7 +121,8 @@ Discussion {
   creator: ObjectId (References User._id, Required),
   attachments: [{
     type: String (Enum["document", "file", "poll", etc.]),
-    resource: String (URL)
+    resource: String (URL),
+    fileSize: Number (Optional, in bytes)
   }] (Optional, items have no _id),
   replies: [{
     id: ObjectId,
@@ -125,8 +131,15 @@ Discussion {
     createdAt: Date (Auto-generated),
     attachments: [{
       type: String,
-      resource: String
-    }] (Optional)
+      resource: String,
+      fileSize: Number (Optional, in bytes)
+    }] (Optional),
+    votes: [{
+      userId: ObjectId (References User._id),
+      voteType: String (Enum["upvote", "downvote"]),
+      createdAt: Date (Auto-generated)
+    }] (Optional, items have no _id),
+    votesCount: Number (Default: 0) 
   }] (Optional, items have no _id),
   votes: [{
     userId: ObjectId (References User._id),
@@ -134,6 +147,10 @@ Discussion {
     createdAt: Date (Auto-generated)
   }] (Optional, items have no _id),
   status: String (Enum["open", "closed", "archived"], Default: "open"),
+  tags: [String] (Optional), 
+  pinned: Boolean (Default: false), 
+  votesCount: Number (Default: 0),
+  repliesCount: Number (Default: 0),
   createdAt: Date (Auto-generated),
   updatedAt: Date (Auto-updated)
 }
@@ -181,6 +198,7 @@ Resource {
   title: String (Required, 255 characters),
   description: String (Optional, 1000 characters),
   fileUrl: String (Required, 2000 characters),
+  fileSize: Number (Required, in bytes), // We will format it in backend
   tags: [String] (Optional),
   visibility: String (Enum["public", "private", "community"], Default: "public"),
   communityId: ObjectId (References Community._id, Optional, Required if visibility="community"),

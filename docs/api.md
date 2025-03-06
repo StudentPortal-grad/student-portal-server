@@ -521,19 +521,25 @@ Retrieves a list of communities.
       "description": "A community for CS students",
       "type": "Community",
       "icon": "https://storage.example.com/icons/cs.png",
-      "memberCount": 156
+      "memberCount": 156,
+      "createdAt": "2023-05-01T10:00:00Z",
     }
   ],
   "pagination": {
     "total": 25,
     "page": 1,
     "limit": 20
+  },
+  "counts": {
+    "totalCommunities": 100,
+    "officialCommunities": 30, 
+    "userCommunities": 70 // Number of user-created communities
   }
 }
 ```
 
 ##### POST /communities
-Creates a new community.
+Creates a new community and assigns admins.
 
 **Request Body:**
 ```json
@@ -541,7 +547,8 @@ Creates a new community.
   "name": "AI Research Group",
   "description": "A community for AI researchers and enthusiasts",
   "type": "Community",
-  "icon": "https://storage.example.com/icons/ai.png"
+  "icon": "https://storage.example.com/icons/ai.png",
+  "admins": ["60a3f2d94e6c2a1234567891"] // List of user IDs to be assigned as admins
 }
 ```
 
@@ -554,13 +561,6 @@ Creates a new community.
   "type": "Community",
   "icon": "https://storage.example.com/icons/ai.png",
   "owner": "60a3f2d94e6c2a1234567890",
-  "members": [
-    {
-      "userId": "60a3f2d94e6c2a1234567890",
-      "roleIds": [],
-      "joinedAt": "2023-05-22T10:00:00Z"
-    }
-  ],
   "inviteLink": "https://studentportal.com/join/ai-research-xyz123",
   "createdAt": "2023-05-22T10:00:00Z"
 }
@@ -574,29 +574,36 @@ Retrieves a specific community.
 {
   "_id": "60d6e4d94e6c2a1234567890",
   "name": "Computer Science Students",
+  "handle": "cs_students",
   "description": "A community for CS students",
   "type": "Community",
   "icon": "https://storage.example.com/icons/cs.png",
+  "banner": "https://cdn.example.com/banners/flutter.jpg",
+  "inviteLink": "https://example.com/invite/flutter-devs",
   "owner": {
-    "_id": "60a3f2d94e6c2a1234567892",
-    "name": "Community Creator"
+    "userId": "60a3f2d94e6c2a1234567890",
+    "name": "Community Creator",
+    "username": "creator",
+    "profilePicture": "https://via.placeholder.com/150",
   },
   "members": [
     {
-      "userId": {
-        "_id": "60a3f2d94e6c2a1234567890",
-        "name": "Student Name"
-      },
+      "userId": "60a3f2d94e6c2a1234567890",
+      "name": "Student Name",
+      "username": "student",
+      "profilePicture": "https://via.placeholder.com/150",
       "roleIds": ["60e7f5d94e6c2a1234567890"],
       "joinedAt": "2023-05-22T11:00:00Z"
     }
   ],
-  "createdAt": "2023-05-01T10:00:00Z"
+  "discussionsCount": 10,
+  "membersCount": 156,
+  "createdAt": "2023-05-01T10:00:00Z",
 }
 ```
 
 ##### PATCH /communities/:communityId
-Updates a community.
+Allows the admin or owner to update community settings.
 
 **Request Body:**
 ```json
@@ -616,6 +623,80 @@ Updates a community.
     "icon": "https://storage.example.com/icons/cs-updated.png",
     "updatedAt": "2023-05-22T12:00:00Z"
   }
+}
+```
+
+##### DELETE /communities/{communityId}
+Deletes a community. Only the owner or admin can delete the community.
+
+**Response (200 OK):**
+```json
+{
+  "message": "Community deleted successfully"
+}
+```
+
+##### GET /communities/:communityId/resources
+Retrieves a list of resources in a community.
+
+**Query Parameters:**
+- `category`: Filter by category
+- `tags`: Comma-separated list of tags
+- `uploader`: Filter by uploader ID
+- `query`: Search in title or description
+- `limit`: Number of results per page (default: 20)
+- `page`: Page number (default: 1)
+
+**Response (200 OK):**
+```json
+{
+  "resources": [
+    {
+      "_id": "60g9e8d94e6c2a1234567890",
+      "title": "Data Structures Cheat Sheet",
+      "description": "A comprehensive cheat sheet for common data structures",
+      "fileUrl": "https://storage.example.com/resources/data-structures-cheat-sheet.pdf",
+      "fileSize": 204800,  // Stored in bytes (200 KB)
+      "tags": ["data structures", "algorithms", "cheat sheet"],
+      "visibility": "community",
+      "category": "Computer Science",
+      "uploader": {
+        "_id": "60a3f2d94e6c2a1234567890",
+        "name": "Student Name",
+        "username": "student",
+        "profilePicture": "https://via.placeholder.com/150"
+      },
+      "interactionStats": {
+        "downloads": 156,
+        "rating": 4.7
+      },
+      "createdAt": "2023-05-10T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 45,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+##### GET /communities/{communityId}/members 
+List Community Members
+
+**Response (200 OK):**
+```json
+{
+  "members": [
+    {
+      "userId": "60a3f2d94e6c2a1234567890",
+      "name": "Student Name",
+      "username": "student",
+      "profilePicture": "https://via.placeholder.com/150",
+      "roleIds": ["60e7f5d94e6c2a1234567890"],
+      "joinedAt": "2023-05-22T11:00:00Z"
+    }
+  ]
 }
 ```
 
@@ -727,6 +808,76 @@ Creates a new role for a community.
 }
 ```
 
+##### PATCH /communities/{communityId}/roles/{roleId}
+Update a Role 
+
+**Request Body:**
+```json
+{
+  "name": "Senior Teaching Assistant",
+  "color": 255, // RGB for blue
+  "permissions": 15, // Bitwise integer representing permissions
+  "mentionable": false
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Role updated successfully",
+  "role": {
+    "_id": "60e7f5d94e6c2a1234567891",
+    "name": "Senior Teaching Assistant",
+    "color": 255,
+    "permissions": 15,
+    "mentionable": false,
+    "updatedAt": "2023-05-22T14:30:00Z"
+  }
+}
+```
+
+##### DELETE /communities/{communityId}/roles/{roleId}
+Delete a Role
+
+**Response (200 OK):**
+```json
+{
+  "message": "Role deleted successfully"
+}
+```
+
+##### POST /communities/{communityId}/members/{userId}/roles
+Assigns a role to a community member.
+
+**Request Body:**
+```json
+{
+  "roleId": "60e7f5d94e6c2a1234567891"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Role assigned successfully",
+  "member": {
+    "userId": "60a3f2d94e6c2a1234567890",
+    "roleIds": ["60e7f5d94e6c2a1234567891"],
+    "joinedAt": "2023-05-22T11:00:00Z"
+  }
+}
+```
+
+##### DELETE /communities/{communityId}/members/{userId}/roles/{roleId}
+Removes a role from a community member.
+
+**Response (200 OK):**
+```json
+{
+  "message": "Role removed successfully"
+}
+```
+
 ##### GET /communities/:communityId/discussions
 Retrieves discussions for a community.
 
@@ -745,12 +896,24 @@ Retrieves discussions for a community.
       "_id": "60f8e6d94e6c2a1234567890",
       "title": "Midterm Study Guide",
       "content": "Let's create a study guide for the upcoming midterm...",
+      "tags": ["study", "midterm"],
       "creator": {
         "_id": "60a3f2d94e6c2a1234567890",
-        "name": "Student Name"
+        "name": "Student Name",
+        "username": "student",
+        "profilePicture": "https://via.placeholder.com/150"
       },
-      "replyCount": 15,
+      "attachments": [
+        {
+          "type": "document",
+          "resource": "https://storage.example.com/docs/study-guide.pdf",
+          "fileSize": 204800 // 200 KB
+        }
+      ],
+      "votes": 124, // upvotes - downvotes
+      "repliesCount": 5,
       "status": "open",
+      "pinned": true,
       "createdAt": "2023-05-15T10:00:00Z",
       "updatedAt": "2023-05-21T14:00:00Z"
     }
@@ -764,17 +927,19 @@ Retrieves discussions for a community.
 ```
 
 ##### POST /communities/:communityId/discussions
-Creates a new discussion in a community.
+Creates a new discussion in a community and returns a shareable link.
 
 **Request Body:**
 ```json
 {
   "title": "Final Project Ideas",
   "content": "I'm looking for ideas for the final project...",
+  "tags": ["study", "midterm"],
   "attachments": [
     {
       "type": "document",
-      "resource": "https://storage.example.com/docs/project-guidelines.pdf"
+      "resource": "https://storage.example.com/docs/project-guidelines.pdf",
+      "fileSize": 204800 // 200 KB
     }
   ]
 }
@@ -786,20 +951,29 @@ Creates a new discussion in a community.
   "_id": "60f8e6d94e6c2a1234567891",
   "title": "Final Project Ideas",
   "content": "I'm looking for ideas for the final project...",
-  "creator": "60a3f2d94e6c2a1234567890",
+  "tags": ["study", "midterm"],
+  "creator": {
+    "_id": "60a3f2d94e6c2a1234567890",
+    "name": "Student Name",
+    "username": "student",
+    "profilePicture": "https://via.placeholder.com/150"
+  },
   "attachments": [
     {
       "type": "document",
-      "resource": "https://storage.example.com/docs/project-guidelines.pdf"
+      "resource": "https://storage.example.com/docs/project-guidelines.pdf",
+      "fileSize": 204800 // 200 KB
     }
   ],
   "status": "open",
-  "createdAt": "2023-05-22T15:00:00Z"
+  "pinned": false,
+  "createdAt": "2023-05-22T15:00:00Z",
+  "shareLink": "https://studentportal.com/communities/60d6e4d94e6c2a1234567890/discussions/60f8e6d94e6c2a1234567891"
 }
 ```
 
 ##### GET /discussions/:discussionId
-Retrieves a specific discussion with replies.
+Retrieves a specific discussion with its replies.
 
 **Query Parameters:**
 - `limit`: Number of replies per page (default: 20)
@@ -812,24 +986,45 @@ Retrieves a specific discussion with replies.
   "communityId": "60d6e4d94e6c2a1234567890",
   "title": "Midterm Study Guide",
   "content": "Let's create a study guide for the upcoming midterm...",
+  "tags": ["study", "midterm"],
   "creator": {
     "_id": "60a3f2d94e6c2a1234567890",
-    "name": "Student Name"
+    "name": "Student Name",
+    "username": "student",
+    "profilePicture": "https://via.placeholder.com/150"
   },
-  "attachments": [],
+  "attachments": [
+    {
+      "type": "document",
+      "resource": "https://storage.example.com/docs/study-guide.pdf",
+      "fileSize": 204800 // 200 KB
+    }
+  ],
   "replies": [
     {
       "id": "60f9e7d94e6c2a1234567890",
       "content": "Great idea! I'll contribute the section on algorithms.",
       "creator": {
         "_id": "60a3f2d94e6c2a1234567891",
-        "name": "Another Student"
+        "name": "Another Student",
+        "username": "another_student",
+        "profilePicture": "https://via.placeholder.com/150"
       },
-      "createdAt": "2023-05-15T11:00:00Z",
-      "attachments": []
+      "attachments": [
+        {
+          "type": "document",
+          "resource": "https://storage.example.com/docs/algorithms.pdf",
+          "fileSize": 102400 // 100 KB
+        }
+      ],
+      "votes": 3, // upvotes - downvotes
+      "createdAt": "2023-05-15T11:00:00Z"
     }
   ],
+  "votes": 124, // upvotes - downvotes
+  "repliesCount": 5,
   "status": "open",
+  "pinned": true,
   "createdAt": "2023-05-15T10:00:00Z",
   "updatedAt": "2023-05-21T14:00:00Z",
   "pagination": {
@@ -837,6 +1032,137 @@ Retrieves a specific discussion with replies.
     "page": 1,
     "limit": 20
   }
+}
+```
+
+##### GET /discussions/:discussionId/replies
+Retrieves the list of replies for a discussion.
+
+**Query Parameters:**
+- `limit`: Number of results per page (default: 20)
+- `page`: Page number (default: 1)
+
+**Response (200 OK):**
+```json
+{
+  "replies": [
+    {
+      "id": "60f9e7d94e6c2a1234567890",
+      "content": "Great idea! I'll contribute the section on algorithms.",
+      "creator": {
+        "_id": "60a3f2d94e6c2a1234567891",
+        "name": "Another Student",
+        "username": "another_student",
+        "profilePicture": "https://via.placeholder.com/150"
+      },
+      "attachments": [
+        {
+          "type": "document",
+          "resource": "https://storage.example.com/docs/algorithms.pdf",
+          "fileSize": 102400 // 100 KB
+        }
+      ],
+      "votes": 362, // upvotes - downvotes
+      "createdAt": "2023-05-15T11:00:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 5,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+##### GET /discussions/:discussionId/votes
+Retrieves the list of users who voted on a discussion.
+
+**Query Parameters:**
+- `voteType`: Filter by vote type (upvote, downvote)
+- `limit`: Number of results per page (default: 20)
+- `page`: Page number (default: 1)
+
+**Response (200 OK):**
+```json
+{
+  "votes": [
+    {
+      "userId": "60a3f2d94e6c2a1234567891",
+      "name": "Another Student",
+      "username": "another_student",
+      "profilePicture": "https://via.placeholder.com/150",
+      "voteType": "upvote",
+      "createdAt": "2023-05-15T11:00:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 10,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+##### GET /replies/:replyId/votes
+Retrieves the list of users who voted on a reply.
+
+**Query Parameters:**
+- `voteType`: Filter by vote type (upvote, downvote)
+- `limit`: Number of results per page (default: 20)
+- `page`: Page number (default: 1)
+- 
+**Response (200 OK):**
+```json
+{
+  "votes": [
+    {
+      "userId": "60a3f2d94e6c2a1234567891",
+      "name": "Another Student",
+      "username": "another_student",
+      "profilePicture": "https://via.placeholder.com/150",
+      "voteType": "upvote",
+      "createdAt": "2023-05-15T11:00:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 3,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+##### PATCH /discussions/:discussionId
+Allows the owner or admin to update the discussion status, pin it, or edit its content.
+
+**Request Body:**
+```json
+{
+  "status": "closed",
+  "pinned": true
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Discussion updated",
+  "discussion": {
+    "_id": "60f8e6d94e6c2a1234567890",
+    "status": "closed",
+    "pinned": true,
+    "updatedAt": "2023-05-22T17:00:00Z"
+  }
+}
+```
+
+##### DELETE /discussions/:discussionId
+Deletes a discussion. Only the owner or admin can delete the discussion.
+
+**Response (200 OK):**
+```json
+{
+  "message": "Discussion deleted successfully"
 }
 ```
 
@@ -869,30 +1195,6 @@ Adds a reply to a discussion.
     }
   ],
   "createdAt": "2023-05-22T16:00:00Z"
-}
-```
-
-##### PATCH /discussions/:discussionId
-Updates a discussion status or pins it.
-
-**Request Body:**
-```json
-{
-  "status": "closed",
-  "pinned": true
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "message": "Discussion updated",
-  "discussion": {
-    "_id": "60f8e6d94e6c2a1234567890",
-    "status": "closed",
-    "pinned": true,
-    "updatedAt": "2023-05-22T17:00:00Z"
-  }
 }
 ```
 
