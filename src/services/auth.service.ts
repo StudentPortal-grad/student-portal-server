@@ -64,6 +64,14 @@ export class AuthService {
       );
     }
 
+    if (!user.emailVerified) {
+      throw new AppError(
+        'Email not verified',
+        401,
+        ErrorCodes.EMAIL_NOT_VERIFIED
+      );
+    }
+
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       throw new AppError(

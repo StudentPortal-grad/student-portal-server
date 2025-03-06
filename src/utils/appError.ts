@@ -63,6 +63,7 @@ export const ErrorCodes = {
   // Email errors
   EMAIL_ERROR: 'EMAIL_ERROR',
   EMAIL_NOT_SENT: 'EMAIL_NOT_SENT',
+  EMAIL_NOT_VERIFIED: 'EMAIL_NOT_VERIFIED',
 
   // Config errors
   CONFIG_ERROR: 'CONFIG_ERROR',
