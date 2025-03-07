@@ -14,14 +14,14 @@ User {
   name: String (Required, 255 characters),
   username: String (Optional, Unique with case-insensitive collation, Min: 3, Max: 30 characters, Trimmed),
   gender: String (Optional, Enum["male", "female"]),
-  phoneNumber: String (Optional, Pattern: /^\+\d{1,3}\s\(\d{3}\)\s\d{3}-\d{4}$/),
+  phoneNumber: String (Optional, Pattern: /^\+\d{1,4}[\s-]?(\d[\s-]?){6,14}\d$/),
   dateOfBirth: Date (Optional),
   university: String (Required if signupStep is "completed"),
   college: String (Required if signupStep is "completed"),
   email: String (Required, Unique, 320 characters),
   password: String (Required, Min: 8, Pattern: one uppercase, lowercase, number, special char, Encrypted, Select: false),
   signupStep: String (Required, Enum["initial", "verified", "completed"], Default: "initial"),
-  role: String (Required if signupStep is "completed", Enum["Student", "Faculty", "Admin"]),
+  role: String (Required if signupStep is "completed", Enum["student", "faculty", "admin"]),
   profilePicture: String (Default: "https://via.placeholder.com/150"),
   profile: {
     bio: String,
@@ -36,11 +36,12 @@ User {
     userId: ObjectId (References User._id),
     messageId: ObjectId (References Message._id)
   }] (Optional, items have no _id),
-  level: Number (Min: 1, Max: 5, Required for Students),
-  gpa: Number (Optional, Min: 0, Max: 4, Only for Students),
+  level: Number (Min: 1, Max: 5),
+  gpa: Number (Optional),
   universityEmail: String (Optional, 320 characters, Unique with sparse index),
   universityEmailVerified: Boolean (Default: false),
   tempEmail: String (Optional, Select: false),
+  tempUniversityEmail: String (Optional, Select: false),
   mfa_settings: {
     enabled: Boolean (Default: false),
     methods: [String]

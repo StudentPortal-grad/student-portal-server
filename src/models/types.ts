@@ -208,3 +208,27 @@ export interface IResource {
   ): boolean;
   incrementDownloads(): Promise<void>;
 }
+
+export interface IEvent {
+  title: string;
+  description?: string;
+  dateTime: Date;
+  location?: string;
+  capacity?: number;
+  visibility: 'public' | 'private' | 'community';
+  attendees?: Types.ObjectId[];
+  creatorId: Types.ObjectId;
+  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  recommendations?: Types.ObjectId[];
+  communityId?: Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IRSVP {
+  eventId: Types.ObjectId;
+  userId: Types.ObjectId;
+  status: 'attending' | 'not_attending' | 'interested';
+  createdAt: Date;
+  updatedAt: Date;
+}

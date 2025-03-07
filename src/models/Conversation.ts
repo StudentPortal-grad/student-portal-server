@@ -11,7 +11,7 @@ const ConversationSchema = new Schema<IConversation>(
     participants: [
       {
         type: Schema.Types.ObjectId,
-        ref: 'User',
+        ref: 'Users',
         required: true,
       },
     ],
@@ -21,7 +21,7 @@ const ConversationSchema = new Schema<IConversation>(
     },
     createdBy: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Users',
       required: true,
     },
     messages: [
