@@ -27,7 +27,6 @@ router.get(
 router.get(
   '/:userId',
   authorize('admin', 'faculty'),
-  validate(userValidation.getUserById),
   UserController.getUserById
 );
 

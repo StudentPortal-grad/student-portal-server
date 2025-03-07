@@ -262,11 +262,4 @@ export const authValidation = {
       'any.required': 'Code is required',
     }),
   }),
-
-  verifyUniversityEmail: Joi.object({
-    code: Joi.string().length(6).required().messages({
-      'string.length': 'Code must be 6 digits',
-      'any.required': 'Code is required',
-    }),
-  }),
 };

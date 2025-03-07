@@ -124,6 +124,10 @@ const UserSchema = new Schema<IUser>(
       type: String,
       select: false,
     },
+    tempUniversityEmail: {
+      type: String,
+      select: false,
+    },
     mfa_settings: {
       enabled: {
         type: Boolean,

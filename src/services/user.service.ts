@@ -52,9 +52,12 @@ export class UserService {
 
   /**
    * Get user by ID
+   * @param userId - The ID of the user to get
+   * @param fields - The fields to select (optional)
+   * @returns The user object
    */
-  static async getUserById(userId: Types.ObjectId) {
-    const user = await UserRepository.findById(userId);
+  static async getUserById(userId: Types.ObjectId, fields?: string[]) {
+    const user = await User.findById(userId).select(fields?.join(' ') || '');
     if (!user) {
       throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
     }

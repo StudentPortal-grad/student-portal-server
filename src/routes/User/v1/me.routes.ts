@@ -17,24 +17,10 @@ router.patch(
 router.delete('/', UserController.deleteMe);
 
 // Password management
-router.put(
+router.post(
   '/password',
   validate(authValidation.changePassword),
   AuthController.changePassword
-);
-
-// Email management
-router.patch(
-  '/email',
-  validate(userValidation.updateEmail),
-  UserController.updateMyEmail
-);
-
-// University email management
-router.patch(
-  '/university-email',
-  validate(userValidation.updateUniversityEmail),
-  UserController.updateUniversityEmail
 );
 
 export default router; 

@@ -19,11 +19,16 @@ export class UserController {
    * @route   GET /v1/users/:userId
    * @desc    Get user by ID
    * @access  Admin, Faculty
+   * @query   fields - The fields to select (optional)
    */
   static getUserById = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
+      const fields = req.query.fields
+        ? String(req.query.fields).split(',')
+        : undefined;
       const result = await UserService.getUserById(
-        new Types.ObjectId(req.params.userId)
+        new Types.ObjectId(req.params.userId),
+        fields
       );
       res.success(result, 'User retrieved successfully');
     }

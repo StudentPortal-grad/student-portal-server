@@ -68,14 +68,31 @@ router.post(
   validate(authValidation.verifyNewEmail),
   AuthController.verifyNewEmail
 );
+
+// University email management routes
+// Initial verification (first time)
 router.post(
   '/university-email/verify/initiate',
   AuthController.initiateUniversityEmailVerification
 );
+
 router.post(
   '/university-email/verify',
-  validate(authValidation.verifyUniversityEmail),
+  validate(authValidation.verifyNewEmail),
   AuthController.verifyUniversityEmail
+);
+
+// Change university email
+router.post(
+  '/university-email/change',
+  validate(authValidation.initiateEmailChange),
+  AuthController.initiateUniversityEmailChange
+);
+
+router.post(
+  '/university-email/change/verify',
+  validate(authValidation.verifyNewEmail),
+  AuthController.verifyUniversityEmailChange
 );
 
 // User management

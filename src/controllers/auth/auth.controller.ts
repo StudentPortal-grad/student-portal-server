@@ -215,19 +215,44 @@ export class AuthController {
       res.success(result, 'Verification code sent to university email');
     }
   );
+  
+
+  /**
+   * @route   POST /v1/auth/university-email/change
+   * @desc    Initiate university email change process
+   */
+  static initiateUniversityEmailChange = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const { newEmail } = req.body;
+      const result = await AuthService.initiateUniversityEmailChange(
+        req.user!._id,
+        newEmail
+      );
+      res.success(result, 'Verification code sent to new university email');
+    }
+  );
 
   /**
    * @route   POST /v1/auth/university-email/verify
-   * @desc    Verify university email
+   * @desc    Verify and complete university email change
    */
   static verifyUniversityEmail = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
       const { code } = req.body;
-      const result = await AuthService.verifyUniversityEmail(
-        req.user!._id,
-        code
-      );
+      const result = await AuthService.verifyUniversityEmail(req.user!._id, code);
       res.success(result, 'University email verified successfully');
+    }
+  );
+
+  /**
+   * @route   POST /v1/auth/university-email/change/verify
+   * @desc    Verify and complete university email change
+   */
+  static verifyUniversityEmailChange = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const { code } = req.body;
+      const result = await AuthService.verifyUniversityEmailChange(req.user!._id, code);
+      res.success(result, 'University email changed successfully');
     }
   );
 }

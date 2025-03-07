@@ -53,7 +53,8 @@ export interface IUser extends Document {
   isGraduated?: boolean;
   graduationYear?: number;
   tempEmail?: string;
-  universityEmailVerified?: boolean;
+  tempUniversityEmail?: string;
+  universityEmailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
 
@@ -74,6 +75,30 @@ export interface IConversation extends Document {
   status: 'active' | 'archived';
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface IMessage extends Document {
+  senderId: Types.ObjectId;
+  content?: string;
+  attachments?: {
+    type: string;
+    resource?: string;
+    thread?: Types.ObjectId;
+  }[];
+  status: 'sent' | 'delivered' | 'read';
+  createdAt: Date;
+}
+
+export interface INotification extends Document {
+  userId: Types.ObjectId;
+  type: string;
+  content: string;
+  status: 'read' | 'unread';
+  timestamp: Date;
+  metadata?: {
+    event_id?: Types.ObjectId;
+    [key: string]: any;
+  };
 }
 
 export interface IDiscussion extends Document {
@@ -104,31 +129,6 @@ export interface IDiscussion extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
-
-export interface IMessage extends Document {
-  senderId: Types.ObjectId;
-  content?: string;
-  attachments?: {
-    type: string;
-    resource?: string;
-    thread?: Types.ObjectId;
-  }[];
-  status: 'sent' | 'delivered' | 'read';
-  createdAt: Date;
-}
-
-export interface INotification extends Document {
-  user_id: Types.ObjectId;
-  type: string;
-  content: string;
-  status: 'read' | 'unread';
-  timestamp: Date;
-  metadata?: {
-    event_id?: Types.ObjectId;
-    [key: string]: any;
-  };
-}
-
 export interface IMember {
   userId: Types.ObjectId;
   roleIds: Types.ObjectId[];
@@ -202,6 +202,9 @@ export interface IResource {
   updatedAt: Date;
 
   // Methods
-  isAccessibleBy(userId: Types.ObjectId, userCommunities: Types.ObjectId[]): boolean;
+  isAccessibleBy(
+    userId: Types.ObjectId,
+    userCommunities: Types.ObjectId[]
+  ): boolean;
   incrementDownloads(): Promise<void>;
-  }
+}

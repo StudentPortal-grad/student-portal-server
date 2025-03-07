@@ -431,7 +431,7 @@ export class AuthService {
   }
 
   /**
-   * Initiate university email verification
+   * Initiate university email verification (first time)
    */
   static async initiateUniversityEmailVerification(userId: Types.ObjectId) {
     const user = await UserRepository.findById(userId);
@@ -459,17 +459,16 @@ export class AuthService {
     const { otp, hashedOtp } = generateHashedOTP();
     user.otp = {
       code: hashedOtp,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     };
     await user.save();
 
     await EmailService.sendVerificationOTP(user.universityEmail, otp);
-
-    return { message: 'Verification code sent to university email' };
+    return {};
   }
 
   /**
-   * Verify university email
+   * Verify university email (first time)
    */
   static async verifyUniversityEmail(userId: Types.ObjectId, code: string) {
     const user = await UserRepository.findById(userId);
@@ -498,7 +497,82 @@ export class AuthService {
     user.universityEmailVerified = true;
     user.otp = undefined;
     await user.save();
+    return {};
+  }
 
-    return { message: 'University email verified successfully' };
+  /**
+   * Initiate university email change
+   */
+  static async initiateUniversityEmailChange(userId: Types.ObjectId, newEmail: string) {
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    // Check if email is already in use
+    const isEmailTaken = await UserRepository.isUniversityEmailTaken(newEmail, user._id);
+    if (isEmailTaken) {
+      throw new AppError(
+        'University email already registered',
+        400,
+        ErrorCodes.ALREADY_EXISTS
+      );
+    }
+
+    // Generate and store OTP
+    const { otp, hashedOtp } = generateHashedOTP();
+    user.otp = {
+      code: hashedOtp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    };
+    user.set('tempUniversityEmail', newEmail);
+    await user.save();
+
+    // Send verification email
+    await EmailService.sendVerificationOTP(newEmail, otp);
+
+    return {};
+  }
+
+  /**
+   * Verify university email change
+   */
+  static async verifyUniversityEmailChange(userId: Types.ObjectId, code: string) {
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    const hashedOtp = crypto.createHash('sha256').update(code).digest('hex');
+
+    if (!user.otp || !user.get('tempUniversityEmail')) {
+      throw new AppError(
+        'No university email change in progress',
+        400,
+        ErrorCodes.INVALID_OPERATION
+      );
+    }
+
+    if (user.otp.code !== hashedOtp || user.otp.expiresAt < new Date()) {
+      throw new AppError(
+        'Invalid or expired verification code',
+        400,
+        ErrorCodes.INVALID_TOKEN
+      );
+    }
+
+    // Update university email and clear temporary data
+    const oldEmail = user.universityEmail;
+    user.universityEmail = user.get('tempUniversityEmail')!;
+    user.universityEmailVerified = true;
+    user.set('tempUniversityEmail', undefined);
+    user.otp = undefined;
+    await user.save();
+
+    if (oldEmail && user.universityEmail) {
+      await EmailService.sendEmailChangeConfirmation(oldEmail, user.universityEmail);
+    }
+
+    return {};
   }
 }
