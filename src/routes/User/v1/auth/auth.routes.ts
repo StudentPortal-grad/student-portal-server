@@ -52,7 +52,7 @@ router.use(authenticate); // Apply authentication middleware to all routes below
 // Complete signup process (requires authentication)
 router.post(
   '/signup/complete',
-  uploadProfilePicture, // Handle file upload first
+  uploadProfilePicture,
   validate(authValidation.completeSignup),
   AuthController.completeSignup
 );

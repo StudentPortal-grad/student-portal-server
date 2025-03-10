@@ -42,21 +42,23 @@ try {
   console.error('Cloudinary configuration error:', error);
 }
 
-// Configure Multer storage with Cloudinary
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'student_portal/profile_pictures',
-    allowed_formats: ['jpg', 'jpeg', 'png'],
-    transformation: [
-      { width: 500, height: 500, crop: 'limit' },
-      { quality: 'auto' },
-    ],
-  } as any,
-});
+// Create a more flexible storage configuration
+const createCloudinaryStorage = (folder: string) => {
+  return new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: `student_portal/${folder}`,
+      allowed_formats: ['jpg', 'jpeg', 'png'],
+      transformation: [
+        { width: 500, height: 500, crop: 'limit' },
+        { quality: 'auto' },
+      ],
+    } as any,
+  });
+};
 
-// File filter function
-const fileFilter = (
+// Generic file filter
+const imageFileFilter = (
   req: Request,
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
@@ -74,21 +76,45 @@ const fileFilter = (
   cb(null, true);
 };
 
-// Create multer upload instance for profile pictures with error handling
-const createProfilePictureUpload = () => {
+// Create a generic upload middleware
+export const createUploadMiddleware = (
+  fieldName: string,
+  folder: string = 'uploads'
+) => {
   try {
     validateCloudinaryConfig();
-    return multer({
-      storage: storage,
+    const upload = multer({
+      storage: createCloudinaryStorage(folder),
       limits: {
         fileSize: 5 * 1024 * 1024, // 5MB limit
       },
-      fileFilter: fileFilter,
-    }).single('profilePicture');
+      fileFilter: imageFileFilter,
+    }).single(fieldName);
+
+    // Return middleware that handles the upload and sets the field
+    return (req: Request, res: Response, next: NextFunction) => {
+      upload(req, res, (err) => {
+        if (err) {
+          return next(
+            new AppError(
+              err.message || 'File upload failed',
+              400,
+              ErrorCodes.UPLOAD_ERROR
+            )
+          );
+        }
+
+        // If file was uploaded, set the URL in the request body
+        if (req.file) {
+          req.body[fieldName] = req.file.path;
+        }
+        console.log(req.body, req.file?.path);
+        next();
+      });
+    };
   } catch (error) {
     console.error('File upload service configuration error:', error);
-    // Return middleware that always errors
-    return (req: Request, _res: Response, next: NextFunction) => {
+    return (_req: Request, _res: Response, next: NextFunction) => {
       next(
         new AppError(
           'File upload service is not configured properly',
@@ -100,7 +126,11 @@ const createProfilePictureUpload = () => {
   }
 };
 
-export const uploadProfilePicture = createProfilePictureUpload();
+// Specific middleware for profile pictures
+export const uploadProfilePicture = createUploadMiddleware(
+  'profilePicture',
+  'profile_pictures'
+);
 
 export class UploadService {
   /**
@@ -160,6 +190,23 @@ export class UploadService {
   static getPublicIdFromUrl(url: string): string {
     const splitUrl = url.split('/');
     const filename = splitUrl[splitUrl.length - 1];
-    return filename.split('.')[0];
+    return `student_portal/${filename.split('.')[0]}`;
+  }
+
+  static async deleteFile(fileUrl: string): Promise<void> {
+    if (!fileUrl || fileUrl === 'https://via.placeholder.com/150') return;
+
+    try {
+      const publicId = this.getPublicIdFromUrl(fileUrl);
+      await cloudinary.uploader.destroy(publicId);
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      throw new AppError(
+        'Error deleting file from storage',
+        500,
+        ErrorCodes.UPLOAD_ERROR,
+        error
+      );
+    }
   }
 }

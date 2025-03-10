@@ -147,32 +147,8 @@ export class AuthController {
    */
   static completeSignup = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      try {
-        // Get the uploaded file URL from multer-cloudinary
-        const profilePicture = req.file?.path;
-
-        // Log upload details for debugging
-        console.log('File upload details:', {
-          file: req.file,
-          cloudinaryConfig: {
-            cloudName: process.env.CLOUDINARY_CLOUD_NAME ? 'Set' : 'Not set',
-            apiKey: process.env.CLOUDINARY_API_KEY ? 'Set' : 'Not set',
-            apiSecret: process.env.CLOUDINARY_API_SECRET ? 'Set' : 'Not set',
-          },
-        });
-
-        // Combine file data with other user data
-        const userData = {
-          ...req.body,
-          ...(profilePicture && { profilePicture }),
-        };
-
-        const result = await AuthService.completeSignup(req.user!, userData);
-        res.success(result, 'Signup completed successfully');
-      } catch (error) {
-        console.error('Complete signup error:', error);
-        throw error;
-      }
+      const result = await AuthService.completeSignup(req.user!, req.body);
+      res.success(result, 'Signup completed successfully');
     }
   );
 

@@ -7,6 +7,7 @@ import { generateHashedOTP } from '@utils/helpers';
 import { DbOperations } from '../utils/dbOperations';
 import User from '../models/User';
 import { getPaginationOptions } from '@utils/pagination';
+import { UploadService } from '../utils/uploadService';
 
 export class UserService {
   /**
@@ -85,18 +86,27 @@ export class UserService {
    * Update user
    */
   static async updateUser(userId: Types.ObjectId, updateData: Partial<IUser>) {
-    const user = await UserRepository.findById(userId);
+    const user = await User.findById(userId);
     if (!user) {
       throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
     }
 
-    // Remove sensitive fields
-    const sanitizedData = { ...updateData };
-    delete sanitizedData.password;
-    delete sanitizedData.emailVerified;
-    delete sanitizedData.otp;
+    // Handle profile picture update if it's being changed
+    if (updateData.profilePicture && 
+        user.profilePicture && 
+        user.profilePicture !== updateData.profilePicture) {
+      try {
+        await UploadService.deleteFile(user.profilePicture);
+      } catch (error) {
+        console.error('Error deleting old profile picture:', error);
+      }
+    }
 
-    const updatedUser = await DbOperations.updateDocument(user, sanitizedData);
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
     return { user: updatedUser };
   }
 
@@ -104,12 +114,22 @@ export class UserService {
    * Delete user
    */
   static async deleteUser(userId: Types.ObjectId) {
-    const user = await UserRepository.findById(userId);
+    const user = await User.findById(userId);
     if (!user) {
       throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
     }
 
-    await DbOperations.deleteDocument(user);
+    // Delete profile picture if exists
+    if (user.profilePicture) {
+      try {
+        await UploadService.deleteFile(user.profilePicture);
+      } catch (error) {
+        console.error('Error deleting profile picture:', error);
+      }
+    }
+
+    await User.findByIdAndDelete(userId);
+    return {};
   }
 
   /**

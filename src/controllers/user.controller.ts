@@ -156,7 +156,7 @@ export class UserController {
    */
   static updateMe = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      const result = await UserService.updateProfile(req.user!, req.body);
+      const result = await UserService.updateUser(req.user!._id, req.body);
       res.success(result, 'Profile updated successfully');
     }
   );
@@ -167,8 +167,8 @@ export class UserController {
    */
   static deleteMe = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      await UserService.deleteAccount(req.user!._id);
-      res.success(null, 'Account deleted successfully');
+      await UserService.deleteUser(req.user!._id);
+      res.success({}, 'Account deleted successfully');
     }
   );
 

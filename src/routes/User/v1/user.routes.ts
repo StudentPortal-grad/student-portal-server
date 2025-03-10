@@ -5,6 +5,7 @@ import { validate } from '@middleware/validate';
 import { userValidation } from '@validations/userValidation';
 import { UserController } from '@controllers/user.controller';
 import meRoutes from './me.routes';
+import { uploadProfilePicture } from '@utils/uploadService';
 
 const router = Router();
 
@@ -34,6 +35,7 @@ router.get(
 router.post(
   '/',
   authorize('admin'),
+  uploadProfilePicture,
   validate(userValidation.createUser),
   UserController.createUser
 );
@@ -42,6 +44,7 @@ router.post(
 router.patch(
   '/:userId',
   authorize('admin'),
+  uploadProfilePicture,
   validate(userValidation.updateUser),
   UserController.updateUser
 );

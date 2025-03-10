@@ -4,6 +4,7 @@ import { AuthController } from '@controllers/auth/auth.controller';
 import { validate } from '@middleware/validate';
 import { userValidation } from '@validations/userValidation';
 import { authValidation } from '@validations/authValidation';
+import { uploadProfilePicture } from '@utils/uploadService';
 
 const router = Router();
 
@@ -11,6 +12,7 @@ const router = Router();
 router.get('/', UserController.getMe);
 router.patch(
   '/',
+  uploadProfilePicture,
   validate(userValidation.updateProfile),
   UserController.updateMe
 );
