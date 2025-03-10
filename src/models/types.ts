@@ -75,6 +75,7 @@ export interface IConversation extends Document {
   status: 'active' | 'archived';
   createdAt: Date;
   updatedAt: Date;
+  groupImage?: string;
 }
 
 export interface IMessage extends Document {

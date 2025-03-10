@@ -100,7 +100,7 @@ const UserSchema = new Schema<IUser>(
     friends: [
       {
         _id: false,
-        userId: { type: Schema.Types.ObjectId, ref: 'User' },
+        userId: { type: Schema.Types.ObjectId, ref: 'Users' },
         messageId: { type: Schema.Types.ObjectId, ref: 'Message' },
       },
     ],

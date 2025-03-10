@@ -8,7 +8,7 @@ export const userValidation = {
     name: Joi.string().trim().min(2).max(255),
     username: Joi.string().trim().min(3).max(30),
     gender: Joi.string().valid('male', 'female'),
-    phoneNumber: Joi.string().pattern(/^\+\d{1,3}\s\(\d{3}\)\s\d{3}-\d{4}$/),
+    phoneNumber: Joi.string().pattern(/^\+\d{1,4}[\s-]?(\d[\s-]?){6,14}\d$/),
     dateOfBirth: Joi.date().max('now'),
     university: Joi.string(),
     college: Joi.string(),
@@ -94,23 +94,35 @@ export const userValidation = {
   }),
 
   bulkCreateUsers: Joi.object({
-    users: Joi.array().items(Joi.object({
-      name: Joi.string().required(),
-      email: Joi.string().email().required(),
-      password: Joi.string().min(8).required(),
-      role: Joi.string().valid('student', 'faculty', 'admin').required(),
-    })).min(1).required(),
+    users: Joi.array()
+      .items(
+        Joi.object({
+          name: Joi.string().required(),
+          email: Joi.string().email().required(),
+          password: Joi.string().min(8).required(),
+          role: Joi.string().valid('student', 'faculty', 'admin').required(),
+        })
+      )
+      .min(1)
+      .required(),
   }),
 
   bulkUpdateUsers: Joi.object({
-    updates: Joi.array().items(Joi.object({
-      userId: Joi.string().required(),
-      data: Joi.object({
-        name: Joi.string(),
-        role: Joi.string().valid('student', 'faculty', 'admin'),
-        status: Joi.string().valid('online', 'offline', 'idle', 'dnd'),
-      }).min(1).required(),
-    })).min(1).required(),
+    updates: Joi.array()
+      .items(
+        Joi.object({
+          userId: Joi.string().required(),
+          data: Joi.object({
+            name: Joi.string(),
+            role: Joi.string().valid('student', 'faculty', 'admin'),
+            status: Joi.string().valid('online', 'offline', 'idle', 'dnd'),
+          })
+            .min(1)
+            .required(),
+        })
+      )
+      .min(1)
+      .required(),
   }),
 
   bulkDeleteUsers: Joi.object({

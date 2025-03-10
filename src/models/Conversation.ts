@@ -39,6 +39,9 @@ const ConversationSchema = new Schema<IConversation>(
       enum: ['active', 'archived'],
       default: 'active',
     },
+    groupImage: {
+      type: String,
+    },
   },
   {
     timestamps: true,
