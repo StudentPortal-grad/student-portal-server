@@ -12,17 +12,42 @@
     "allowImportingTsExtensions": true,
     "baseUrl": "./src",
     "paths": {
-      "@config/*": ["config/*"],
-      "@routes/*": ["routes/*"],
-      "@controllers/*": ["controllers/*"],
-      "@services/*": ["services/*"],
-      "@repositories/*": ["repositories/*"],
-      "@utils/*": ["utils/*"],
-      "@middleware/*": ["middleware/*"],
-      "@validators/*": ["validators/*"],
-      "@validations/*": ["validations/*"]
+      "@config/*": [
+        "config/*"
+      ],
+      "@routes/*": [
+        "routes/*"
+      ],
+      "@controllers/*": [
+        "controllers/*"
+      ],
+      "@services/*": [
+        "services/*"
+      ],
+      "@repositories/*": [
+        "repositories/*"
+      ],
+      "@utils/*": [
+        "utils/*"
+      ],
+      "@middleware/*": [
+        "middleware/*"
+      ],
+      "@validators/*": [
+        "validators/*"
+      ],
+      "@validations/*": [
+        "validations/*"
+      ],
+      "@models/*": [
+        "models/*"
+      ]
     }
   },
-  "include": ["src"],
-  "exclude": ["dist"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "dist"
+  ]
 }

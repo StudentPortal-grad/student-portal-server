@@ -26,8 +26,10 @@ export default [
     rules: {
       'no-undef': 'off',
     },
-    env: {
-      jest: true,
+    languageOptions: {
+      globals: {
+        ...globals.jest,
+      },
     },
   },
 ];
