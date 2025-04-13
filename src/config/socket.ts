@@ -242,7 +242,7 @@ export const initializeSocket = (
 
             try {
                 // Handle user connection
-                await SocketService.handleUserConnection(userId, socket.id);
+                await SocketService.handleUserConnection(userId, socket);
 
                 // Set up event handlers
                 await SocketService.handleSocket(socket);

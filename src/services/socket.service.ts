@@ -8,8 +8,9 @@ import Message from "@models/message";
 import { getIO } from "@config/socket";
 
 export class SocketService {
-    static async handleUserConnection(userId: string, socketId: string) {
-        await this.updateUserStatus(userId, "online", socketId);
+    static async handleUserConnection(userId: string, socket: Socket) {
+        await this.updateUserStatus(userId, "online", socket.id);
+        await this.joinUserConversations(userId, socket);
     }
 
     static async handleUserDisconnection(userId: string) {
@@ -381,6 +382,284 @@ export class SocketService {
             } catch (_error) {
                 socket.emit("conversations", { conversations: [] });
                 // _callback([]);
+            }
+        });
+
+        socket.on("getConversations", async (data, _callback) => {
+            try {
+                // Set default pagination values
+                const page = data?.page || 1;
+                const limit = data?.limit || 10;
+                const skip = (page - 1) * limit;
+
+                // Get total count for pagination info
+                const totalConversations = await Conversation.countDocuments({
+                    "participants.userId": socket.data.userId,
+                    status: "active",
+                });
+
+                // Get paginated conversations
+                const conversations = await Conversation.find({
+                    "participants.userId": socket.data.userId,
+                    status: "active",
+                })
+                    .populate(
+                        "participants.userId",
+                        "name profilePicture status"
+                    )
+                    .populate("lastMessage")
+                    .sort({ "metadata.lastActivity": -1 })
+                    .skip(skip)
+                    .limit(limit);
+
+                // Calculate pagination metadata
+                const totalPages = Math.ceil(totalConversations / limit);
+                const hasNextPage = page < totalPages;
+                const hasPrevPage = page > 1;
+
+                socket.emit("conversations", {
+                    conversations,
+                    pagination: {
+                        total: totalConversations,
+                        page,
+                        limit,
+                        totalPages,
+                        hasNextPage,
+                        hasPrevPage,
+                        nextPage: hasNextPage ? page + 1 : null,
+                        prevPage: hasPrevPage ? page - 1 : null,
+                    },
+                });
+            } catch (_error) {
+                socket.emit("conversations", {
+                    conversations: [],
+                    pagination: {
+                        total: 0,
+                        page: 1,
+                        limit: 10,
+                        totalPages: 0,
+                        hasNextPage: false,
+                        hasPrevPage: false,
+                        nextPage: null,
+                        prevPage: null,
+                    },
+                });
+            }
+        });
+
+        // Add new event for getting conversation messages with pagination and sorting
+        socket.on("getConversationMessages", async (data, _callback) => {
+            try {
+                if (!this.validateObjectId(data.conversationId)) {
+                    socket.emit("conversationMessages", {
+                        success: false,
+                        error: "Invalid conversation ID",
+                    });
+                    return;
+                }
+
+                // Check if user is a participant in the conversation
+                const isParticipant = await Conversation.exists({
+                    _id: data.conversationId,
+                    "participants.userId": socket.data.userId,
+                    status: "active",
+                });
+
+                if (!isParticipant) {
+                    socket.emit("conversationMessages", {
+                        success: false,
+                        error: "Not authorized to view this conversation",
+                    });
+                    return;
+                }
+
+                // Set default pagination values if not provided
+                const page = data.page || 1;
+                const limit = data.limit || 20;
+                const skip = (page - 1) * limit;
+
+                // Set default sort (newest messages first)
+                const sortBy = data.sortBy || { createdAt: -1 };
+
+                // Optional date filters
+                const dateFilter: any = {};
+                if (data.before) {
+                    dateFilter["createdAt"] = {
+                        ...dateFilter["createdAt"],
+                        $lt: new Date(data.before),
+                    };
+                }
+                if (data.after) {
+                    dateFilter["createdAt"] = {
+                        ...dateFilter["createdAt"],
+                        $gt: new Date(data.after),
+                    };
+                }
+
+                // Build query
+                const query = {
+                    conversationId: data.conversationId,
+                    ...dateFilter,
+                };
+
+                // Get total count for pagination info
+                const totalMessages = await Message.countDocuments(query);
+
+                // Get messages with pagination and sorting
+                const messages = await Message.find(query)
+                    .sort(sortBy)
+                    .skip(skip)
+                    .limit(limit)
+                    .populate("senderId", "name profilePicture")
+                    .populate("reactions.users", "name profilePicture")
+                    .populate("readBy.userId", "name profilePicture");
+
+                // Mark messages as read by this user if not already read
+                await Message.updateMany(
+                    {
+                        _id: { $in: messages.map((m) => m._id) },
+                        "readBy.userId": { $ne: socket.data.userId },
+                    },
+                    {
+                        $push: {
+                            readBy: {
+                                userId: socket.data.userId,
+                                readAt: new Date(),
+                            },
+                        },
+                    }
+                );
+
+                // Update user's last seen in the conversation
+                await Conversation.updateOne(
+                    {
+                        _id: data.conversationId,
+                        "participants.userId": socket.data.userId,
+                    },
+                    {
+                        $set: { "participants.$.lastSeen": new Date() },
+                    }
+                );
+
+                // Emit read receipts to other participants
+                socket.to(data.conversationId).emit("messageRead", {
+                    userId: socket.data.userId,
+                    conversationId: data.conversationId,
+                    lastSeen: new Date(),
+                });
+
+                // Calculate pagination metadata
+                const totalPages = Math.ceil(totalMessages / limit);
+                const hasNextPage = page < totalPages;
+                const hasPrevPage = page > 1;
+
+                // Send paginated results
+                socket.emit("conversationMessages", {
+                    success: true,
+                    messages,
+                    pagination: {
+                        total: totalMessages,
+                        page,
+                        limit,
+                        totalPages,
+                        hasNextPage,
+                        hasPrevPage,
+                        nextPage: hasNextPage ? page + 1 : null,
+                        prevPage: hasPrevPage ? page - 1 : null,
+                    },
+                });
+            } catch (error) {
+                console.error("Error fetching conversation messages:", error);
+                socket.emit("conversationMessages", {
+                    success: false,
+                    error: "Failed to fetch messages",
+                });
+            }
+        });
+
+        // Add event for getting messages around a specific message (for context)
+        socket.on("getMessageContext", async (data, _callback) => {
+            try {
+                if (
+                    !this.validateObjectId(data.messageId) ||
+                    !this.validateObjectId(data.conversationId)
+                ) {
+                    socket.emit("messageContext", {
+                        success: false,
+                        error: "Invalid message or conversation ID",
+                    });
+                    return;
+                }
+
+                // Check if user is a participant in the conversation
+                const isParticipant = await Conversation.exists({
+                    _id: data.conversationId,
+                    "participants.userId": socket.data.userId,
+                    status: "active",
+                });
+
+                if (!isParticipant) {
+                    socket.emit("messageContext", {
+                        success: false,
+                        error: "Not authorized to view this conversation",
+                    });
+                    return;
+                }
+
+                // Find the target message to get its timestamp
+                const targetMessage = await Message.findOne({
+                    _id: data.messageId,
+                    conversationId: data.conversationId,
+                }).populate("senderId", "name profilePicture");
+
+                if (!targetMessage) {
+                    socket.emit("messageContext", {
+                        success: false,
+                        error: "Message not found",
+                    });
+                    return;
+                }
+
+                const contextSize = data.contextSize || 10;
+
+                // Get messages before the target message
+                const messagesBefore = await Message.find({
+                    conversationId: data.conversationId,
+                    createdAt: { $lt: targetMessage.createdAt },
+                })
+                    .sort({ createdAt: -1 })
+                    .limit(Math.floor(contextSize / 2))
+                    .populate("senderId", "name profilePicture")
+                    .populate("reactions.users", "name profilePicture");
+
+                // Get messages after the target message
+                const messagesAfter = await Message.find({
+                    conversationId: data.conversationId,
+                    createdAt: { $gt: targetMessage.createdAt },
+                })
+                    .sort({ createdAt: 1 })
+                    .limit(Math.floor(contextSize / 2))
+                    .populate("senderId", "name profilePicture")
+                    .populate("reactions.users", "name profilePicture");
+
+                // Combine messages in chronological order
+                const contextMessages = [
+                    ...messagesBefore.reverse(),
+                    targetMessage,
+                    ...messagesAfter,
+                ];
+
+                socket.emit("messageContext", {
+                    success: true,
+                    targetMessageId: data.messageId,
+                    messages: contextMessages,
+                });
+            } catch (error) {
+                console.error("Error fetching message context:", error);
+                socket.emit("messageContext", {
+                    success: false,
+                    error: "Failed to fetch message context",
+                });
             }
         });
     }
@@ -769,5 +1048,31 @@ export class SocketService {
         await this.handleConversationEvents(socket);
         await this.handleSearchEvents(socket);
         await this.handleFriendEvents(socket);
+    }
+
+    static async joinUserConversations(userId: string, socket: Socket) {
+        try {
+            // Find all active conversations where the user is a participant
+            const conversations = await Conversation.find({
+                "participants.userId": userId,
+                status: "active",
+            }).select("_id");
+
+            // Join the socket to each conversation room
+            for (const conversation of conversations) {
+                const conversationId = (
+                    conversation._id as ObjectId
+                ).toString();
+                socket.join(conversationId);
+            }
+            console.log(
+                `User ${userId} joined ${conversations.length} conversation rooms`
+            );
+        } catch (error) {
+            console.error(
+                `Error joining user ${userId} to conversation rooms:`,
+                error
+            );
+        }
     }
 }
