@@ -171,7 +171,6 @@ const UserSchema = new Schema<IUser>(
         },
         socketId: {
             type: String,
-            select: false,
         },
         lastSeen: {
             type: Date,
@@ -191,6 +190,7 @@ const UserSchema = new Schema<IUser>(
                     "Graduation year must be between 1900 and current year",
             },
         },
+        // Add to the friends array schema to include conversationId
         friends: [
             {
                 _id: false,
@@ -203,6 +203,10 @@ const UserSchema = new Schema<IUser>(
                 blockedBy: {
                     type: Schema.Types.ObjectId,
                     ref: "Users",
+                },
+                conversationId: {
+                    type: Schema.Types.ObjectId,
+                    ref: "Conversation",
                 },
                 createdAt: {
                     type: Date,
@@ -376,14 +380,45 @@ UserSchema.methods = {
         }
     },
 
-    acceptFriend: async function (userId: Types.ObjectId): Promise<void> {
+    // Update the acceptFriend method to include conversationId
+    acceptFriend: async function (
+        userId: Types.ObjectId,
+        conversationId?: Types.ObjectId
+    ): Promise<void> {
         const friendship = this.friends?.find((f: IFriendship) =>
             f.userId.equals(userId)
         );
         if (friendship && friendship.status === "pending") {
             friendship.status = "accepted";
+            if (conversationId) {
+                friendship.conversationId = conversationId;
+            }
             await this.save({ validateBeforeSave: false });
         }
+    },
+
+    // Add a method to set conversation for a friend
+    setFriendConversation: async function (
+        userId: Types.ObjectId,
+        conversationId: Types.ObjectId
+    ): Promise<void> {
+        const friendship = this.friends?.find((f: IFriendship) =>
+            f.userId.equals(userId)
+        );
+        if (friendship) {
+            friendship.conversationId = conversationId;
+            await this.save({ validateBeforeSave: false });
+        }
+    },
+
+    // Add a method to get a friend's conversation
+    getFriendConversation: function (
+        userId: Types.ObjectId
+    ): Types.ObjectId | null {
+        const friendship = this.friends?.find((f: IFriendship) =>
+            f.userId.equals(userId)
+        );
+        return friendship?.conversationId || null;
     },
 
     blockUser: async function (userId: Types.ObjectId): Promise<void> {

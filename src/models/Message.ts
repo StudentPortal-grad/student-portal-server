@@ -147,6 +147,8 @@ MessageSchema.index({ conversationId: 1 });
 MessageSchema.index({ "attachments.thread": 1 });
 MessageSchema.index({ createdAt: 1 });
 MessageSchema.index({ mentions: 1 });
+// Add this near other indexes
+MessageSchema.index({ content: 'text' });
 
 // Validate that either content or attachments are present
 MessageSchema.pre("save", function (this: IMessage, next) {

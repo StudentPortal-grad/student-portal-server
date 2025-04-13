@@ -1,4 +1,4 @@
-import { Document, Types } from "mongoose";
+import { Document, Model, Types } from "mongoose";
 
 export interface IChatPreferences {
     messageNotifications: "all" | "mentions" | "none";
@@ -144,6 +144,20 @@ export interface IConversation extends Document {
     };
     createdAt: Date;
     updatedAt: Date;
+
+    // Instance methods
+    addParticipant(userId: Types.ObjectId, role?: string): Promise<void>;
+    removeParticipant(userId: Types.ObjectId): Promise<void>;
+    updateParticipantRole(
+        userId: Types.ObjectId,
+        newRole: string
+    ): Promise<void>;
+    updateLastSeen(userId: Types.ObjectId): Promise<void>;
+    addMessage(messageId: Types.ObjectId): Promise<void>;
+    togglePinMessage(messageId: Types.ObjectId): Promise<void>;
+    generateInviteLink(): Promise<string | null>;
+    isUserAdmin(userId: Types.ObjectId): boolean;
+    getUnreadCount(userId: Types.ObjectId): Promise<number>;
 }
 
 export interface IMessage extends Document {
@@ -337,4 +351,14 @@ export interface IRSVP {
     status: "attending" | "not_attending" | "interested";
     createdAt: Date;
     updatedAt: Date;
+}
+
+// Add this interface for the Conversation model
+export interface IConversationModel extends Model<IConversation> {
+    findOrCreateDM(
+        participant1Id: Types.ObjectId,
+        participant2Id: Types.ObjectId
+    ): Promise<IConversation>;
+    findActiveConversations(userId: Types.ObjectId): Promise<IConversation[]>;
+    findAdminGroups(userId: Types.ObjectId): Promise<IConversation[]>;
 }

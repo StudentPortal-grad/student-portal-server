@@ -27,24 +27,112 @@ interface ServerToClientEvents {
         isTyping: boolean;
     }) => void;
     error: (data: { message: string; code?: string }) => void;
+
+    // New events
+    conversationCreated: (data: { conversation: any }) => void;
+    conversationUpdated: (data: { conversation: any }) => void;
+    conversationDeleted: (data: { conversationId: string }) => void;
+    userJoinedGroup: (data: { conversationId: string; user: any }) => void;
+    userLeftGroup: (data: { conversationId: string; userId: string }) => void;
+    messageDeleted: (data: {
+        messageId: string;
+        conversationId: string;
+    }) => void;
+    messageEdited: (data: {
+        messageId: string;
+        conversationId: string;
+        content: string;
+    }) => void;
+    searchResults: (data: { messages: any[]; conversations: any[] }) => void;
 }
 
 interface ClientToServerEvents {
+    sendMessage: (
+        data: { conversationId: string; content: string },
+        callback: (success: boolean) => void
+    ) => void;
     joinConversation: (
         conversationId: string,
         callback: (success: boolean) => void
     ) => void;
     leaveConversation: (conversationId: string) => void;
-    sendMessage: (
-        data: { conversationId: string; content: string },
-        callback: (success: boolean) => void
-    ) => void;
     markMessageRead: (data: {
         messageId: string;
         conversationId: string;
     }) => void;
     startTyping: (conversationId: string) => void;
     stopTyping: (conversationId: string) => void;
+
+    // New events
+    createConversation: (
+        data: {
+            type: "DM" | "GroupDM";
+            participants: string[];
+            name?: string;
+            description?: string;
+        },
+        callback: (success: boolean, conversation?: any) => void
+    ) => void;
+
+    updateConversation: (
+        data: {
+            conversationId: string;
+            updates: {
+                name?: string;
+                description?: string;
+                settings?: any;
+            };
+        },
+        callback: (success: boolean) => void
+    ) => void;
+
+    deleteConversation: (
+        conversationId: string,
+        callback: (success: boolean) => void
+    ) => void;
+
+    addParticipants: (
+        data: {
+            conversationId: string;
+            userIds: string[];
+        },
+        callback: (success: boolean) => void
+    ) => void;
+
+    removeParticipant: (
+        data: {
+            conversationId: string;
+            userId: string;
+        },
+        callback: (success: boolean) => void
+    ) => void;
+
+    deleteMessage: (
+        data: {
+            messageId: string;
+            conversationId: string;
+        },
+        callback: (success: boolean) => void
+    ) => void;
+
+    editMessage: (
+        data: {
+            messageId: string;
+            conversationId: string;
+            content: string;
+        },
+        callback: (success: boolean) => void
+    ) => void;
+
+    searchMessages: (
+        data: {
+            query: string;
+            conversationId?: string;
+        },
+        callback: (results: any) => void
+    ) => void;
+
+    getConversations: (callback: (conversations: any[]) => void) => void;
 }
 
 interface InterServerEvents {
@@ -105,7 +193,12 @@ export const initializeSocket = (
             next: (err?: Error) => void
         ) => {
             try {
-                const token = socket.handshake.auth.token;
+                // Try to get token from different sources
+                const token =
+                    socket.handshake.auth.token || // Original auth method
+                    socket.handshake.headers["x-auth-token"] || // From headers
+                    (socket.handshake.query.token as string); // From query params
+
                 if (!token) {
                     return next(
                         new Error("Authentication error: Token not provided")
@@ -145,16 +238,14 @@ export const initializeSocket = (
                 return;
             }
 
-            console.log(`User ${userId} connected`);
+            console.log(`User ${userId} connected. with ID: ${socket.id}`);
 
             try {
                 // Handle user connection
                 await SocketService.handleUserConnection(userId, socket.id);
 
                 // Set up event handlers
-                await SocketService.handleConversationEvents(socket);
-                await SocketService.handleMessageEvents(socket);
-                await SocketService.handleTypingEvents(socket);
+                await SocketService.handleSocket(socket);
 
                 socket.on("disconnect", async () => {
                     console.log(`User ${userId} disconnected`);
