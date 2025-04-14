@@ -6,6 +6,7 @@ import { IConversation } from "@models/types";
 import Conversation from "@models/Conversation";
 import Message from "@models/message";
 import { getIO } from "@config/socket";
+import { SocketHelpers } from "@utils/socketHelpers";
 
 export class SocketService {
     static async handleUserConnection(userId: string, socket: Socket) {
@@ -48,26 +49,45 @@ export class SocketService {
     }
 
     static validateObjectId(id: string): boolean {
-        return Types.ObjectId.isValid(id);
+        return SocketHelpers.validateObjectId(id);
     }
 
     static async handleMessageEvents(socket: Socket) {
         // Regular message sending for existing conversations
         socket.on("sendMessage", async (data, _callback) => {
             try {
-                if (!this.validateObjectId(data.conversationId)) {
-                    socket.emit("messageSent", { success: false });
-                    // _callback(false);
+                if (
+                    !(await SocketHelpers.validateRequest(socket, data, [
+                        "conversationId",
+                        "content",
+                    ]))
+                ) {
                     return;
+                }
+
+                // Check if user is participant
+                if (
+                    !(await SocketHelpers.isConversationParticipant(
+                        socket.data.userId,
+                        data.conversationId
+                    ))
+                ) {
+                    return SocketHelpers.emitError(
+                        socket,
+                        "messageSent",
+                        "Not authorized for this conversation"
+                    );
                 }
 
                 const conversation = await Conversation.findById(
                     data.conversationId
                 );
                 if (!conversation) {
-                    socket.emit("messageSent", { success: false });
-                    // _callback(false);
-                    return;
+                    return SocketHelpers.emitError(
+                        socket,
+                        "messageSent",
+                        "Conversation not found"
+                    );
                 }
 
                 const message = await Message.create({
@@ -153,12 +173,10 @@ export class SocketService {
                     $inc: { "metadata.totalMessages": 1 },
                 });
 
-                socket.emit("messageSent", { success: true });
-                // _callback(true);
+                SocketHelpers.emitSuccess(socket, "messageSent");
             } catch (error) {
                 console.error("Error sending message:", error);
-                socket.emit("messageSent", { success: false });
-                // _callback(false);
+                SocketHelpers.emitError(socket, "messageSent");
             }
         });
 
@@ -188,25 +206,38 @@ export class SocketService {
                         status: f.status,
                     }));
 
-                socket.emit("friendConversations", { friendConversations });
-                // _callback(friendConversations);
+                SocketHelpers.emitSuccess(socket, "friendConversations", {
+                    friendConversations,
+                });
             } catch (_error) {
-                socket.emit("friendConversations", { friendConversations: [] });
-                // _callback([]);
+                SocketHelpers.emitSuccess(socket, "friendConversations", {
+                    friendConversations: [],
+                });
             }
         });
 
         // New message events
         socket.on("deleteMessage", async (data, _callback) => {
             try {
+                if (
+                    !(await SocketHelpers.validateRequest(socket, data, [
+                        "messageId",
+                        "conversationId",
+                    ]))
+                ) {
+                    return;
+                }
+
                 const message = await Message.findById(data.messageId);
                 if (
                     !message ||
                     message.senderId.toString() !== socket.data.userId
                 ) {
-                    socket.emit("messageDeleted", { success: false });
-                    // _callback(false);
-                    return;
+                    return SocketHelpers.emitError(
+                        socket,
+                        "messageDeleted",
+                        "Not authorized to delete this message"
+                    );
                 }
 
                 await message.deleteOne();
@@ -215,24 +246,34 @@ export class SocketService {
                     messageId: data.messageId,
                     conversationId: data.conversationId,
                 });
-                socket.emit("messageDeleted", { success: true });
-                // _callback(true);
+                SocketHelpers.emitSuccess(socket, "messageDeleted");
             } catch (_error) {
-                socket.emit("messageDeleted", { success: false });
-                // _callback(false);
+                SocketHelpers.emitError(socket, "messageDeleted");
             }
         });
 
         socket.on("editMessage", async (data, _callback) => {
             try {
+                if (
+                    !(await SocketHelpers.validateRequest(socket, data, [
+                        "messageId",
+                        "conversationId",
+                        "content",
+                    ]))
+                ) {
+                    return;
+                }
+
                 const message = await Message.findById(data.messageId);
                 if (
                     !message ||
                     message.senderId.toString() !== socket.data.userId
                 ) {
-                    socket.emit("messageEdited", { success: false });
-                    // _callback(false);
-                    return;
+                    return SocketHelpers.emitError(
+                        socket,
+                        "messageEdited",
+                        "Not authorized to edit this message"
+                    );
                 }
 
                 message.content = data.content;
@@ -243,11 +284,9 @@ export class SocketService {
                     conversationId: data.conversationId,
                     content: data.content,
                 });
-                socket.emit("messageEdited", { success: true });
-                // _callback(true);
+                SocketHelpers.emitSuccess(socket, "messageEdited");
             } catch (_error) {
-                socket.emit("messageEdited", { success: false });
-                // _callback(false);
+                SocketHelpers.emitError(socket, "messageEdited");
             }
         });
 
@@ -311,76 +350,6 @@ export class SocketService {
     }
 
     static async handleConversationEvents(socket: Socket) {
-        socket.on("createDMConversation", async (data, _callback) => {
-            try {
-                if (!this.validateObjectId(data.recipientId)) {
-                    socket.emit("dmCreated", { success: false });
-                    // _callback(false);
-                    return;
-                }
-
-                const recipient = await User.findById(data.recipientId);
-                if (!recipient) {
-                    socket.emit("dmCreated", { success: false });
-                    // _callback(false);
-                    return;
-                }
-
-                const conversation: IConversation = await Conversation.create({
-                    type: "DM",
-                    participants: [
-                        { userId: socket.data.userId, role: "member" },
-                        { userId: data.recipientId, role: "member" },
-                    ],
-                    createdBy: socket.data.userId,
-                });
-
-                const populatedConversation = await conversation.populate([
-                    {
-                        path: "participants.userId",
-                        select: "name profilePicture status socketId",
-                    },
-                    { path: "createdBy", select: "name profilePicture" },
-                ]);
-
-                const conversationId = (
-                    conversation._id as ObjectId
-                ).toString();
-
-                // Join creator to the conversation room
-                socket.join(conversationId);
-
-                // If recipient is online, join them to the room
-                if (recipient.socketId) {
-                    socket.to(recipient.socketId).emit("dmCreated", {
-                        conversation: populatedConversation,
-                    });
-                }
-
-                // Update both users' friend records with the conversation ID
-                await User.updateMany(
-                    {
-                        _id: { $in: [socket.data.userId, data.recipientId] },
-                        "friends.userId": {
-                            $in: [socket.data.userId, data.recipientId],
-                        },
-                    },
-                    {
-                        $set: { "friends.$.conversationId": conversation._id },
-                    }
-                );
-
-                socket.emit("dmCreated", {
-                    success: true,
-                    conversation: populatedConversation,
-                });
-                // _callback(true, populatedConversation);
-            } catch (_error) {
-                socket.emit("dmCreated", { success: false });
-                // _callback(false);
-            }
-        });
-
         socket.on("createConversation", async (data, _callback) => {
             try {
                 const conversation: IConversation = await Conversation.create({
@@ -444,18 +413,17 @@ export class SocketService {
                     }
                 });
 
-                io.to(conversationId).emit("conversationCreated", {
-                    conversation: populatedConversation,
-                });
+                socket.broadcast
+                    .to(conversationId)
+                    .emit("conversationCreated", {
+                        conversation: populatedConversation,
+                    });
 
-                socket.emit("conversationCreated", {
-                    success: true,
+                SocketHelpers.emitSuccess(socket, "conversationCreated", {
                     conversation: populatedConversation,
                 });
-                // _callback(true, populatedConversation);
             } catch (_error) {
-                socket.emit("conversationCreated", { success: false });
-                // _callback(false);
+                SocketHelpers.emitError(socket, "conversationCreated");
             }
         });
 
@@ -472,11 +440,13 @@ export class SocketService {
                     .populate("lastMessage")
                     .sort({ "metadata.lastActivity": -1 });
 
-                socket.emit("conversations", { conversations });
-                // _callback(conversations);
+                SocketHelpers.emitSuccess(socket, "conversations", {
+                    conversations,
+                });
             } catch (_error) {
-                socket.emit("conversations", { conversations: [] });
-                // _callback([]);
+                SocketHelpers.emitSuccess(socket, "conversations", {
+                    conversations: [],
+                });
             }
         });
         // Add new event for getting conversation messages with pagination and sorting
@@ -692,6 +662,127 @@ export class SocketService {
                     success: false,
                     error: "Failed to fetch message context",
                 });
+            }
+        });
+
+        // Add event handler for adding new group members
+        socket.on("addGroupMembers", async (data, _callback) => {
+            try {
+                if (
+                    !(await SocketHelpers.validateRequest(socket, data, [
+                        "conversationId",
+                        "userIds",
+                    ]))
+                ) {
+                    return;
+                }
+
+                // Check if conversation exists and is a group
+                const conversation = await Conversation.findById(
+                    data.conversationId
+                );
+                if (!conversation || conversation.type !== "GroupDM") {
+                    return SocketHelpers.emitError(
+                        socket,
+                        "groupMembersAdded",
+                        "Invalid conversation or not a group"
+                    );
+                }
+
+                const conversationId = (
+                    conversation._id as ObjectId
+                ).toString();
+
+                // Check if user is admin/owner
+                const userRole = conversation.participants.find(
+                    (p) => p.userId.toString() === socket.data.userId
+                )?.role;
+
+                if (!userRole || !["owner", "admin"].includes(userRole)) {
+                    return SocketHelpers.emitError(
+                        socket,
+                        "groupMembersAdded",
+                        "Not authorized to add members"
+                    );
+                }
+
+                // Filter out existing participants
+                const existingParticipantIds = conversation.participants.map(
+                    (p) => p.userId.toString()
+                );
+                const newUserIds = data.userIds.filter(
+                    (id: string) => !existingParticipantIds.includes(id)
+                );
+
+                if (newUserIds.length === 0) {
+                    return SocketHelpers.emitError(
+                        socket,
+                        "groupMembersAdded",
+                        "All users are already members"
+                    );
+                }
+
+                // Add new participants
+                const newParticipants = newUserIds.map((userId: string) => ({
+                    userId,
+                    role: "member",
+                    joinedAt: new Date(),
+                    lastSeen: new Date(),
+                    isAdmin: false,
+                }));
+
+                await conversation.updateOne({
+                    $push: { participants: { $each: newParticipants } },
+                });
+
+                // Add conversation to new members' recentConversations
+                await User.updateMany(
+                    { _id: { $in: newUserIds } },
+                    {
+                        $push: {
+                            recentConversations: {
+                                conversationId: conversation._id,
+                                unreadCount: 0,
+                                isPinned: false,
+                                isMuted: false,
+                            },
+                        },
+                    }
+                );
+
+                // Get populated conversation data
+                const updatedConversation = await conversation.populate([
+                    {
+                        path: "participants.userId",
+                        select: "name profilePicture",
+                    },
+                    { path: "createdBy", select: "name profilePicture" },
+                ]);
+
+                // Join new members to the socket room
+                const io = getIO();
+                newUserIds.forEach((userId: string) => {
+                    const userSocket = Array.from(
+                        io.sockets.sockets.values()
+                    ).find((s) => s.data.userId === userId);
+                    if (userSocket) {
+                        userSocket.join(conversationId);
+                    }
+                });
+
+                // Notify all participants about new members
+                io.to(conversationId).emit("groupMembersAdded", {
+                    conversationId,
+                    newMembers: newUserIds,
+                    conversation: updatedConversation,
+                });
+
+                SocketHelpers.emitSuccess(socket, "groupMembersAdded", {
+                    conversation: updatedConversation,
+                });
+            } catch (error) {
+                console.error("Error adding group members:", error);
+                SocketHelpers.emitError(socket, "groupMembersAdded");
             }
         });
     }

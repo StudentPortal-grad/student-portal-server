@@ -44,6 +44,11 @@ interface ServerToClientEvents {
         content: string;
     }) => void;
     searchResults: (data: { messages: any[]; conversations: any[] }) => void;
+    groupMembersAdded: (data: {
+        conversationId: string;
+        newMembers: string[];
+        conversation: any;
+    }) => void;
 }
 
 interface ClientToServerEvents {
