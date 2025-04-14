@@ -214,6 +214,16 @@ const UserSchema = new Schema<IUser>(
                 },
             },
         ],
+        friendRequests: [
+            {
+                _id: false,
+                userId: { type: Schema.Types.ObjectId, ref: "Users" },
+                createdAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+            },
+        ],
         recentConversations: [
             {
                 _id: false,

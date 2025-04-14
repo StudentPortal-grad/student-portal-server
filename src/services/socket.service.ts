@@ -76,7 +76,69 @@ export class SocketService {
                     content: data.content,
                 });
 
-                // const io = getIO();
+                // Get all participants except the sender
+                const otherParticipants = conversation.participants
+                    .filter((p) => p.userId.toString() !== socket.data.userId)
+                    .map((p) => p.userId);
+
+                // Update unreadCount for all other participants
+                await User.updateMany(
+                    {
+                        _id: { $in: otherParticipants },
+                        "recentConversations.conversationId":
+                            data.conversationId,
+                    },
+                    {
+                        $inc: { "recentConversations.$.unreadCount": 1 },
+                        $set: {
+                            "recentConversations.$.lastReadMessageId":
+                                message._id,
+                        },
+                    }
+                );
+
+                // Update sender's recentConversations (move to top without incrementing unread)
+                await User.updateOne(
+                    {
+                        _id: socket.data.userId,
+                        "recentConversations.conversationId":
+                            data.conversationId,
+                    },
+                    {
+                        $set: {
+                            "recentConversations.$.lastReadMessageId":
+                                message._id,
+                            "recentConversations.$.unreadCount": 0,
+                        },
+                    }
+                );
+
+                // If conversation is not in recentConversations for any participant, add it
+                const allParticipants = conversation.participants.map(
+                    (p) => p.userId
+                );
+                await User.updateMany(
+                    {
+                        _id: { $in: allParticipants },
+                        "recentConversations.conversationId": {
+                            $ne: data.conversationId,
+                        },
+                    },
+                    {
+                        $push: {
+                            recentConversations: {
+                                conversationId: data.conversationId,
+                                unreadCount:
+                                    socket.data.userId === "$_id" ? 0 : 1,
+                                lastReadMessageId: message._id,
+                                isPinned: false,
+                                isMuted: false,
+                            },
+                        },
+                    }
+                );
+
+                // Broadcast to other participants
                 socket.broadcast.to(data.conversationId).emit("newMessage", {
                     message: await message.populate(
                         "senderId",
@@ -84,12 +146,6 @@ export class SocketService {
                     ),
                     conversationId: data.conversationId,
                 });
-
-                /*await Conversation.findByIdAndUpdate(data.conversationId, {
-                    lastMessage: message._id,
-                    "metadata.lastActivity": new Date(),
-                    $inc: { "metadata.totalMessages": 1 },
-                });*/
 
                 await conversation.updateOne({
                     lastMessage: message._id,
@@ -99,7 +155,8 @@ export class SocketService {
 
                 socket.emit("messageSent", { success: true });
                 // _callback(true);
-            } catch (_error) {
+            } catch (error) {
+                console.error("Error sending message:", error);
                 socket.emit("messageSent", { success: false });
                 // _callback(false);
             }
@@ -212,12 +269,29 @@ export class SocketService {
         // Message read receipts
         socket.on("markMessageRead", async (data, _callback) => {
             try {
+                // Update conversation participant's last seen
                 await Conversation.updateOne(
                     {
                         _id: data.conversationId,
                         "participants.userId": socket.data.userId,
                     },
                     { $set: { "participants.$.lastSeen": new Date() } }
+                );
+
+                // Reset unread count in recentConversations
+                await User.updateOne(
+                    {
+                        _id: socket.data.userId,
+                        "recentConversations.conversationId":
+                            data.conversationId,
+                    },
+                    {
+                        $set: {
+                            "recentConversations.$.unreadCount": 0,
+                            "recentConversations.$.lastReadMessageId":
+                                data.messageId || undefined,
+                        },
+                    }
                 );
 
                 socket.to(data.conversationId).emit("messageRead", {
@@ -228,7 +302,8 @@ export class SocketService {
 
                 socket.emit("messageMarkedRead", { success: true });
                 // _callback(true);
-            } catch (_error) {
+            } catch (error) {
+                console.error("Error marking message as read:", error);
                 socket.emit("messageMarkedRead", { success: false });
                 // _callback(false);
             }
@@ -309,7 +384,7 @@ export class SocketService {
         socket.on("createConversation", async (data, _callback) => {
             try {
                 const conversation: IConversation = await Conversation.create({
-                    type: data.type,
+                    type: data?.type || "GroupDM",
                     participants: [
                         { userId: socket.data.userId, role: "owner" },
                         ...data.participants.map((id: string) => ({
@@ -338,6 +413,26 @@ export class SocketService {
 
                 // Join the creator to the room first
                 socket.join(conversationId);
+
+                // Add conversation to recentConversations for all participants
+                const participantIds = [
+                    socket.data.userId,
+                    ...data.participants,
+                ];
+
+                await User.updateMany(
+                    { _id: { $in: participantIds } },
+                    {
+                        $push: {
+                            recentConversations: {
+                                conversationId: conversation._id,
+                                unreadCount: 0,
+                                isPinned: false,
+                                isMuted: false,
+                            },
+                        },
+                    }
+                );
 
                 // Then join other participants
                 data.participants.forEach((userId: string) => {
@@ -384,69 +479,6 @@ export class SocketService {
                 // _callback([]);
             }
         });
-
-        socket.on("getConversations", async (data, _callback) => {
-            try {
-                // Set default pagination values
-                const page = data?.page || 1;
-                const limit = data?.limit || 10;
-                const skip = (page - 1) * limit;
-
-                // Get total count for pagination info
-                const totalConversations = await Conversation.countDocuments({
-                    "participants.userId": socket.data.userId,
-                    status: "active",
-                });
-
-                // Get paginated conversations
-                const conversations = await Conversation.find({
-                    "participants.userId": socket.data.userId,
-                    status: "active",
-                })
-                    .populate(
-                        "participants.userId",
-                        "name profilePicture status"
-                    )
-                    .populate("lastMessage")
-                    .sort({ "metadata.lastActivity": -1 })
-                    .skip(skip)
-                    .limit(limit);
-
-                // Calculate pagination metadata
-                const totalPages = Math.ceil(totalConversations / limit);
-                const hasNextPage = page < totalPages;
-                const hasPrevPage = page > 1;
-
-                socket.emit("conversations", {
-                    conversations,
-                    pagination: {
-                        total: totalConversations,
-                        page,
-                        limit,
-                        totalPages,
-                        hasNextPage,
-                        hasPrevPage,
-                        nextPage: hasNextPage ? page + 1 : null,
-                        prevPage: hasPrevPage ? page - 1 : null,
-                    },
-                });
-            } catch (_error) {
-                socket.emit("conversations", {
-                    conversations: [],
-                    pagination: {
-                        total: 0,
-                        page: 1,
-                        limit: 10,
-                        totalPages: 0,
-                        hasNextPage: false,
-                        hasPrevPage: false,
-                        nextPage: null,
-                        prevPage: null,
-                    },
-                });
-            }
-        });
-
         // Add new event for getting conversation messages with pagination and sorting
         socket.on("getConversationMessages", async (data, _callback) => {
             try {
@@ -664,6 +696,135 @@ export class SocketService {
         });
     }
 
+    static async handleRecentConversationsEvents(socket: Socket) {
+        // Get recent conversations
+        socket.on("getRecentConversations", async (_callback) => {
+            try {
+                const user = await User.findById(socket.data.userId)
+                    .populate({
+                        path: "recentConversations.conversationId",
+                        populate: [
+                            {
+                                path: "participants.userId",
+                                select: "name profilePicture status lastSeen",
+                            },
+                            {
+                                path: "lastMessage",
+                            },
+                        ],
+                    })
+                    .populate("recentConversations.lastReadMessageId");
+
+                if (!user) {
+                    socket.emit("recentConversations", {
+                        success: false,
+                        conversations: [],
+                    });
+                    return;
+                }
+
+                socket.emit("recentConversations", {
+                    success: true,
+                    conversations: user.recentConversations,
+                });
+            } catch (error) {
+                console.error("Error getting recent conversations:", error);
+                socket.emit("recentConversations", {
+                    success: false,
+                    conversations: [],
+                });
+            }
+        });
+
+        // Update recent conversation settings
+        socket.on("updateRecentConversation", async (data, _callback) => {
+            try {
+                if (!this.validateObjectId(data.conversationId)) {
+                    socket.emit("recentConversationUpdated", {
+                        success: false,
+                    });
+                    return;
+                }
+
+                const updateData: any = {};
+
+                if (data.isPinned !== undefined) {
+                    updateData["recentConversations.$.isPinned"] =
+                        data.isPinned;
+                }
+
+                if (data.isMuted !== undefined) {
+                    updateData["recentConversations.$.isMuted"] = data.isMuted;
+
+                    if (data.isMuted && data.mutedUntil) {
+                        updateData["recentConversations.$.mutedUntil"] =
+                            new Date(data.mutedUntil);
+                    } else if (!data.isMuted) {
+                        updateData["recentConversations.$.mutedUntil"] = null;
+                    }
+                }
+
+                await User.updateOne(
+                    {
+                        _id: socket.data.userId,
+                        "recentConversations.conversationId":
+                            data.conversationId,
+                    },
+                    { $set: updateData }
+                );
+
+                socket.emit("recentConversationUpdated", {
+                    success: true,
+                    conversationId: data.conversationId,
+                    updates: {
+                        isPinned: data.isPinned,
+                        isMuted: data.isMuted,
+                        mutedUntil: data.mutedUntil,
+                    },
+                });
+            } catch (error) {
+                console.error("Error updating recent conversation:", error);
+                socket.emit("recentConversationUpdated", { success: false });
+            }
+        });
+
+        // Remove conversation from recent list
+        socket.on("removeFromRecentConversations", async (data, _callback) => {
+            try {
+                if (!this.validateObjectId(data.conversationId)) {
+                    socket.emit("removedFromRecentConversations", {
+                        success: false,
+                    });
+                    return;
+                }
+
+                await User.updateOne(
+                    { _id: socket.data.userId },
+                    {
+                        $pull: {
+                            recentConversations: {
+                                conversationId: data.conversationId,
+                            },
+                        },
+                    }
+                );
+
+                socket.emit("removedFromRecentConversations", {
+                    success: true,
+                    conversationId: data.conversationId,
+                });
+            } catch (error) {
+                console.error(
+                    "Error removing from recent conversations:",
+                    error
+                );
+                socket.emit("removedFromRecentConversations", {
+                    success: false,
+                });
+            }
+        });
+    }
+
     static async handleSearchEvents(socket: Socket) {
         // Basic peer search
         socket.on("searchPeers", async (data, _callback) => {
@@ -678,7 +839,10 @@ export class SocketService {
                 const query = {
                     _id: { $ne: socket.data.userId },
                     role: "student",
-                    signupStep: "completed",
+                    $or: [
+                        { signupStep: "completed" },
+                        { signupStep: "verified" },
+                    ],
                     isGraduated: false,
                     level: currentUser.level,
                     ...(data.query && {
@@ -860,30 +1024,44 @@ export class SocketService {
         socket.on("sendFriendRequest", async (data, _callback) => {
             try {
                 const recipient = await User.findById(data.recipientId);
-                console.log("receiver id: ", recipient);
                 if (!recipient) {
                     socket.emit("friendRequestSent", { success: false });
-                    // _callback(false);
                     return;
                 }
 
-                // Add to sender's friends list
-                await User.findByIdAndUpdate(socket.data.userId, {
-                    $push: {
-                        friends: {
-                            userId: data.recipientId,
-                            status: "pending",
-                            createdAt: new Date(),
-                        },
-                    },
+                // Check if request already exists
+                const existingRequest = await User.findOne({
+                    _id: data.recipientId,
+                    "friendRequests.userId": socket.data.userId,
                 });
 
-                // Add to recipient's friends list
+                if (existingRequest) {
+                    socket.emit("friendRequestSent", {
+                        success: false,
+                        message: "Friend request already sent",
+                    });
+                    return;
+                }
+
+                // Check if they're already friends
+                const alreadyFriends = await User.findOne({
+                    _id: socket.data.userId,
+                    "friends.userId": data.recipientId,
+                });
+
+                if (alreadyFriends) {
+                    socket.emit("friendRequestSent", {
+                        success: false,
+                        message: "Already friends",
+                    });
+                    return;
+                }
+
+                // Add to recipient's friend requests
                 await User.findByIdAndUpdate(data.recipientId, {
                     $push: {
-                        friends: {
+                        friendRequests: {
                             userId: socket.data.userId,
-                            status: "pending",
                             createdAt: new Date(),
                         },
                     },
@@ -899,21 +1077,32 @@ export class SocketService {
                 }
 
                 socket.emit("friendRequestSent", { success: true });
-                // _callback(true);
-            } catch (_error) {
+            } catch (error) {
+                console.log("sendFriendRequest error:", error);
                 socket.emit("friendRequestSent", { success: false });
-                // _callback(false);
-                console.log("sendFriendRequest error:", _error);
             }
         });
 
         // Accept friend request
         socket.on("acceptFriendRequest", async (data, _callback) => {
             try {
+                // Verify the request exists
+                const requestExists = await User.findOne({
+                    _id: socket.data.userId,
+                    "friendRequests.userId": data.senderId,
+                });
+
+                if (!requestExists) {
+                    socket.emit("friendRequestAccepted", {
+                        success: false,
+                        message: "Friend request not found",
+                    });
+                    return;
+                }
+
                 const sender = await User.findById(data.senderId);
                 if (!sender) {
                     socket.emit("friendRequestAccepted", { success: false });
-                    // _callback(false);
                     return;
                 }
 
@@ -927,21 +1116,35 @@ export class SocketService {
                     createdBy: socket.data.userId,
                 });
 
-                // Update both users' friend records
-                await User.updateMany(
-                    {
-                        _id: { $in: [socket.data.userId, data.senderId] },
-                        "friends.userId": {
-                            $in: [socket.data.userId, data.senderId],
+                // Add to current user's friends list
+                await User.findByIdAndUpdate(socket.data.userId, {
+                    $push: {
+                        friends: {
+                            userId: data.senderId,
+                            status: "accepted",
+                            conversationId: conversation._id,
+                            createdAt: new Date(),
                         },
                     },
-                    {
-                        $set: {
-                            "friends.$.status": "accepted",
-                            "friends.$.conversationId": conversation._id,
+                    // Remove from friend requests
+                    $pull: {
+                        friendRequests: {
+                            userId: data.senderId,
                         },
-                    }
-                );
+                    },
+                });
+
+                // Add to sender's friends list
+                await User.findByIdAndUpdate(data.senderId, {
+                    $push: {
+                        friends: {
+                            userId: socket.data.userId,
+                            status: "accepted",
+                            conversationId: conversation._id,
+                            createdAt: new Date(),
+                        },
+                    },
+                });
 
                 // Notify the original sender if online
                 if (sender.socketId) {
@@ -955,40 +1158,86 @@ export class SocketService {
                     success: true,
                     conversationId: conversation._id,
                 });
-                // _callback(true, { conversationId: conversation._id });
-            } catch (_error) {
+            } catch (error) {
+                console.log("acceptFriendRequest error:", error);
                 socket.emit("friendRequestAccepted", { success: false });
-                // _callback(false);
-                console.log("acceptFriendRequest error:", _error);
+            }
+        });
+
+        // Get friend requests
+        socket.on("getFriendRequests", async (data, _callback) => {
+            try {
+                // Find the current user with populated friend requests
+                const user = await User.findById(socket.data.userId).populate({
+                    path: "friendRequests.userId",
+                    select: "name username profilePicture status lastSeen level college",
+                });
+
+                if (!user) {
+                    socket.emit("friendRequests", {
+                        success: false,
+                        requests: [],
+                    });
+                    return;
+                }
+
+                // Set pagination if provided
+                const page = data?.page || 1;
+                const limit = data?.limit || 10;
+                const startIndex = (page - 1) * limit;
+                const endIndex = page * limit;
+
+                // Get paginated requests
+                const paginatedRequests = user.friendRequests?.slice(
+                    startIndex,
+                    endIndex
+                );
+
+                // Calculate pagination metadata
+                const totalRequests = user.friendRequests?.length || 0;
+                const totalPages = Math.ceil(totalRequests / limit);
+                const hasNextPage = page < totalPages;
+                const hasPrevPage = page > 1;
+
+                socket.emit("friendRequests", {
+                    success: true,
+                    requests: paginatedRequests,
+                    pagination: {
+                        total: totalRequests,
+                        page,
+                        limit,
+                        totalPages,
+                        hasNextPage,
+                        hasPrevPage,
+                        nextPage: hasNextPage ? page + 1 : null,
+                        prevPage: hasPrevPage ? page - 1 : null,
+                    },
+                });
+            } catch (error) {
+                console.error("Error getting friend requests:", error);
+                socket.emit("friendRequests", {
+                    success: false,
+                    requests: [],
+                });
             }
         });
 
         // Reject friend request
         socket.on("rejectFriendRequest", async (data, _callback) => {
             try {
-                await User.updateMany(
-                    {
-                        _id: { $in: [socket.data.userId, data.senderId] },
-                        "friends.userId": {
-                            $in: [socket.data.userId, data.senderId],
+                // Remove the friend request
+                await User.findByIdAndUpdate(socket.data.userId, {
+                    $pull: {
+                        friendRequests: {
+                            userId: data.senderId,
                         },
                     },
-                    {
-                        $pull: {
-                            friends: {
-                                userId: {
-                                    $in: [socket.data.userId, data.senderId],
-                                },
-                            },
-                        },
-                    }
-                );
+                });
 
                 socket.emit("friendRequestRejected", { success: true });
-                // _callback(true);
-            } catch (_error) {
+            } catch (error) {
+                console.error("rejectFriendRequest error:", error);
                 socket.emit("friendRequestRejected", { success: false });
-                // _callback(false);
             }
         });
 
@@ -1046,6 +1295,7 @@ export class SocketService {
     static async handleSocket(socket: Socket) {
         await this.handleMessageEvents(socket);
         await this.handleConversationEvents(socket);
+        await this.handleRecentConversationsEvents(socket);
         await this.handleSearchEvents(socket);
         await this.handleFriendEvents(socket);
     }

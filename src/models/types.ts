@@ -39,6 +39,10 @@ export interface IUser extends Document {
         status: "active" | "blocked" | "muted";
         lastInteractionAt: Date;
     }[];
+    friendRequests?: {
+        userId: Types.ObjectId;
+        createdAt: Date;
+    }[];
     level: number;
     gpa?: number;
     universityEmail?: string;
