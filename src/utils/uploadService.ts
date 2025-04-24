@@ -132,6 +132,12 @@ export const uploadProfilePicture = createUploadMiddleware(
   'profile_pictures'
 );
 
+// Specific middleware for group conversation images
+export const uploadGroupImage = createUploadMiddleware(
+  'groupImage',
+  'group_images'
+);
+
 export class UploadService {
   /**
    * Upload a file to Cloudinary

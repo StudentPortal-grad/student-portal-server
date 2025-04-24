@@ -5,7 +5,6 @@ interface IParticipant {
     userId: Types.ObjectId;
     role: string;
     joinedAt: Date;
-    lastSeen: Date;
     isAdmin: boolean;
 }
 
@@ -30,10 +29,6 @@ const ConversationSchema = new Schema<IConversation>(
                     default: "member",
                 },
                 joinedAt: {
-                    type: Date,
-                    default: Date.now,
-                },
-                lastSeen: {
                     type: Date,
                     default: Date.now,
                 },
@@ -194,16 +189,7 @@ ConversationSchema.methods = {
         }
     },
 
-    // Update last seen
-    updateLastSeen: async function (userId: Types.ObjectId): Promise<void> {
-        const participant = this.participants.find((p: IParticipant) =>
-            p.userId.equals(userId)
-        );
-        if (participant) {
-            participant.lastSeen = new Date();
-            await this.save();
-        }
-    },
+
 
     // Add message and update metadata
     addMessage: async function (messageId: Types.ObjectId): Promise<void> {
@@ -251,15 +237,15 @@ ConversationSchema.methods = {
 
     // Get unread messages count for user
     getUnreadCount: async function (userId: Types.ObjectId): Promise<number> {
-        const lastSeen = this.participants.find((p: IParticipant) =>
-            p.userId.equals(userId)
-        )?.lastSeen;
+        // Get user's lastSeen from User model
+        const User = this.model("Users");
+        const user = await User.findById(userId).select("lastSeen");
 
-        if (!lastSeen) return 0;
+        if (!user || !user.lastSeen) return 0;
 
         return this.model("Message").countDocuments({
             conversationId: this._id,
-            createdAt: { $gt: lastSeen },
+            createdAt: { $gt: user.lastSeen },
             senderId: { $ne: userId },
         });
     },

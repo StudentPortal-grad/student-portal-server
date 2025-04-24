@@ -2,6 +2,7 @@ import { Socket } from "socket.io";
 import { Types } from "mongoose";
 import Conversation from "@models/Conversation";
 import User from "@models/User";
+import { ObjectId } from "mongoose";
 
 export class SocketHelpers {
     /**
@@ -109,4 +110,89 @@ export class SocketHelpers {
     ) {
         socket.emit(eventName, { success: false, error });
     }
+
+    /**
+     * Joins the socket to all active conversation rooms for the user
+     */
+    static async joinUserConversations(userId: string, socket: Socket) {
+        try {
+            const conversations = await Conversation.find({
+                "participants.userId": userId,
+                status: "active",
+            }).select("_id");
+            for (const conversation of conversations) {
+                const conversationId = (conversation._id as ObjectId).toString();
+                socket.join(conversationId);
+            }
+            console.log(
+                `User ${userId} joined ${conversations.length} conversation rooms`
+            );
+        } catch (error) {
+            console.error(
+                `Error joining user ${userId} to conversation rooms:`,
+                error
+            );
+        }
+    }
+
+    /**
+     * Updates unread counts for all participants except sender
+     */
+    static async updateUnreadCounts(conversation: any, senderId: string, messageId: string) {
+        const otherParticipants = conversation.participants
+            .filter((p: any) => p.userId.toString() !== senderId)
+            .map((p: any) => p.userId);
+        await User.updateMany(
+            {
+                _id: { $in: otherParticipants },
+                "recentConversations.conversationId": conversation._id,
+            },
+            {
+                $inc: { "recentConversations.$.unreadCount": 1 },
+                $set: { "recentConversations.$.lastReadMessageId": messageId },
+            }
+        );
+    }
+
+    /**
+     * Updates sender's recentConversations (move to top, unreadCount = 0)
+     */
+    static async updateSenderRecentConversation(userId: string, conversationId: string, messageId: string) {
+        await User.updateOne(
+            {
+                _id: userId,
+                "recentConversations.conversationId": conversationId,
+            },
+            {
+                $set: {
+                    "recentConversations.$.lastReadMessageId": messageId,
+                    "recentConversations.$.unreadCount": 0,
+                },
+            }
+        );
+    }
+
+    /**
+     * Adds conversation to recentConversations for any participant missing it
+     */
+    static async addConversationToRecentIfMissing(participantIds: string[], conversationId: string, messageId: string, senderId: string) {
+        await User.updateMany(
+            {
+                _id: { $in: participantIds },
+                "recentConversations.conversationId": { $ne: conversationId },
+            },
+            {
+                $push: {
+                    recentConversations: {
+                        conversationId,
+                        unreadCount: { $cond: [{ $eq: ["$_id", senderId] }, 0, 1] },
+                        lastReadMessageId: messageId,
+                        isPinned: false,
+                        isMuted: false,
+                    },
+                },
+            }
+        );
+    }
 }
+
