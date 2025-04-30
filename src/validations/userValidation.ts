@@ -134,6 +134,12 @@ export const userValidation = {
   }),
 
   updateUserRole: Joi.object({
-    role: Joi.string().valid('student', 'faculty', 'admin').required(),
+    role: Joi.string().valid('student', 'faculty', 'admin', 'superadmin').required(),
+  }),
+
+  // Suspend user validation
+  suspendUser: Joi.object({
+    reason: Joi.string().required().min(5).max(500),
+    duration: Joi.number().integer().min(1).max(365).optional(),
   }),
 };

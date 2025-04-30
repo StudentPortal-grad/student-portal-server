@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { AppError } from '../utils/appError';
 import { CommunityService } from '../services/community.service';
 import { getPaginationOptions } from '../utils/pagination';
-import { ResponseBuilder } from '../utils/ApiResponse';
 import { resourceQuerySchema } from '../validations/communityValidation';
 
 const communityService = new CommunityService();
@@ -16,39 +15,29 @@ export const createCommunity = async (req: Request, res: Response) => {
     ...req.body,
     owner: req.user._id
   });
-  res.status(201).json(
-    ResponseBuilder.success(community, 'Community created successfully')
-  );
+  res.success(community, 'Community created successfully', 201);
 };
 
 export const getAllCommunities = async (req: Request, res: Response) => {
   const paginationOptions = getPaginationOptions(req.query);
   const { communities, metadata } = await communityService.getAllCommunities(paginationOptions);
   
-  res.status(200).json(
-    ResponseBuilder.paginated(communities, metadata, 'Communities retrieved successfully')
-  );
+  res.paginated(communities, metadata, 'Communities retrieved successfully');
 };
 
 export const getCommunityById = async (req: Request, res: Response) => {
   const community = await communityService.getCommunityById(req.params.id);
-  res.status(200).json(
-    ResponseBuilder.success(community, 'Community retrieved successfully')
-  );
+  res.success(community, 'Community retrieved successfully');
 };
 
 export const updateCommunity = async (req: Request, res: Response) => {
   const community = await communityService.updateCommunity(req.params.id, req.body);
-  res.status(200).json(
-    ResponseBuilder.success(community, 'Community updated successfully')
-  );
+  res.success(community, 'Community updated successfully');
 };
 
 export const deleteCommunity = async (req: Request, res: Response) => {
   await communityService.deleteCommunity(req.params.id);
-  res.status(200).json(
-    ResponseBuilder.success(null, 'Community deleted successfully')
-  );
+  res.success(null, 'Community deleted successfully');
 };
 
 export const joinCommunity = async (req: Request, res: Response) => {
@@ -61,9 +50,7 @@ export const joinCommunity = async (req: Request, res: Response) => {
     req.user._id.toString(),
     req.body.inviteCode
   );
-  res.status(200).json(
-    ResponseBuilder.success(community, 'Joined community successfully')
-  );
+  res.success(community, 'Joined community successfully');
 };
 
 export const leaveCommunity = async (req: Request, res: Response) => {
@@ -71,16 +58,12 @@ export const leaveCommunity = async (req: Request, res: Response) => {
     throw new AppError('User not authenticated', 401, 'UNAUTHORIZED');
   }
   await communityService.leaveCommunity(req.params.id, req.user._id.toString());
-  res.status(200).json(
-    ResponseBuilder.success(null, 'Left community successfully')
-  );
+  res.success(null, 'Left community successfully');
 };
 
 export const generateInviteLink = async (req: Request, res: Response) => {
   const inviteLink = await communityService.generateInviteLink(req.params.id);
-  res.status(200).json(
-    ResponseBuilder.success({ inviteLink }, 'Invite link generated successfully')
-  );
+  res.success({ inviteLink }, 'Invite link generated successfully');
 };
 
 export const getCommunityMembers = async (req: Request, res: Response) => {
@@ -90,9 +73,7 @@ export const getCommunityMembers = async (req: Request, res: Response) => {
     paginationOptions
   );
   
-  res.status(200).json(
-    ResponseBuilder.paginated(members, metadata, 'Community members retrieved successfully')
-  );
+  res.paginated(members, metadata, 'Community members retrieved successfully');
 };
 
 export const updateCommunityIcon = async (req: Request, res: Response) => {
@@ -105,16 +86,12 @@ export const updateCommunityIcon = async (req: Request, res: Response) => {
     req.file.path
   );
   
-  res.status(200).json(
-    ResponseBuilder.success(community, 'Community icon updated successfully')
-  );
+  res.success(community, 'Community icon updated successfully');
 };
 
 export const getCommunityRoles = async (req: Request, res: Response) => {
   const roles = await communityService.getCommunityRoles(req.params.id);
-  res.status(200).json(
-    ResponseBuilder.success(roles, 'Community roles retrieved successfully')
-  );
+  res.success(roles, 'Community roles retrieved successfully');
 };
 
 export const getCommunityResources = async (req: Request, res: Response) => {
@@ -128,9 +105,16 @@ export const getCommunityResources = async (req: Request, res: Response) => {
     value
   );
 
-  res.status(200).json(
-    ResponseBuilder.paginated(resources, metadata, 'Resources retrieved successfully')
-  );
+  const paginationMetadata = {
+    total: metadata.total,
+    page: metadata.page,
+    limit: metadata.limit,
+    totalPages: metadata.pages,
+    hasNextPage: metadata.page < metadata.pages,
+    hasPrevPage: metadata.page > 1
+  };
+
+  res.paginated(resources, paginationMetadata, 'Resources retrieved successfully');
 };
 
 export const addCommunityMember = async (req: Request, res: Response) => {
@@ -139,9 +123,7 @@ export const addCommunityMember = async (req: Request, res: Response) => {
     req.body
   );
 
-  res.status(201).json(
-    ResponseBuilder.success(member, 'Member added successfully')
-  );
+  res.success(member, 'Member added successfully', 201);
 };
 
 export const removeCommunityMember = async (req: Request, res: Response) => {
@@ -150,7 +132,5 @@ export const removeCommunityMember = async (req: Request, res: Response) => {
     req.params.userId
   );
 
-  res.status(200).json(
-    ResponseBuilder.success(null, 'Member removed successfully')
-  );
+  res.success(null, 'Member removed successfully');
 };

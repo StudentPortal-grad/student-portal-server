@@ -6,11 +6,14 @@ import { userValidation } from '@validations/userValidation';
 import { UserController } from '@controllers/user.controller';
 import meRoutes from './me.routes';
 import { uploadProfilePicture } from '@utils/uploadService';
+import friendRoutes from './friend.routes';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+router.use("/friends", friendRoutes);
 
 // Mount /me routes
 router.use('/me', meRoutes);
@@ -85,6 +88,20 @@ router.patch(
   authorize('admin'),
   validate(userValidation.updateUserStatus),
   UserController.updateUserStatus
+);
+
+// User suspension management
+router.patch(
+  '/:userId/suspend',
+  authorize('admin', 'superadmin'),
+  validate(userValidation.suspendUser),
+  UserController.suspendUser
+);
+
+router.patch(
+  '/:userId/unsuspend',
+  authorize('admin', 'superadmin'),
+  UserController.unsuspendUser
 );
 
 // Role management

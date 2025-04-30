@@ -13,21 +13,8 @@ const attachmentSchema = Joi.object({
 });
 
 const replySchema = Joi.object({
-  id: Joi.string().hex().length(24).required().messages({
-    'string.hex': 'id must be a valid ObjectId',
-    'string.length': 'id must be 24 characters long',
-    'any.required': 'id is required',
-  }),
   content: Joi.string().required().messages({
     'any.required': 'content is required',
-  }),
-  creator: Joi.string().hex().length(24).required().messages({
-    'string.hex': 'creator must be a valid ObjectId',
-    'string.length': 'creator must be 24 characters long',
-    'any.required': 'creator is required',
-  }),
-  createdAt: Joi.date().default(Date.now).messages({
-    'date.base': 'createdAt must be a valid date',
   }),
   attachments: Joi.array().items(attachmentSchema).default([]).messages({
     'array.base': 'attachments must be an array',
@@ -35,18 +22,10 @@ const replySchema = Joi.object({
 });
 
 const voteSchema = Joi.object({
-  userId: Joi.string().hex().length(24).required().messages({
-    'string.hex': 'userId must be a valid ObjectId',
-    'string.length': 'userId must be 24 characters long',
-    'any.required': 'userId is required',
-  }),
   voteType: Joi.string().valid('upvote', 'downvote').required().messages({
     'string.base': 'voteType must be a string',
     'any.only': 'voteType must be either "upvote" or "downvote"',
     'any.required': 'voteType is required',
-  }),
-  createdAt: Joi.date().default(Date.now).messages({
-    'date.base': 'createdAt must be a valid date',
   }),
 });
 
@@ -104,3 +83,90 @@ export const updateDiscussionSchema = Joi.object({
       'any.only': 'status must be either "open", "closed", or "archived"',
     }),
   });
+
+// Export all validation schemas as a single object
+export const discussionValidation = {
+  createDiscussion: createDiscussionSchema,
+  updateDiscussion: updateDiscussionSchema,
+  
+  // New validation schemas
+  getDiscussions: Joi.object({
+    page: Joi.number().integer().min(1).optional().default(1)
+      .messages({
+        'number.base': 'Page must be a number',
+        'number.integer': 'Page must be an integer',
+        'number.min': 'Page must be at least 1'
+      }),
+    limit: Joi.number().integer().min(1).max(100).optional().default(10)
+      .messages({
+        'number.base': 'Limit must be a number',
+        'number.integer': 'Limit must be an integer',
+        'number.min': 'Limit must be at least 1',
+        'number.max': 'Limit cannot exceed 100'
+      }),
+    communityId: Joi.string().hex().length(24).optional()
+      .messages({
+        'string.hex': 'Community ID must be a valid ObjectId',
+        'string.length': 'Community ID must be 24 characters long'
+      }),
+    sortBy: Joi.string().valid('createdAt', 'title', 'votes').optional().default('createdAt')
+      .messages({
+        'string.base': 'Sort by must be a string',
+        'any.only': 'Sort by must be one of: createdAt, title, votes'
+      }),
+    sortOrder: Joi.string().valid('asc', 'desc').optional().default('desc')
+      .messages({
+        'string.base': 'Sort order must be a string',
+        'any.only': 'Sort order must be either asc or desc'
+      }),
+    search: Joi.string().optional()
+      .messages({
+        'string.base': 'Search must be a string'
+      })
+  }),
+  
+  addReply: Joi.object({
+    content: Joi.string().required()
+      .messages({
+        'string.base': 'Content must be a string',
+        'any.required': 'Content is required'
+      }),
+    attachments: Joi.array().items(attachmentSchema).optional()
+      .messages({
+        'array.base': 'Attachments must be an array'
+      })
+  }),
+  
+  voteDiscussion: Joi.object({
+    voteType: Joi.string().valid('upvote', 'downvote').required()
+      .messages({
+        'string.base': 'Vote type must be a string',
+        'any.only': 'Vote type must be either upvote or downvote',
+        'any.required': 'Vote type is required'
+      })
+  }),
+  
+  pinDiscussion: Joi.object({
+    pinned: Joi.boolean().required()
+      .messages({
+        'boolean.base': 'Pinned must be a boolean',
+        'any.required': 'Pinned is required'
+      })
+  }),
+  
+  getPaginatedItems: Joi.object({
+    page: Joi.number().integer().min(1).optional().default(1)
+      .messages({
+        'number.base': 'Page must be a number',
+        'number.integer': 'Page must be an integer',
+        'number.min': 'Page must be at least 1'
+      }),
+    limit: Joi.number().integer().min(1).max(100).optional().default(10)
+      .messages({
+        'number.base': 'Limit must be a number',
+        'number.integer': 'Limit must be an integer',
+        'number.min': 'Limit must be at least 1',
+        'number.max': 'Limit cannot exceed 100'
+      })
+  })
+};

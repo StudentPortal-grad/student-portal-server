@@ -318,4 +318,52 @@ export class UserService {
     await DbOperations.deleteDocument(user);
     return {};
   }
+
+  /**
+   * Suspend user account
+   * @param userId - The ID of the user to suspend
+   * @param suspensionData - Suspension details
+   */
+  static async suspendUser(
+    userId: Types.ObjectId,
+    suspensionData: { reason: string; duration?: number }
+  ) {
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    // Set suspension fields
+    user.isSuspended = true;
+    user.suspensionReason = suspensionData.reason;
+    
+    // Set suspension duration if provided
+    if (suspensionData.duration) {
+      const suspendedUntil = new Date();
+      suspendedUntil.setDate(suspendedUntil.getDate() + suspensionData.duration);
+      user.suspendedUntil = suspendedUntil;
+    }
+
+    await DbOperations.saveDocument(user);
+    return { user };
+  }
+
+  /**
+   * Unsuspend user account
+   * @param userId - The ID of the user to unsuspend
+   */
+  static async unsuspendUser(userId: Types.ObjectId) {
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    // Remove suspension
+    user.isSuspended = false;
+    user.suspensionReason = undefined;
+    user.suspendedUntil = undefined;
+
+    await DbOperations.saveDocument(user);
+    return { user };
+  }
 }

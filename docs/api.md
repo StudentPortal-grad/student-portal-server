@@ -460,6 +460,8 @@ Updates message status (read/delivered).
 }
 ```
 
+
+
 #### 2.2 Groups and Communities
 
 ##### GET /communities

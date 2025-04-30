@@ -12,15 +12,11 @@ const objectId = Joi.string().custom((value, helpers) => {
 export const conversationValidation = {
   // Create conversation validation
   createConversation: Joi.object({
-    participants: Joi.array()
-      .items(objectId)
-      .min(1)
-      .required()
-      .messages({
-        'array.min': 'At least one participant is required',
-        'array.base': 'Participants must be an array',
-        'any.required': 'Participants are required',
-      }),
+    participants: Joi.array().items(objectId).min(1).required().messages({
+      'array.min': 'At least one participant is required',
+      'array.base': 'Participants must be an array',
+      'any.required': 'Participants are required',
+    }),
     name: Joi.string().max(255).trim(),
     description: Joi.string().max(1000),
     type: Joi.string().valid('DM', 'GroupDM').default('GroupDM'),
@@ -29,6 +25,14 @@ export const conversationValidation = {
 
   // Get conversation by ID validation
   getConversation: Joi.object({
+    id: objectId.required().messages({
+      'any.required': 'Conversation ID is required',
+      'any.invalid': 'Invalid conversation ID format',
+    }),
+  }),
+
+  // Get conversation by ID validation (renamed to match route handler)
+  getConversationById: Joi.object({
     id: objectId.required().messages({
       'any.required': 'Conversation ID is required',
       'any.invalid': 'Invalid conversation ID format',
@@ -51,5 +55,53 @@ export const conversationValidation = {
   removeParticipant: Joi.object({
     id: objectId.required(),
     userId: objectId.required(),
+  }),
+
+  // Add group members validation
+  addGroupMembers: Joi.object({
+    id: objectId.required().messages({
+      'any.required': 'Conversation ID is required',
+      'any.invalid': 'Invalid conversation ID format',
+    }),
+    userIds: Joi.array().items(objectId).min(1).required().messages({
+      'array.min': 'At least one user ID is required',
+      'array.base': 'User IDs must be an array',
+      'any.required': 'User IDs are required',
+    }),
+  }),
+
+  // Remove group member validation
+  removeGroupMember: Joi.object({
+    id: objectId.required().messages({
+      'any.required': 'Conversation ID is required',
+      'any.invalid': 'Invalid conversation ID format',
+    }),
+    memberId: objectId.required().messages({
+      'any.required': 'Member ID is required',
+      'any.invalid': 'Invalid member ID format',
+    }),
+  }),
+
+  // Update recent conversation settings validation
+  updateRecentConversation: Joi.object({
+    id: objectId.required().messages({
+      'any.required': 'Conversation ID is required',
+      'any.invalid': 'Invalid conversation ID format',
+    }),
+    isPinned: Joi.boolean(),
+    isMuted: Joi.boolean(),
+    mutedUntil: Joi.date().when('isMuted', {
+      is: true,
+      then: Joi.date().min('now'),
+      otherwise: Joi.optional().allow(null),
+    }),
+  }).min(2),
+
+  // Remove from recent conversations validation
+  removeFromRecentConversations: Joi.object({
+    id: objectId.required().messages({
+      'any.required': 'Conversation ID is required',
+      'any.invalid': 'Invalid conversation ID format',
+    }),
   }),
 };

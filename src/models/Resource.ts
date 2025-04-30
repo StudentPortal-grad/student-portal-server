@@ -57,13 +57,44 @@ const ResourceSchema = new Schema<IResource>(
         type: Number,
         default: 0
       },
+      views: {
+        type: Number,
+        default: 0
+      }
+    },
+    ratings: [{
+      userId: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+      },
       rating: {
         type: Number,
-        default: 0,
-        min: 0,
+        required: true,
+        min: 1,
         max: 5
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now
       }
-    }
+    }],
+    comments: [{
+      userId: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+      },
+      content: {
+        type: String,
+        required: true,
+        maxlength: 500
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now
+      }
+    }]
   },
   {
     timestamps: true
@@ -89,6 +120,38 @@ ResourceSchema.methods = {
   async incrementDownloads(): Promise<void> {
     this.interactionStats.downloads += 1;
     await this.save();
+  },
+
+  async incrementViews(): Promise<void> {
+    this.interactionStats.views += 1;
+    await this.save();
+  },
+
+  async addRating(userId: Types.ObjectId, rating: number): Promise<void> {
+    // Remove existing rating by this user if it exists
+    const existingRatingIndex = this.ratings.findIndex((r: { userId: Types.ObjectId }) => 
+      r.userId.toString() === userId.toString()
+    );
+    
+    if (existingRatingIndex !== -1) {
+      this.ratings.splice(existingRatingIndex, 1);
+    }
+    
+    // Add new rating
+    this.ratings.push({ userId, rating });
+    await this.save();
+  },
+
+  async addComment(userId: Types.ObjectId, content: string): Promise<void> {
+    this.comments.push({ userId, content });
+    await this.save();
+  },
+
+  getAverageRating(): number {
+    if (this.ratings.length === 0) return 0;
+    
+    const sum = this.ratings.reduce((acc: number, curr: { rating: number }) => acc + curr.rating, 0);
+    return parseFloat((sum / this.ratings.length).toFixed(1));
   }
 };
 

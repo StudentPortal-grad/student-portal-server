@@ -16,7 +16,7 @@ export class AuthService {
     name: string;
     email: string;
     password: string;
-    role: 'student' | 'faculty' | 'admin';
+    role: 'student' | 'faculty' | 'admin' | 'superadmin';
     level?: number;
   }) {
     const existingUser = await UserRepository.findByEmail(userData.email);
@@ -29,13 +29,25 @@ export class AuthService {
       );
     }
 
+    // Enforce only one superadmin in the database
+    if (userData.role === 'superadmin') {
+      const superadminExists = await User.exists({ role: 'superadmin' });
+      if (superadminExists) {
+        throw new AppError(
+          'A superadmin already exists. Only one superadmin is allowed.',
+          400,
+          ErrorCodes.ALREADY_EXISTS
+        );
+      }
+    }
+
     // Set level only for students, remove for other roles
     const userDataToSave = {
       ...userData,
       level: userData.role === 'student' ? userData.level || 1 : undefined,
     };
 
-    const user = await DbOperations.create(User, userDataToSave);
+    const user = await DbOperations.create<IUser>(User, userDataToSave);
 
     // Generate and send verification OTP
     const { otp, hashedOtp } = generateHashedOTP();
@@ -241,7 +253,7 @@ export class AuthService {
    * Logout user
    */
   static async logout(user: IUser) {
-      await user.updateStatus('offline');
+    await user.updateStatus('offline');
     return {};
   }
 

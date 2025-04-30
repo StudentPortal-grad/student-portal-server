@@ -90,7 +90,7 @@ const UserSchema = new Schema<IUser>(
             required: function (this: IUser) {
                 return this.signupStep === "completed";
             },
-            enum: ["student", "faculty", "admin"],
+            enum: ["student", "faculty", "admin", "superadmin"],
         },
         profilePicture: {
             type: String,
@@ -165,9 +165,18 @@ const UserSchema = new Schema<IUser>(
         ],
         status: {
             type: String,
-            required: true,
             enum: ["online", "offline", "idle", "dnd"],
             default: "offline",
+        },
+        isSuspended: {
+            type: Boolean,
+            default: false,
+        },
+        suspensionReason: {
+            type: String,
+        },
+        suspendedUntil: {
+            type: Date,
         },
         socketId: {
             type: String,

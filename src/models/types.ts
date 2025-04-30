@@ -20,7 +20,7 @@ export interface IUser extends Document {
     college: string;
     email: string;
     password: string;
-    role: "student" | "faculty" | "admin";
+    role: "student" | "faculty" | "admin" | "superadmin";
     signupStep: "initial" | "verified" | "password_set" | "completed";
     profilePicture: string;
     profile?: {
@@ -66,6 +66,9 @@ export interface IUser extends Document {
         role: string;
     }[];
     status: "online" | "offline" | "idle" | "dnd";
+    isSuspended: boolean;
+    suspensionReason?: string;
+    suspendedUntil?: Date;
     socketId?: string;
     lastSeen: Date;
     isGraduated?: boolean;
@@ -307,7 +310,7 @@ export interface IRole extends Document {
     createdAt: Date;
 }
 
-export interface IResource {
+export interface IResource extends Document {
     _id: Types.ObjectId;
     title: string;
     description?: string;
@@ -320,8 +323,18 @@ export interface IResource {
     community: Types.ObjectId;
     interactionStats: {
         downloads: number;
-        rating: number;
+        views: number;
     };
+    ratings: {
+        userId: Types.ObjectId;
+        rating: number;
+        createdAt: Date;
+    }[];
+    comments: {
+        userId: Types.ObjectId;
+        content: string;
+        createdAt: Date;
+    }[];
     createdAt: Date;
     updatedAt: Date;
 
@@ -331,6 +344,10 @@ export interface IResource {
         userCommunities: Types.ObjectId[]
     ): boolean;
     incrementDownloads(): Promise<void>;
+    incrementViews(): Promise<void>;
+    addRating(userId: Types.ObjectId, rating: number): Promise<void>;
+    addComment(userId: Types.ObjectId, content: string): Promise<void>;
+    getAverageRating(): number;
 }
 
 export interface IEvent {

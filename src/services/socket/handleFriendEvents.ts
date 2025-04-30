@@ -115,14 +115,13 @@ export const handleFriendEvents = (socket: Socket) => {
     // Get friend requests
     socket.on("getFriendRequests", async (data, _callback) => {
         try {
-            // Use projection and lean for better performance
+            // Use projection for better performance
             const user = await User.findById(socket.data.userId)
                 .select("friendRequests")
                 .populate({
                     path: "friendRequests.userId",
                     select: "name username profilePicture status lastSeen level college",
-                })
-                .lean();
+                });
 
             if (!user) {
                 return SocketUtils.emitError(

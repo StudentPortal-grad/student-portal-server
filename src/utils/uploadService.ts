@@ -138,6 +138,12 @@ export const uploadGroupImage = createUploadMiddleware(
   'group_images'
 );
 
+// Specific middleware for resource files
+export const uploadFile = createUploadMiddleware(
+  'fileUrl',
+  'resources'
+);
+
 export class UploadService {
   /**
    * Upload a file to Cloudinary

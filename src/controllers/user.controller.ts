@@ -214,4 +214,34 @@ export class UserController {
       res.success(result, 'University email updated successfully');
     }
   );
+
+  /**
+   * @route   PATCH /v1/users/:userId/suspend
+   * @desc    Suspend user account
+   * @access  Admin, Superadmin
+   */
+  static suspendUser = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const { reason, duration } = req.body;
+      const result = await UserService.suspendUser(
+        new Types.ObjectId(req.params.userId),
+        { reason, duration }
+      );
+      res.success(result, 'User suspended successfully');
+    }
+  );
+
+  /**
+   * @route   PATCH /v1/users/:userId/unsuspend
+   * @desc    Unsuspend user account
+   * @access  Admin, Superadmin
+   */
+  static unsuspendUser = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const result = await UserService.unsuspendUser(
+        new Types.ObjectId(req.params.userId)
+      );
+      res.success(result, 'User unsuspended successfully');
+    }
+  );
 }
