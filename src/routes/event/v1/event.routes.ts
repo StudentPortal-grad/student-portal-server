@@ -1,13 +1,10 @@
-import express from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate, authorize } from '@middleware/auth';
 import { validate } from '@middleware/validate';
 import asyncHandler from '@utils/asyncHandler';
 import {
   getAllEvents,
   getEventById,
-  createEvent,
-  updateEvent,
-  deleteEvent,
   getEventAttendees,
   getEventMetrics,
   getEventsForChart,
@@ -15,73 +12,130 @@ import {
   exportMultipleEventsToCalendar,
   getCalendarIntegrationUrls,
   getRecommendedEvents,
-  updateEventRecommendations
+  updateEventRecommendations,
 } from '@controllers/event.controller';
-import {
-  createOrUpdateRSVP,
-  getUserRSVP,
-  deleteRSVP,
-  getEventRSVPs
-} from '@controllers/rsvp.controller';
 import { eventValidation } from '../../../validations/eventValidation';
-import { rsvpValidation } from '../../../validations/rsvpValidation';
+import {
+  validateEventCreation,
+  validateEventUpdate,
+} from '../../../validators/event.validator';
+import { EventController } from '../../../controllers/event.controller';
 
-const router = express.Router();
+const router = Router();
+const eventController = new EventController();
 
 // Apply authentication middleware to all routes
 router.use(authenticate);
 
 // Public routes (still need authentication)
-router.get('/', validate(eventValidation.getEvents), asyncHandler(getAllEvents));
+router.get(
+  '/',
+  validate(eventValidation.getEvents),
+  asyncHandler(getAllEvents)
+);
 router.get('/:id', asyncHandler(getEventById));
 router.get('/:id/attendees', asyncHandler(getEventAttendees));
 
 // Admin/Dashboard routes
-router.get('/metrics/dashboard', authorize('admin', 'superadmin'), asyncHandler(getEventMetrics));
-router.get('/metrics/chart', authorize('admin', 'superadmin'), asyncHandler(getEventsForChart));
+router.get(
+  '/metrics/dashboard',
+  authorize('admin', 'superadmin'),
+  asyncHandler(getEventMetrics)
+);
+router.get(
+  '/metrics/chart',
+  authorize('admin', 'superadmin'),
+  asyncHandler(getEventsForChart)
+);
 
 // Protected routes (need specific permissions)
 router.post(
   '/',
-  authorize('createEvent'),
-  validate(eventValidation.createEvent),
-  asyncHandler(createEvent)
+  validateEventCreation,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const response = await eventController.createEvent(req, res);
+      res.status(201).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
 );
 
 router.patch(
   '/:id',
-  authorize('updateEvent'),
-  validate(eventValidation.updateEvent),
-  asyncHandler(updateEvent)
+  validateEventUpdate,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const response = await eventController.updateEvent(req, res);
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
 );
 
 router.delete(
   '/:id',
-  authorize('deleteEvent'),
-  asyncHandler(deleteEvent)
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const response = await eventController.deleteEvent(req, res);
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
 );
 
 // RSVP routes
 router.post(
   '/:eventId/rsvp',
-  validate(rsvpValidation.createOrUpdateRSVP),
-  createOrUpdateRSVP
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const response = await eventController.createOrUpdateRSVP(req, res);
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
 );
 
 router.get(
   '/:eventId/rsvp',
-  getUserRSVP
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const response = await eventController.getUserRSVP(req, res);
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
 );
 
 router.delete(
   '/:eventId/rsvp',
-  deleteRSVP
+
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const response = await eventController.deleteRSVP(req, res);
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
 );
 
 router.get(
   '/:eventId/rsvps',
-  validate(rsvpValidation.getRSVPs),
-  getEventRSVPs
+
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const response = await eventController.getEventRSVPs(req, res);
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
 );
 
 // Calendar integration routes
@@ -91,6 +145,10 @@ router.get('/:id/calendar-urls', asyncHandler(getCalendarIntegrationUrls));
 
 // Recommendation routes
 router.get('/recommendations', asyncHandler(getRecommendedEvents));
-router.patch('/:id/recommendations', authorize('updateEvent'), asyncHandler(updateEventRecommendations));
+router.patch(
+  '/:id/recommendations',
+  authorize('updateEvent'),
+  asyncHandler(updateEventRecommendations)
+);
 
 export default router;

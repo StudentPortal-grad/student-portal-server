@@ -1,12 +1,9 @@
 import request from 'supertest';
 import mongoose from 'mongoose';
-import express from 'express';
 import jwt from 'jsonwebtoken';
-import bodyParser from 'body-parser';
+import { httpServer as app } from '../../src/config/app';
 
 // Create a mock Express app for testing
-const app = express();
-app.use(bodyParser.json());
 
 // Mock the models
 jest.mock('../../src/models/Discussion', () => {
@@ -23,11 +20,9 @@ jest.mock('../../src/models/Discussion', () => {
     skip: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     lean: jest.fn().mockReturnThis(),
-    exec: jest.fn()
+    exec: jest.fn(),
   };
 });
-
-
 
 // Mock the authentication middleware
 jest.mock('../../src/middleware/auth', () => ({
@@ -35,27 +30,23 @@ jest.mock('../../src/middleware/auth', () => ({
     req.user = {
       _id: req.headers.userid || new mongoose.Types.ObjectId().toString(),
       email: 'test@example.com',
-      role: req.headers.userrole || 'user'
+      role: req.headers.userrole || 'user',
     };
     next();
   },
-  authorize: (...roles: string[]) => (req: any, res: any, next: any) => {
-    if (roles.includes(req.user.role) || req.user.role === 'admin') {
-      next();
-    } else {
-      res.status(403).json({ message: 'Forbidden' });
-    }
-  }
+  authorize:
+    (...roles: string[]) =>
+    (req: any, res: any, next: any) => {
+      if (roles.includes(req.user.role) || req.user.role === 'admin') {
+        next();
+      } else {
+        res.status(403).json({ message: 'Forbidden' });
+      }
+    },
 }));
-
-// Import the routes (after mocking dependencies)
-import discussionRoutes from '../../src/routes/discussion/v1/discussion.routes';
-
 // Import models after mocking
 import Discussion from '../../src/models/Discussion';
 
-// Setup the app with the routes
-app.use('/api/v1/discussions', discussionRoutes);
 
 // Create a mock token for authentication
 const createAuthToken = (userId: string, role: string = 'user') => {
@@ -80,7 +71,7 @@ describe('Discussion API Routes', () => {
     community: mockCommunityId,
     createdAt: new Date(),
     updatedAt: new Date(),
-    replies: []
+    replies: [],
   };
 
   describe('GET /api/v1/discussions', () => {
@@ -95,10 +86,10 @@ describe('Discussion API Routes', () => {
         skip: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
         lean: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValueOnce(mockDiscussions)
+        exec: jest.fn().mockResolvedValueOnce(mockDiscussions),
       });
       (Discussion.countDocuments as jest.Mock).mockImplementation(() => ({
-        exec: jest.fn().mockResolvedValueOnce(mockCount)
+        exec: jest.fn().mockResolvedValueOnce(mockCount),
       }));
 
       // Make the request
@@ -119,7 +110,7 @@ describe('Discussion API Routes', () => {
       // Mock the database response
       (Discussion.findById as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValueOnce(mockDiscussionData)
+        exec: jest.fn().mockResolvedValueOnce(mockDiscussionData),
       });
 
       // Make the request
@@ -138,7 +129,7 @@ describe('Discussion API Routes', () => {
       // Mock the database response for discussion not found
       (Discussion.findById as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValueOnce(null)
+        exec: jest.fn().mockResolvedValueOnce(null),
       });
 
       // Make the request
@@ -157,15 +148,15 @@ describe('Discussion API Routes', () => {
       const discussionData = {
         title: 'New Discussion',
         content: 'New Content',
-        community: mockCommunityId
+        community: mockCommunityId,
       };
 
-      const createdDiscussion = { 
-        ...discussionData, 
+      const createdDiscussion = {
+        ...discussionData,
         _id: new mongoose.Types.ObjectId(),
         author: mockUserId,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       // Mock the database response
@@ -190,21 +181,23 @@ describe('Discussion API Routes', () => {
     it('should update a discussion successfully', async () => {
       const updateData = {
         title: 'Updated Title',
-        content: 'Updated Content'
+        content: 'Updated Content',
       };
 
       const updatedDiscussion = { ...mockDiscussionData, ...updateData };
 
       // Mock the database responses
       (Discussion.findById as jest.Mock).mockReturnValueOnce({
-        exec: jest.fn().mockResolvedValueOnce(mockDiscussionData)
+        exec: jest.fn().mockResolvedValueOnce(mockDiscussionData),
       });
 
-      (Discussion.updateOne as jest.Mock).mockResolvedValueOnce({ nModified: 1 });
+      (Discussion.updateOne as jest.Mock).mockResolvedValueOnce({
+        nModified: 1,
+      });
 
       (Discussion.findById as jest.Mock).mockReturnValueOnce({
         populate: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValueOnce(updatedDiscussion)
+        exec: jest.fn().mockResolvedValueOnce(updatedDiscussion),
       });
 
       // Make the request
@@ -226,10 +219,12 @@ describe('Discussion API Routes', () => {
     it('should delete a discussion successfully', async () => {
       // Mock the database responses
       (Discussion.findById as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValueOnce(mockDiscussionData)
+        exec: jest.fn().mockResolvedValueOnce(mockDiscussionData),
       });
 
-      (Discussion.deleteOne as jest.Mock).mockResolvedValueOnce({ deletedCount: 1 });
+      (Discussion.deleteOne as jest.Mock).mockResolvedValueOnce({
+        deletedCount: 1,
+      });
 
       // Make the request
       const response = await request(app)
@@ -240,14 +235,16 @@ describe('Discussion API Routes', () => {
 
       // Verify the response
       expect(response.body.success).toBe(true);
-      expect(Discussion.deleteOne).toHaveBeenCalledWith({ _id: mockDiscussionId });
+      expect(Discussion.deleteOne).toHaveBeenCalledWith({
+        _id: mockDiscussionId,
+      });
     });
   });
 
   describe('POST /api/v1/discussions/:id/replies', () => {
     it('should add a reply to a discussion successfully', async () => {
       const replyData = {
-        content: 'Test Reply'
+        content: 'Test Reply',
       };
 
       const mockReplyData = {
@@ -264,17 +261,17 @@ describe('Discussion API Routes', () => {
           ...mockDiscussionData,
           addReply: jest.fn().mockReturnValue({
             ...mockDiscussionData,
-            replies: [...(mockDiscussionData.replies || []), mockReplyData]
-          })
-        })
+            replies: [...(mockDiscussionData.replies || []), mockReplyData],
+          }),
+        }),
       });
 
       // Mock the save method
       const mockSave = jest.fn().mockResolvedValueOnce({
         ...mockDiscussionData,
-        replies: [...(mockDiscussionData.replies || []), mockReplyData]
+        replies: [...(mockDiscussionData.replies || []), mockReplyData],
       });
-      
+
       // Add the save method to the mock
       (Discussion.findById as jest.Mock).mockReturnValue({
         exec: jest.fn().mockResolvedValueOnce({
@@ -282,9 +279,9 @@ describe('Discussion API Routes', () => {
           addReply: jest.fn().mockReturnValue({
             ...mockDiscussionData,
             replies: [...(mockDiscussionData.replies || []), mockReplyData],
-            save: mockSave
-          })
-        })
+            save: mockSave,
+          }),
+        }),
       });
 
       // Make the request
@@ -313,12 +310,12 @@ describe('Discussion API Routes', () => {
 
       const mockDiscussionWithReplies = {
         ...mockDiscussionData,
-        replies: [mockReply]
+        replies: [mockReply],
       };
 
       // Mock the database response
       (Discussion.findById as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValueOnce(mockDiscussionWithReplies)
+        exec: jest.fn().mockResolvedValueOnce(mockDiscussionWithReplies),
       });
 
       // Make the request

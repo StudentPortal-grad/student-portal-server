@@ -11,6 +11,12 @@ interface JwtPayload {
   role: string;
 }
 
+declare module 'express' {
+  interface Request {
+    user?: any;
+  }
+}
+
 /**
  * Verify JWT token and attach user to request
  */
@@ -90,7 +96,7 @@ export const authorizeOwner = (userIdPath: string) => {
 
     if (
       req.user.role !== 'admin' &&
-      req.user._id.toString() !== resourceUserId?.toString()
+      req.user.id.toString() !== resourceUserId?.toString()
     ) {
       return next(
         new AppError(

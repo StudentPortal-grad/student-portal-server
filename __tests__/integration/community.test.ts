@@ -1,12 +1,8 @@
 import request from 'supertest';
 import mongoose from 'mongoose';
-import express from 'express';
 import jwt from 'jsonwebtoken';
-import bodyParser from 'body-parser';
-
-// Create a mock Express app for testing
-const app = express();
-app.use(bodyParser.json());
+import { httpServer as app } from '../../src/config/app';
+import Community from '../../src/models/Community';
 
 // Mock the models
 jest.mock('../../src/models/Community', () => {
@@ -23,7 +19,7 @@ jest.mock('../../src/models/Community', () => {
     skip: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     lean: jest.fn().mockReturnThis(),
-    exec: jest.fn()
+    exec: jest.fn(),
   };
 });
 
@@ -41,38 +37,33 @@ jest.mock('../../src/models/User', () => {
     skip: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     lean: jest.fn().mockReturnThis(),
-    exec: jest.fn()
+    exec: jest.fn(),
   };
 });
 
 // Mock the authentication middleware
 jest.mock('../../src/middleware/auth', () => ({
   authenticate: (req: any, res: any, next: any) => {
+    const userId =
+      req.headers.userid || new mongoose.Types.ObjectId().toString();
     req.user = {
-      _id: req.headers.userid || new mongoose.Types.ObjectId().toString(),
+      _id: userId,
+      id: userId,
       email: 'test@example.com',
-      role: req.headers.userrole || 'user'
+      role: req.headers.userrole || 'user',
     };
     next();
   },
-  authorize: (...roles: string[]) => (req: any, res: any, next: any) => {
-    if (roles.includes(req.user.role) || req.user.role === 'admin') {
-      next();
-    } else {
-      res.status(403).json({ message: 'Forbidden' });
-    }
-  }
+  authorize:
+    (...roles: string[]) =>
+    (req: any, res: any, next: any) => {
+      if (roles.includes(req.user.role) || req.user.role === 'admin') {
+        next();
+      } else {
+        res.status(403).json({ message: 'Forbidden' });
+      }
+    },
 }));
-
-// Import the routes (after mocking dependencies)
-import communityRoutes from '../../src/routes/community/v1/community.routes';
-
-// Import models after mocking
-import Community from '../../src/models/Community';
-import User from '../../src/models/User';
-
-// Setup the app with the routes
-app.use('/api/v1/communities', communityRoutes);
 
 // Create a mock token for authentication
 const createAuthToken = (userId: string, role: string = 'user') => {
@@ -110,10 +101,10 @@ describe('Community API Routes', () => {
         skip: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
         lean: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValueOnce(mockCommunities)
+        exec: jest.fn().mockResolvedValueOnce(mockCommunities),
       });
       (Community.countDocuments as jest.Mock).mockImplementation(() => ({
-        exec: jest.fn().mockResolvedValueOnce(mockCount)
+        exec: jest.fn().mockResolvedValueOnce(mockCount),
       }));
 
       // Make the request
@@ -134,7 +125,7 @@ describe('Community API Routes', () => {
       // Mock the database response
       (Community.findById as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValueOnce(mockCommunityData)
+        exec: jest.fn().mockResolvedValueOnce(mockCommunityData),
       });
 
       // Make the request
@@ -153,7 +144,7 @@ describe('Community API Routes', () => {
       // Mock the database response for community not found
       (Community.findById as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValueOnce(null)
+        exec: jest.fn().mockResolvedValueOnce(null),
       });
 
       // Make the request
@@ -174,7 +165,10 @@ describe('Community API Routes', () => {
         description: 'New Description',
       };
 
-      const createdCommunity = { ...communityData, _id: new mongoose.Types.ObjectId() };
+      const createdCommunity = {
+        ...communityData,
+        _id: new mongoose.Types.ObjectId(),
+      };
 
       // Mock the database response
       (Community.create as jest.Mock).mockResolvedValueOnce(createdCommunity);
@@ -198,21 +192,23 @@ describe('Community API Routes', () => {
     it('should update a community successfully', async () => {
       const updateData = {
         name: 'Updated Name',
-        description: 'Updated Description'
+        description: 'Updated Description',
       };
 
       const updatedCommunity = { ...mockCommunityData, ...updateData };
 
       // Mock the database responses
       (Community.findById as jest.Mock).mockReturnValueOnce({
-        exec: jest.fn().mockResolvedValueOnce(mockCommunityData)
+        exec: jest.fn().mockResolvedValueOnce(mockCommunityData),
       });
 
-      (Community.updateOne as jest.Mock).mockResolvedValueOnce({ nModified: 1 });
+      (Community.updateOne as jest.Mock).mockResolvedValueOnce({
+        nModified: 1,
+      });
 
       (Community.findById as jest.Mock).mockReturnValueOnce({
         populate: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValueOnce(updatedCommunity)
+        exec: jest.fn().mockResolvedValueOnce(updatedCommunity),
       });
 
       // Make the request
@@ -234,10 +230,12 @@ describe('Community API Routes', () => {
     it('should delete a community successfully', async () => {
       // Mock the database responses
       (Community.findById as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValueOnce(mockCommunityData)
+        exec: jest.fn().mockResolvedValueOnce(mockCommunityData),
       });
 
-      (Community.deleteOne as jest.Mock).mockResolvedValueOnce({ deletedCount: 1 });
+      (Community.deleteOne as jest.Mock).mockResolvedValueOnce({
+        deletedCount: 1,
+      });
 
       // Make the request
       const response = await request(app)
@@ -248,7 +246,9 @@ describe('Community API Routes', () => {
 
       // Verify the response
       expect(response.body.success).toBe(true);
-      expect(Community.deleteOne).toHaveBeenCalledWith({ _id: mockCommunityId });
+      expect(Community.deleteOne).toHaveBeenCalledWith({
+        _id: mockCommunityId,
+      });
     });
   });
 
@@ -256,10 +256,12 @@ describe('Community API Routes', () => {
     it('should join a community successfully', async () => {
       // Mock the database responses
       (Community.findById as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValueOnce(mockCommunityData)
+        exec: jest.fn().mockResolvedValueOnce(mockCommunityData),
       });
 
-      (Community.updateOne as jest.Mock).mockResolvedValueOnce({ nModified: 1 });
+      (Community.updateOne as jest.Mock).mockResolvedValueOnce({
+        nModified: 1,
+      });
 
       // Make the request
       const response = await request(app)
@@ -278,10 +280,12 @@ describe('Community API Routes', () => {
     it('should leave a community successfully', async () => {
       // Mock the database responses
       (Community.findById as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValueOnce(mockCommunityData)
+        exec: jest.fn().mockResolvedValueOnce(mockCommunityData),
       });
 
-      (Community.updateOne as jest.Mock).mockResolvedValueOnce({ nModified: 1 });
+      (Community.updateOne as jest.Mock).mockResolvedValueOnce({
+        nModified: 1,
+      });
 
       // Make the request
       const response = await request(app)

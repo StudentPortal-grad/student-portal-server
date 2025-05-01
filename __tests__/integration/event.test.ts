@@ -1,12 +1,11 @@
 import request from 'supertest';
 import mongoose from 'mongoose';
-import express from 'express';
 import jwt from 'jsonwebtoken';
-import bodyParser from 'body-parser';
-
-// Create a mock Express app for testing
-const app = express();
-app.use(bodyParser.json());
+import { httpServer as app } from '../../src/config/app';
+import Event from '../../src/models/Event';
+import RSVP from '../../src/models/RSVP';
+import { generateEventRecommendations } from '../../src/utils/recommendationUtils';
+import { generateEventCalendar, generateGoogleCalendarUrl } from '../../src/utils/calendarUtils';
 
 // Mock the models
 jest.mock('../../src/models/Event', () => {
@@ -23,7 +22,7 @@ jest.mock('../../src/models/Event', () => {
     skip: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     lean: jest.fn().mockReturnThis(),
-    exec: jest.fn()
+    exec: jest.fn(),
   };
 });
 
@@ -41,51 +40,48 @@ jest.mock('../../src/models/RSVP', () => {
     skip: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     lean: jest.fn().mockReturnThis(),
-    exec: jest.fn()
+    exec: jest.fn(),
   };
 });
 
 // Mock the calendar utilities
 jest.mock('../../src/utils/calendarUtils', () => ({
-  generateICalForEvent: jest.fn().mockReturnValue('mock-ical-data'),
-  generateICalForEvents: jest.fn().mockReturnValue('mock-ical-data-multiple'),
+  generateEventCalendar: jest.fn().mockReturnValue('mock-ical-data'),
+  generateMultipleEventsCalendar: jest.fn().mockReturnValue('mock-ical-data-multiple'),
   generateGoogleCalendarUrl: jest.fn().mockReturnValue('mock-google-url'),
   generateOutlookCalendarUrl: jest.fn().mockReturnValue('mock-outlook-url'),
 }));
 
 // Mock the recommendation utilities
 jest.mock('../../src/utils/recommendationUtils', () => ({
-  generateEventRecommendations: jest.fn().mockResolvedValue(['event1', 'event2']),
+  generateEventRecommendations: jest
+    .fn()
+    .mockResolvedValue(['event1', 'event2']),
 }));
 
 // Mock the authentication middleware
 jest.mock('../../src/middleware/auth', () => ({
   authenticate: (req: any, res: any, next: any) => {
+    const userId =
+      req.headers.userid || new mongoose.Types.ObjectId().toString();
     req.user = {
-      _id: req.headers.userid || new mongoose.Types.ObjectId().toString(),
+      _id: userId,
+      id: userId,
       email: 'test@example.com',
-      role: req.headers.userrole || 'user'
+      role: req.headers.userrole || 'user',
     };
     next();
   },
-  authorize: (...roles: string[]) => (req: any, res: any, next: any) => {
-    if (roles.includes(req.user.role) || req.user.role === 'admin') {
-      next();
-    } else {
-      res.status(403).json({ message: 'Forbidden' });
-    }
-  }
+  authorize:
+    (...roles: string[]) =>
+    (req: any, res: any, next: any) => {
+      if (roles.includes(req.user.role) || req.user.role === 'admin') {
+        next();
+      } else {
+        res.status(403).json({ message: 'Forbidden' });
+      }
+    },
 }));
-
-// Import the routes (after mocking dependencies)
-import eventRoutes from '../../src/routes/event/v1/event.routes';
-
-// Import models after mocking
-import Event from '../../src/models/Event';
-import RSVP from '../../src/models/RSVP';
-
-// Setup the app with the routes
-app.use('/api/v1/events', eventRoutes);
 
 // Create a mock token for authentication
 const createAuthToken = (userId: string, role: string = 'user') => {
@@ -113,10 +109,6 @@ describe('Event API Routes', () => {
     updatedAt: new Date(),
   };
 
-  // Mock utility imports
-  const mockUtils = require('../../src/utils/recommendationUtils');
-  const mockCalendarUtils = require('../../src/utils/calendarUtils');
-
   const authToken = createAuthToken(mockUserId);
 
   beforeEach(() => {
@@ -134,7 +126,7 @@ describe('Event API Routes', () => {
         skip: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
         lean: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValueOnce(mockEvents)
+        exec: jest.fn().mockResolvedValueOnce(mockEvents),
       });
       (Event.countDocuments as jest.Mock).mockResolvedValueOnce(mockCount);
 
@@ -156,7 +148,7 @@ describe('Event API Routes', () => {
       // Mock the database response
       (Event.findById as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValueOnce(mockEventData)
+        exec: jest.fn().mockResolvedValueOnce(mockEventData),
       });
 
       // Make the request
@@ -175,7 +167,7 @@ describe('Event API Routes', () => {
       // Mock the database response for event not found
       (Event.findById as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValueOnce(null)
+        exec: jest.fn().mockResolvedValueOnce(null),
       });
 
       // Make the request
@@ -198,14 +190,14 @@ describe('Event API Routes', () => {
         dateTime: new Date().toISOString(),
         location: 'New Location',
         capacity: 50,
-        visibility: 'public'
+        visibility: 'public',
       };
 
       // Mock the database response
       (Event.create as jest.Mock).mockResolvedValueOnce({
         ...eventData,
         _id: new mongoose.Types.ObjectId().toString(),
-        organizer: mockUserId
+        organizer: mockUserId,
       });
 
       // Make the request
@@ -245,23 +237,23 @@ describe('Event API Routes', () => {
     it('should update an event successfully', async () => {
       const updateData = {
         title: 'Updated Event Title',
-        description: 'Updated Description'
+        description: 'Updated Description',
       };
 
       // Mock the database responses
       (Event.findById as jest.Mock).mockReturnValue({
         exec: jest.fn().mockResolvedValueOnce({
           ...mockEventData,
-          organizer: mockUserId
-        })
+          organizer: mockUserId,
+        }),
       });
       (Event.updateOne as jest.Mock).mockResolvedValueOnce({ nModified: 1 });
       (Event.findById as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValueOnce({
           ...mockEventData,
-          ...updateData
-        })
+          ...updateData,
+        }),
       });
 
       // Make the request
@@ -282,7 +274,7 @@ describe('Event API Routes', () => {
     it('should return 404 if event does not exist', async () => {
       // Mock the database response for event not found
       (Event.findById as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValueOnce(null)
+        exec: jest.fn().mockResolvedValueOnce(null),
       });
 
       // Make the request
@@ -304,8 +296,8 @@ describe('Event API Routes', () => {
       (Event.findById as jest.Mock).mockReturnValue({
         exec: jest.fn().mockResolvedValueOnce({
           ...mockEventData,
-          organizer: differentUserId // Different user is the organizer
-        })
+          organizer: differentUserId, // Different user is the organizer
+        }),
       });
 
       // Make the request
@@ -328,8 +320,8 @@ describe('Event API Routes', () => {
       (Event.findById as jest.Mock).mockReturnValue({
         exec: jest.fn().mockResolvedValueOnce({
           ...mockEventData,
-          organizer: mockUserId
-        })
+          organizer: mockUserId,
+        }),
       });
       (Event.deleteOne as jest.Mock).mockResolvedValueOnce({ deletedCount: 1 });
 
@@ -348,7 +340,7 @@ describe('Event API Routes', () => {
     it('should return 404 if event does not exist', async () => {
       // Mock the database response for event not found
       (Event.findById as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValueOnce(null)
+        exec: jest.fn().mockResolvedValueOnce(null),
       });
 
       // Make the request
@@ -368,7 +360,7 @@ describe('Event API Routes', () => {
       // Mock the database response
       (Event.findById as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValueOnce(mockEventData)
+        exec: jest.fn().mockResolvedValueOnce(mockEventData),
       });
 
       // Make the request
@@ -379,14 +371,14 @@ describe('Event API Routes', () => {
 
       // Verify the response
       expect(response.text).toBe('mock-ical-data');
-      expect(mockCalendarUtils.generateICalForEvent).toHaveBeenCalled();
+      expect(generateEventCalendar).toHaveBeenCalled();
     });
 
     it('should export event to Google Calendar format', async () => {
       // Mock the database response
       (Event.findById as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValueOnce(mockEventData)
+        exec: jest.fn().mockResolvedValueOnce(mockEventData),
       });
 
       // Make the request
@@ -397,16 +389,16 @@ describe('Event API Routes', () => {
 
       // Verify the response
       expect(response.header.location).toBe('mock-google-url');
-      expect(mockCalendarUtils.generateGoogleCalendarUrl).toHaveBeenCalled();
+      expect(generateGoogleCalendarUrl).toHaveBeenCalled();
     });
   });
 
   describe('GET /api/v1/events/recommended', () => {
     it('should get recommended events', async () => {
       // Mock the recommendation utility
-      mockUtils.generateEventRecommendations.mockResolvedValueOnce([
+      (generateEventRecommendations as jest.Mock).mockResolvedValueOnce([
         { ...mockEventData, title: 'Recommended Event 1' },
-        { ...mockEventData, title: 'Recommended Event 2' }
+        { ...mockEventData, title: 'Recommended Event 2' },
       ]);
 
       // Make the request
@@ -418,28 +410,28 @@ describe('Event API Routes', () => {
       // Verify the response
       expect(response.body.success).toBe(true);
       expect(response.body.data.events).toHaveLength(2);
-      expect(mockUtils.generateEventRecommendations).toHaveBeenCalled();
+      expect(generateEventRecommendations).toHaveBeenCalled();
     });
   });
 
   describe('POST /api/v1/events/:id/rsvp', () => {
     it('should create or update an RSVP successfully', async () => {
       const rsvpData = {
-        status: 'going'
+        status: 'going',
       };
 
       // Mock the database responses
       (Event.findById as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValueOnce(mockEventData)
+        exec: jest.fn().mockResolvedValueOnce(mockEventData),
       });
       (RSVP.findOne as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValueOnce(null) // No existing RSVP
+        exec: jest.fn().mockResolvedValueOnce(null), // No existing RSVP
       });
       (RSVP.create as jest.Mock).mockResolvedValueOnce({
         _id: new mongoose.Types.ObjectId().toString(),
         event: mockEventId,
         user: mockUserId,
-        status: 'going'
+        status: 'going',
       });
 
       // Make the request
@@ -460,7 +452,7 @@ describe('Event API Routes', () => {
     it('should return 404 if event does not exist', async () => {
       // Mock the database response for event not found
       (Event.findById as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValueOnce(null)
+        exec: jest.fn().mockResolvedValueOnce(null),
       });
 
       // Make the request
@@ -482,15 +474,15 @@ describe('Event API Routes', () => {
         _id: new mongoose.Types.ObjectId().toString(),
         event: mockEventId,
         user: mockUserId,
-        status: 'going'
+        status: 'going',
       };
 
       // Mock the database responses
       (Event.findById as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValueOnce(mockEventData)
+        exec: jest.fn().mockResolvedValueOnce(mockEventData),
       });
       (RSVP.findOne as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValueOnce(mockRSVP)
+        exec: jest.fn().mockResolvedValueOnce(mockRSVP),
       });
 
       // Make the request
@@ -509,10 +501,10 @@ describe('Event API Routes', () => {
     it('should return 404 if no RSVP exists', async () => {
       // Mock the database responses
       (Event.findById as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValueOnce(mockEventData)
+        exec: jest.fn().mockResolvedValueOnce(mockEventData),
       });
       (RSVP.findOne as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValueOnce(null)
+        exec: jest.fn().mockResolvedValueOnce(null),
       });
 
       // Make the request

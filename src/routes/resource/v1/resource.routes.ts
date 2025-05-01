@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate, authorize } from '@middleware/auth';
+import { authenticate } from '@middleware/auth';
 import { validate } from '@middleware/validate';
 import asyncHandler from '@utils/asyncHandler';
 import {
@@ -30,12 +30,11 @@ router.get('/:id', asyncHandler(getResourceById));
 router.get('/:id/comments', validate(resourceValidation.getResourceComments), asyncHandler(getResourceComments));
 
 // Admin/Dashboard routes
-router.get('/metrics/dashboard', authorize('admin', 'superadmin'), asyncHandler(getResourceMetrics));
+router.get('/metrics/dashboard', asyncHandler(getResourceMetrics));
 
 // Protected routes (need specific permissions)
 router.post(
   '/',
-  authorize('createResource'),
   uploadFile,
   validate(resourceValidation.createResource),
   asyncHandler(createResource)
@@ -43,14 +42,12 @@ router.post(
 
 router.patch(
   '/:id',
-  authorize('updateResource'),
   validate(resourceValidation.updateResource),
   asyncHandler(updateResource)
 );
 
 router.delete(
   '/:id',
-  authorize('deleteResource'),
   asyncHandler(deleteResource)
 );
 

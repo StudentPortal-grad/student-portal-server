@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Response, Request, NextFunction } from 'express';
+import { Response } from 'express';
 
 // Define custom response interface with additional methods
 interface CustomResponse extends Response {
@@ -46,62 +46,67 @@ export const mockRequest = (data: any = {}) => {
 // Mock next function
 export const mockNext = jest.fn();
 
-// Setup and teardown for MongoDB in-memory server
-export const setupTestDB = () => {
-  beforeAll(async () => {
-  }); 
-
-  afterAll(async () => {
-  });
-
-  afterEach(async () => {
-    const collections = mongoose.connection.collections;
-    for (const key in collections) {
-      await collections[key].deleteMany({});
-    }
-  });
+// Mock database operations
+export const mockDbOperation = (mockData: any = null) => {
+  return {
+    exec: jest.fn().mockResolvedValue(mockData),
+    lean: jest.fn().mockReturnThis(),
+    populate: jest.fn().mockReturnThis(),
+    sort: jest.fn().mockReturnThis(),
+    skip: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+  };
 };
 
-// Mock mongoose models
+// Mock mongoose model operations
 export const mockModel = (modelName: string, mockData: any = {}) => {
-  const mockFind = jest.fn().mockReturnThis();
-  const mockFindOne = jest.fn().mockReturnThis();
-  const mockFindById = jest.fn().mockReturnThis();
-  const mockPopulate = jest.fn().mockReturnThis();
-  const mockSort = jest.fn().mockReturnThis();
-  const mockSkip = jest.fn().mockReturnThis();
-  const mockLimit = jest.fn().mockReturnThis();
-  const mockLean = jest.fn().mockReturnThis();
-  const mockExec = jest.fn().mockResolvedValue(mockData);
-  const mockCreate = jest.fn().mockResolvedValue(mockData);
-  const mockSave = jest.fn().mockResolvedValue(mockData);
-  const mockUpdateOne = jest.fn().mockResolvedValue({ nModified: 1 });
-  const mockUpdateMany = jest.fn().mockResolvedValue({ nModified: 1 });
-  const mockDeleteOne = jest.fn().mockResolvedValue({ deletedCount: 1 });
-  const mockDeleteMany = jest.fn().mockResolvedValue({ deletedCount: 1 });
-  const mockCountDocuments = jest.fn().mockResolvedValue(0);
-  
   return {
-    find: mockFind,
-    findOne: mockFindOne,
-    findById: mockFindById,
-    populate: mockPopulate,
-    sort: mockSort,
-    skip: mockSkip,
-    limit: mockLimit,
-    lean: mockLean,
-    exec: mockExec,
-    create: mockCreate,
-    save: mockSave,
-    updateOne: mockUpdateOne,
-    updateMany: mockUpdateMany,
-    deleteOne: mockDeleteOne,
-    deleteMany: mockDeleteMany,
-    countDocuments: mockCountDocuments,
+    find: jest.fn().mockImplementation(() => mockDbOperation(Array.isArray(mockData) ? mockData : [mockData])),
+    findOne: jest.fn().mockImplementation(() => mockDbOperation(mockData)),
+    findById: jest.fn().mockImplementation(() => mockDbOperation(mockData)),
+    create: jest.fn().mockResolvedValue(mockData),
+    updateOne: jest.fn().mockResolvedValue({ nModified: 1, ...mockData }),
+    updateMany: jest.fn().mockResolvedValue({ nModified: mockData.length || 1 }),
+    deleteOne: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+    deleteMany: jest.fn().mockResolvedValue({ deletedCount: mockData.length || 1 }),
+    countDocuments: jest.fn().mockImplementation(() => mockDbOperation(mockData.length || 0)),
+    aggregate: jest.fn().mockImplementation(() => mockDbOperation(mockData)),
   };
 };
 
 // Generate a mock ObjectId
-export const generateObjectId = () => {
-  return new mongoose.Types.ObjectId().toString();
+export const generateObjectId = () => new mongoose.Types.ObjectId().toString();
+
+// Mock mongoose connection
+export const setupTestDB = () => {
+  beforeAll(() => {
+    // Mock mongoose connect method
+    jest.spyOn(mongoose, 'connect').mockImplementation(() => Promise.resolve(mongoose));
+    
+    // Create a mock connection object
+    const mockConnection = {
+      collections: {},
+      db: {
+        collection: jest.fn().mockReturnValue({
+          deleteMany: jest.fn().mockResolvedValue({ deletedCount: 1 })
+        })
+      }
+    };
+
+    // Mock the connection getter
+    Object.defineProperty(mongoose, 'connection', {
+      get: jest.fn().mockReturnValue(mockConnection),
+      configurable: true
+    });
+  });
+
+  afterAll(() => {
+    // Clean up mocks
+    jest.restoreAllMocks();
+  });
+
+  beforeEach(() => {
+    // Clear all mocks before each test
+    jest.clearAllMocks();
+  });
 };

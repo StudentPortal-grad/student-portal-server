@@ -1,7 +1,7 @@
 import { Schema, model, Types } from 'mongoose';
-import { IEvent } from './types';
+import { IEvent, IEventDocument } from '../interfaces/event.interface';
 
-const EventSchema = new Schema<IEvent>(
+const EventSchema = new Schema<IEventDocument>(
   {
     title: {
       type: String,
@@ -12,7 +12,11 @@ const EventSchema = new Schema<IEvent>(
       type: String,
       maxlength: 1000,
     },
-    dateTime: {
+    startDate: {
+      type: Date,
+      required: true,
+    },
+    endDate: {
       type: Date,
       required: true,
     },
@@ -30,12 +34,26 @@ const EventSchema = new Schema<IEvent>(
       enum: ['public', 'private', 'community'],
       default: 'public',
     },
-    attendees: [
-      {
+    attendees: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Users'
+    }],
+    rsvps: [{
+      userId: {
         type: Schema.Types.ObjectId,
-        ref: 'RSVP',
+        ref: 'Users',
+        required: true
       },
-    ],
+      status: {
+        type: String,
+        enum: ['going', 'maybe', 'not_going'],
+        required: true
+      },
+      updatedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }],
     creatorId: {
       type: Schema.Types.ObjectId,
       ref: 'Users',
@@ -59,6 +77,14 @@ const EventSchema = new Schema<IEvent>(
         return this.visibility === 'community';
       },
     },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    }
   },
   {
     timestamps: true,
@@ -67,31 +93,46 @@ const EventSchema = new Schema<IEvent>(
 
 // Methods
 EventSchema.methods = {
-  isAtCapacity: function (): boolean {
+  isAtCapacity: function(this: IEventDocument): boolean {
     return this.capacity ? this.attendees?.length >= this.capacity : false;
   },
 
-  updateStatus: async function (): Promise<void> {
+  updateStatus: async function(this: IEventDocument): Promise<void> {
     const now = new Date();
-    if (this.dateTime > now && this.status !== 'cancelled') {
+    if (this.startDate > now && this.status !== 'cancelled') {
       this.status = 'upcoming';
-    } else if (this.dateTime <= now && this.status === 'upcoming') {
+    } else if (this.startDate <= now && this.status === 'upcoming') {
       this.status = 'ongoing';
     }
     await this.save();
   },
+
+  addRating: async function(this: IEventDocument, _userId: Types.ObjectId, _rating: number): Promise<IEventDocument> {
+    // Implementation
+    return this;
+  },
+  
+  addComment: async function(this: IEventDocument, _userId: Types.ObjectId, _content: string): Promise<IEventDocument> {
+    // Implementation
+    return this;
+  },
+  
+  getAverageRating: function(this: IEventDocument): number {
+    // Implementation
+    return 0;
+  }
 };
 
 // Statics
 EventSchema.statics = {
-  findUpcoming: function () {
+  findUpcoming: function() {
     return this.find({
       status: 'upcoming',
-      dateTime: { $gt: new Date() },
-    }).sort({ dateTime: 1 });
+      startDate: { $gt: new Date() },
+    }).sort({ startDate: 1 });
   },
 
-  findByCommunity: function (communityId: Types.ObjectId) {
+  findByCommunity: function(communityId: Types.ObjectId) {
     return this.find({
       communityId,
       status: { $in: ['upcoming', 'ongoing'] },
@@ -100,7 +141,7 @@ EventSchema.statics = {
 };
 
 // Indexes
-EventSchema.index({ dateTime: 1, status: 1 });
+EventSchema.index({ startDate: 1, status: 1 });
 EventSchema.index({ communityId: 1, status: 1 });
 
-export default model<IEvent>('Event', EventSchema);
+export default model<IEventDocument>('Event', EventSchema);

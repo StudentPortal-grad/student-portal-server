@@ -1,6 +1,8 @@
-import { IEvent } from '@models/types';
-import ical, { ICalCalendar } from 'ical-generator';
+import { IEvent } from '../interfaces/event.interface';
+import ical from 'ical-generator';
 import { Document } from 'mongoose';
+
+/* global process */
 
 /**
  * Generate an iCal calendar file for a single event
@@ -12,8 +14,8 @@ export const generateEventCalendar = (event: IEvent & Document): string => {
   
   // Add event to calendar
   calendar.createEvent({
-    start: event.dateTime,
-    end: new Date(event.dateTime.getTime() + 2 * 60 * 60 * 1000), // Default 2 hours if no end time
+    start: event.startDate,
+    end: event.endDate,
     summary: event.title,
     description: event.description,
     location: event.location,
@@ -38,8 +40,8 @@ export const generateMultipleEventsCalendar = (events: (IEvent & Document)[]): s
   // Add events to calendar
   events.forEach(event => {
     calendar.createEvent({
-      start: event.dateTime,
-      end: new Date(event.dateTime.getTime() + 2 * 60 * 60 * 1000), // Default 2 hours if no end time
+      start: event.startDate,
+      end: event.endDate,
       summary: event.title,
       description: event.description,
       location: event.location,
@@ -60,10 +62,8 @@ export const generateMultipleEventsCalendar = (events: (IEvent & Document)[]): s
  * @returns The Google Calendar URL
  */
 export const generateGoogleCalendarUrl = (event: IEvent): string => {
-  const startDate = event.dateTime.toISOString().replace(/-|:|\.\d+/g, '');
-  const endDate = new Date(event.dateTime.getTime() + 2 * 60 * 60 * 1000)
-    .toISOString()
-    .replace(/-|:|\.\d+/g, '');
+  const startDate = event.startDate.toISOString().replace(/-|:|\.\d+/g, '');
+  const endDate = event.endDate.toISOString().replace(/-|:|\.\d+/g, '');
   
   const url = new URL('https://calendar.google.com/calendar/render');
   url.searchParams.append('action', 'TEMPLATE');
@@ -81,8 +81,8 @@ export const generateGoogleCalendarUrl = (event: IEvent): string => {
  * @returns The Outlook Calendar URL
  */
 export const generateOutlookCalendarUrl = (event: IEvent): string => {
-  const startDate = event.dateTime.toISOString();
-  const endDate = new Date(event.dateTime.getTime() + 2 * 60 * 60 * 1000).toISOString();
+  const startDate = event.startDate.toISOString();
+  const endDate = event.endDate.toISOString();
   
   const url = new URL('https://outlook.office.com/calendar/0/deeplink/compose');
   url.searchParams.append('subject', event.title);
