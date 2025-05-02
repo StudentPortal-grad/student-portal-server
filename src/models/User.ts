@@ -356,7 +356,7 @@ UserSchema.methods = {
     generateAuthToken: function (): string {
         return jwt.sign(
             { id: this._id, role: this.role },
-            process.env.JWT_SECRET || "sfjsd65gfsdf-sdgsdgsdg-dsgsdgsdg",
+            process.env.JWT_SECRET || "li11kgF62d9SyoW8AV72f3ltzKv/WSk8wVIE5xxvSRg=",
             { expiresIn: "24h" }
         );
     },
