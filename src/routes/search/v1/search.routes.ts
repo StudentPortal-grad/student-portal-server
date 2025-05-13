@@ -1,9 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@middleware/auth';
-import { validate } from '@middleware/validate';
-import { searchValidation } from '../../../validations/searchValidation';
 import { searchPeers, searchPeersByFilter, searchRecommendedPeers } from '../../../controllers/search.controller';
-import asyncHandler from '@utils/asyncHandler';
 
 const router = Router();
 

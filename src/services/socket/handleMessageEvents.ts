@@ -2,7 +2,6 @@ import { Socket } from "socket.io";
 import User from "@models/User";
 import Conversation from "@models/Conversation";
 import Message from "@models/Message";
-import { getIO } from "@config/socket";
 import { SocketUtils } from "@utils/socketUtils";
 import { ConversationUtils } from "@utils/conversationUtils";
 

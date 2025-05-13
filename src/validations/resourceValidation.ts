@@ -33,6 +33,10 @@ export const resourceValidation = {
     title: Joi.string().required().max(255).trim(),
     description: Joi.string().max(1000),
     fileUrl: Joi.string().uri().required(),
+    fileType: Joi.string().valid('document', 'image', 'video', 'audio', 'other').required(),
+    mimeType: Joi.string().required(),
+    originalFileName: Joi.string().required(),
+    checksum: Joi.string().required(),
     fileSize: Joi.number().required().min(0),
     tags: Joi.alternatives().try(
       Joi.string(),

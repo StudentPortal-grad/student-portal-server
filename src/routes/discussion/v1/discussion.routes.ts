@@ -3,6 +3,7 @@ import asyncHandler from '@utils/asyncHandler';
 import { validate } from '@middleware/validate';
 import { authenticate, authorize } from '@middleware/auth';
 import { discussionValidation } from '../../../validations/discussionValidation';
+import { uploadFile } from '@utils/uploadService';
 import {
   createDiscussion,
   getDiscussionById,
@@ -42,11 +43,13 @@ router.get('/:id/replies',
 
 // Protected routes (need specific permissions)
 router.post('/', 
+  uploadFile,
   validate(discussionValidation.createDiscussion), 
   asyncHandler(createDiscussion)
 );
 
 router.post('/:id/reply', 
+  uploadFile,
   validate(discussionValidation.addReply),
   asyncHandler(addReply)
 );

@@ -1,6 +1,8 @@
 import { Schema, model, Types } from 'mongoose';
 import { IResource } from './types';
 
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB limit
+
 const ResourceSchema = new Schema<IResource>(
   {
     title: {
@@ -23,10 +25,34 @@ const ResourceSchema = new Schema<IResource>(
         message: 'File URL must be a valid URL'
       }
     },
+    fileType: {
+      type: String,
+      enum: ['document', 'image', 'video', 'audio', 'other'],
+      required: true
+    },
+    mimeType: {
+      type: String,
+      required: true
+    },
+    originalFileName: {
+      type: String,
+      required: true
+    },
+    checksum: {
+      type: String,
+      required: true
+    },
     fileSize: {
       type: Number,
       required: true,
-      min: 0
+      min: 0,
+      max: MAX_FILE_SIZE,
+      validate: {
+        validator: function(v: number) {
+          return v <= MAX_FILE_SIZE;
+        },
+        message: 'File size exceeds maximum allowed limit of 100MB'
+      }
     },
     tags: [{
       type: String,

@@ -138,6 +138,12 @@ export const uploadGroupImage = createUploadMiddleware(
   'group_images'
 );
 
+// Specific middleware for event images
+export const uploadEventImage = createUploadMiddleware(
+  'eventImage',
+  'event_images'
+);
+
 // Specific middleware for resource files
 export const uploadFile = createUploadMiddleware(
   'fileUrl',

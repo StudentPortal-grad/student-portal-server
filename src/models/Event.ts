@@ -24,6 +24,10 @@ const EventSchema = new Schema<IEventDocument>(
       type: String,
       maxlength: 255,
     },
+    eventImage: {
+      type: String,
+      default: '',
+    },
     capacity: {
       type: Number,
       min: 1,

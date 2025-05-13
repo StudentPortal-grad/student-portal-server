@@ -21,6 +21,7 @@ export interface IEvent {
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   recommendations?: Types.ObjectId[];
   communityId?: Types.ObjectId;
+  eventImage?: string;
   createdAt: Date;
   updatedAt: Date;
 }
