@@ -2,7 +2,7 @@ import { Document, Types } from 'mongoose';
 
 interface RSVP {
   userId: Types.ObjectId;
-  status: 'going' | 'maybe' | 'not_going';
+  status: 'attending' | 'not_attending' | 'interested';
   updatedAt: Date;
 }
 

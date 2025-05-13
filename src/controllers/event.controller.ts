@@ -330,7 +330,7 @@ export const exportMultipleEventsToCalendar = asyncHandler(
     const events = (await Event.find({
       _id: { $in: validIds },
     })) as IEventDocument[];
-    
+
     if (events.length === 0) {
       res.notFound('No events found');
       return;
@@ -558,8 +558,8 @@ export const updateEvent = asyncHandler(
 
     if (event.creatorId.toString() !== userId) {
       res.failure(
-        'Not authorized to update this event', 
-        ErrorCodes.FORBIDDEN, 
+        'Not authorized to update this event',
+        ErrorCodes.FORBIDDEN,
         HttpStatus.FORBIDDEN
       );
       return;
@@ -600,8 +600,8 @@ export const deleteEvent = asyncHandler(
 
     if (event.creatorId.toString() !== userId) {
       res.failure(
-        'Not authorized to delete this event', 
-        ErrorCodes.FORBIDDEN, 
+        'Not authorized to delete this event',
+        ErrorCodes.FORBIDDEN,
         HttpStatus.FORBIDDEN
       );
       return;
@@ -644,13 +644,22 @@ export const createOrUpdateRSVP = asyncHandler(
       updatedAt: new Date(),
     };
 
-    await Event.updateOne(
+    // Use $addToSet with $each to avoid conflicts
+    const updatedEvent = await Event.findOneAndUpdate(
       { _id: eventId },
       {
-        $pull: { rsvps: { userId: rsvp.userId } },
-        $push: { rsvps: rsvp },
-      }
+        $pull: { rsvps: { userId: rsvp.userId } }
+      },
+      { new: true }
     );
+
+    if (updatedEvent) {
+      // Now push the new RSVP in a separate operation
+      await Event.updateOne(
+        { _id: eventId },
+        { $push: { rsvps: rsvp } }
+      );
+    }
 
     res.success({ rsvp }, 'RSVP updated successfully');
   }
