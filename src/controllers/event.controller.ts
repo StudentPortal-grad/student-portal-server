@@ -3,6 +3,7 @@ import Event from '@models/Event';
 import RSVP from '@models/RSVP';
 import { Types } from 'mongoose';
 import { AppError, ErrorCodes } from '@utils/appError';
+import { HttpStatus } from '@utils/ApiResponse';
 import {
   generateEventCalendar,
   generateMultipleEventsCalendar,
@@ -10,29 +11,21 @@ import {
   generateOutlookCalendarUrl,
 } from '@utils/calendarUtils';
 import { generateEventRecommendations } from '@utils/recommendationUtils';
-import {
-  NotFoundError,
-  ValidationError,
-  AuthorizationError,
-} from '../utils/errors';
+import asyncHandler from '../utils/asyncHandler';
 import { IEventDocument } from '../interfaces/event.interface';
 
 /**
  * Get all events with pagination, filtering and sorting
  */
-export const getAllEvents = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const getAllEvents = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const {
       page = 1,
       limit = 10,
       status,
       visibility,
       communityId,
-      sortBy = 'dateTime',
+      sortBy = 'startDate',
       sortOrder = 'asc',
     } = req.query;
 
@@ -61,42 +54,32 @@ export const getAllEvents = async (
 
     // Get total count for pagination
     const total = await Event.countDocuments(filter);
+    const totalPages = Math.ceil(total / limitNum);
 
-    res.success({
+    res.paginated(
       events,
-      pagination: {
+      {
         total,
         page: pageNum,
         limit: limitNum,
-        pages: Math.ceil(total / limitNum),
+        totalPages,
+        hasNextPage: pageNum < totalPages,
+        hasPrevPage: pageNum > 1,
       },
-    });
-  } catch (error) {
-    next(
-      new AppError(
-        error instanceof Error ? error.message : 'Failed to fetch events',
-        500,
-        ErrorCodes.INTERNAL_ERROR
-      )
+      'Events retrieved successfully'
     );
   }
-};
+);
 
 /**
  * Get event by ID
  */
-export const getEventById = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const getEventById = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const { id } = req.params;
 
     if (!Types.ObjectId.isValid(id)) {
-      return next(
-        new AppError('Invalid event ID', 400, ErrorCodes.VALIDATION_ERROR)
-      );
+      throw new AppError('Invalid event ID', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
     }
 
     const event = await Event.findById(id)
@@ -104,7 +87,8 @@ export const getEventById = async (
       .populate('communityId', 'name');
 
     if (!event) {
-      return next(new AppError('Event not found', 404, ErrorCodes.NOT_FOUND));
+      res.notFound('Event not found');
+      return;
     }
 
     // Get RSVP counts
@@ -129,210 +113,18 @@ export const getEventById = async (
       event,
       rsvpStats,
     });
-  } catch (_error) {
-    next(new AppError('Failed to fetch event', 500, ErrorCodes.INTERNAL_ERROR));
   }
-};
-
-/**
- * Create a new event
- */
-export const createEvent = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const {
-      title,
-      description,
-      dateTime,
-      location,
-      capacity,
-      visibility,
-      communityId,
-    } = req.body;
-    const creatorId = req.user?.id;
-
-    if (!creatorId) {
-      return next(
-        new AppError('User not authenticated', 401, ErrorCodes.UNAUTHORIZED)
-      );
-    }
-
-    // Create event
-    const event = await Event.create({
-      title,
-      description,
-      dateTime,
-      location,
-      capacity,
-      visibility,
-      communityId,
-      creatorId,
-    });
-
-    res.success({ event }, 'Event created successfully', 201);
-  } catch (_error) {
-    next(
-      new AppError('Failed to create event', 500, ErrorCodes.INTERNAL_ERROR)
-    );
-  }
-};
-
-/**
- * Update an event
- */
-export const updateEvent = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { id } = req.params;
-    const {
-      title,
-      description,
-      dateTime,
-      location,
-      capacity,
-      visibility,
-      communityId,
-    } = req.body;
-    const userId = req.user?.id;
-
-    if (!userId) {
-      return next(
-        new AppError('User not authenticated', 401, ErrorCodes.UNAUTHORIZED)
-      );
-    }
-
-    if (!Types.ObjectId.isValid(id)) {
-      return next(
-        new AppError('Invalid event ID', 400, ErrorCodes.VALIDATION_ERROR)
-      );
-    }
-
-    // Find event and check permissions
-    const event = await Event.findById(id);
-
-    if (!event) {
-      return next(new AppError('Event not found', 404, ErrorCodes.NOT_FOUND));
-    }
-
-    // Check if user is creator or admin
-    const isCreator = event.creatorId.toString() === userId.toString();
-    const isAdmin =
-      req.user?.role === 'admin' || req.user?.role === 'superadmin';
-
-    if (!isCreator && !isAdmin) {
-      return next(
-        new AppError(
-          'Not authorized to update this event',
-          403,
-          ErrorCodes.FORBIDDEN
-        )
-      );
-    }
-
-    // Update event
-    const updatedEvent = await Event.findByIdAndUpdate(
-      id,
-      {
-        title,
-        description,
-        dateTime,
-        location,
-        capacity,
-        visibility,
-        communityId,
-      },
-      { new: true, runValidators: true }
-    );
-
-    res.success({ event: updatedEvent }, 'Event updated successfully');
-  } catch (_error) {
-    next(
-      new AppError('Failed to update event', 500, ErrorCodes.INTERNAL_ERROR)
-    );
-  }
-};
-
-/**
- * Delete an event
- */
-export const deleteEvent = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user?.id;
-
-    if (!userId) {
-      return next(
-        new AppError('User not authenticated', 401, ErrorCodes.UNAUTHORIZED)
-      );
-    }
-
-    if (!Types.ObjectId.isValid(id)) {
-      return next(
-        new AppError('Invalid event ID', 400, ErrorCodes.VALIDATION_ERROR)
-      );
-    }
-
-    // Find event and check permissions
-    const event = await Event.findById(id);
-
-    if (!event) {
-      return next(new AppError('Event not found', 404, ErrorCodes.NOT_FOUND));
-    }
-
-    // Check if user is creator or admin
-    const isCreator = event.creatorId.toString() === userId.toString();
-    const isAdmin =
-      req.user?.role === 'admin' || req.user?.role === 'superadmin';
-
-    if (!isCreator && !isAdmin) {
-      return next(
-        new AppError(
-          'Not authorized to delete this event',
-          403,
-          ErrorCodes.FORBIDDEN
-        )
-      );
-    }
-
-    // Delete event
-    await Event.findByIdAndDelete(id);
-
-    // Delete associated RSVPs
-    await RSVP.deleteMany({ eventId: id });
-
-    res.success(null, 'Event deleted successfully');
-  } catch (_error) {
-    next(
-      new AppError('Failed to delete event', 500, ErrorCodes.INTERNAL_ERROR)
-    );
-  }
-};
+);
 
 /**
  * Get event attendees
  */
-export const getEventAttendees = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const getEventAttendees = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const { id } = req.params;
 
     if (!Types.ObjectId.isValid(id)) {
-      return next(
-        new AppError('Invalid event ID', 400, ErrorCodes.VALIDATION_ERROR)
-      );
+      throw new AppError('Invalid event ID', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
     }
 
     const attendees = await RSVP.find({ eventId: id, status: 'attending' })
@@ -340,22 +132,14 @@ export const getEventAttendees = async (
       .sort({ createdAt: 1 });
 
     res.success({ attendees });
-  } catch (_error) {
-    next(
-      new AppError('Failed to fetch attendees', 500, ErrorCodes.INTERNAL_ERROR)
-    );
   }
-};
+);
 
 /**
  * Get event metrics and stats for dashboard
  */
-export const getEventMetrics = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const getEventMetrics = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     // Get counts by status
     const statusCounts = await Event.aggregate([
       { $group: { _id: '$status', count: { $sum: 1 } } },
@@ -397,7 +181,7 @@ export const getEventMetrics = async (
     // Get upcoming events count
     const upcomingEventsCount = await Event.countDocuments({
       status: 'upcoming',
-      dateTime: { $gt: new Date() },
+      startDate: { $gt: new Date() },
     });
 
     // Get total RSVP counts
@@ -436,26 +220,14 @@ export const getEventMetrics = async (
       },
       'Event metrics retrieved successfully'
     );
-  } catch (_error) {
-    next(
-      new AppError(
-        'Failed to fetch event metrics',
-        500,
-        ErrorCodes.INTERNAL_ERROR
-      )
-    );
   }
-};
+);
 
 /**
  * Get events for chart display (date, time, attendees)
  */
-export const getEventsForChart = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const getEventsForChart = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const { startDate, endDate } = req.query;
 
     // Build date filter
@@ -469,7 +241,7 @@ export const getEventsForChart = async (
 
     const filter: any = {};
     if (Object.keys(dateFilter).length > 0) {
-      filter.dateTime = dateFilter;
+      filter.startDate = dateFilter;
     }
 
     // Get events with attendance counts
@@ -486,7 +258,7 @@ export const getEventsForChart = async (
       {
         $project: {
           title: 1,
-          dateTime: 1,
+          startDate: 1,
           status: 1,
           attendeesCount: {
             $size: {
@@ -499,41 +271,28 @@ export const getEventsForChart = async (
           },
         },
       },
-      { $sort: { dateTime: 1 } },
+      { $sort: { startDate: 1 } },
     ]);
 
     res.success({ events }, 'Events chart data retrieved successfully');
-  } catch (_error) {
-    next(
-      new AppError(
-        'Failed to fetch events chart data',
-        500,
-        ErrorCodes.INTERNAL_ERROR
-      )
-    );
   }
-};
+);
 
 /**
  * Export event to iCal format
  */
-export const exportEventToCalendar = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
+export const exportEventToCalendar = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const { id } = req.params;
 
     if (!Types.ObjectId.isValid(id)) {
-      return next(
-        new AppError('Invalid event ID', 400, ErrorCodes.VALIDATION_ERROR)
-      );
+      throw new AppError('Invalid event ID', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
     }
 
     const event = (await Event.findById(id)) as IEventDocument;
     if (!event) {
-      return next(new AppError('Event not found', 404, ErrorCodes.NOT_FOUND));
+      res.notFound('Event not found');
+      return;
     }
 
     const calendar = generateEventCalendar(event);
@@ -547,56 +306,34 @@ export const exportEventToCalendar = async (
 
     // Send the calendar data
     res.send(calendar);
-  } catch (error) {
-    next(
-      new AppError(
-        error instanceof Error ? error.message : 'Failed to export event',
-        500,
-        ErrorCodes.INTERNAL_ERROR
-      )
-    );
   }
-};
+);
 
 /**
  * Export multiple events to iCal format
  */
-export const exportMultipleEventsToCalendar = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
+export const exportMultipleEventsToCalendar = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const { ids } = req.body;
 
     if (!Array.isArray(ids) || ids.length === 0) {
-      return next(
-        new AppError(
-          'Invalid or empty event IDs',
-          400,
-          ErrorCodes.VALIDATION_ERROR
-        )
-      );
+      throw new AppError('Invalid or empty event IDs', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
     }
 
     // Validate all IDs
     const validIds = ids.filter((id) => Types.ObjectId.isValid(id));
     if (validIds.length !== ids.length) {
-      return next(
-        new AppError(
-          'One or more invalid event IDs',
-          400,
-          ErrorCodes.VALIDATION_ERROR
-        )
-      );
+      throw new AppError('One or more invalid event IDs', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
     }
 
     // Find all events
     const events = (await Event.find({
       _id: { $in: validIds },
     })) as IEventDocument[];
+
     if (events.length === 0) {
-      return next(new AppError('No events found', 404, ErrorCodes.NOT_FOUND));
+      res.notFound('No events found');
+      return;
     }
 
     const calendar = generateMultipleEventsCalendar(events);
@@ -610,37 +347,24 @@ export const exportMultipleEventsToCalendar = async (
 
     // Send the calendar data
     res.send(calendar);
-  } catch (error) {
-    next(
-      new AppError(
-        error instanceof Error ? error.message : 'Failed to export events',
-        500,
-        ErrorCodes.INTERNAL_ERROR
-      )
-    );
   }
-};
+);
 
 /**
  * Get calendar integration URLs for an event (Google, Outlook)
  */
-export const getCalendarIntegrationUrls = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
+export const getCalendarIntegrationUrls = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const { id } = req.params;
 
     if (!Types.ObjectId.isValid(id)) {
-      return next(
-        new AppError('Invalid event ID', 400, ErrorCodes.VALIDATION_ERROR)
-      );
+      throw new AppError('Invalid event ID', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
     }
 
     const event = (await Event.findById(id)) as IEventDocument;
     if (!event) {
-      return next(new AppError('Event not found', 404, ErrorCodes.NOT_FOUND));
+      res.notFound('Event not found');
+      return;
     }
 
     // Generate calendar URLs
@@ -655,33 +379,18 @@ export const getCalendarIntegrationUrls = async (
       },
       'Calendar integration URLs generated successfully'
     );
-  } catch (error) {
-    next(
-      new AppError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to generate calendar URLs',
-        500,
-        ErrorCodes.INTERNAL_ERROR
-      )
-    );
   }
-};
+);
 
 /**
  * Get recommended events for the current user
  */
-export const getRecommendedEvents = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
+export const getRecommendedEvents = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const userId = req.user?.id;
     if (!userId) {
-      return next(
-        new AppError('User not authenticated', 401, ErrorCodes.UNAUTHORIZED)
-      );
+      res.unauthorized('User not authenticated');
+      return;
     }
 
     const { limit = 5 } = req.query;
@@ -700,59 +409,31 @@ export const getRecommendedEvents = async (
       },
       'Event recommendations generated successfully'
     );
-  } catch (error) {
-    next(
-      new AppError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to generate event recommendations',
-        500,
-        ErrorCodes.INTERNAL_ERROR
-      )
-    );
   }
-};
+);
 
 /**
  * Update event recommendations for a specific event
  */
-export const updateEventRecommendations = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
+export const updateEventRecommendations = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const { id } = req.params;
     const { recommendationIds } = req.body;
 
     if (!Types.ObjectId.isValid(id)) {
-      return next(
-        new AppError('Invalid event ID', 400, ErrorCodes.VALIDATION_ERROR)
-      );
+      throw new AppError('Invalid event ID', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
     }
 
     // Validate recommendation IDs
     if (!Array.isArray(recommendationIds)) {
-      return next(
-        new AppError(
-          'recommendationIds must be an array',
-          400,
-          ErrorCodes.VALIDATION_ERROR
-        )
-      );
+      throw new AppError('recommendationIds must be an array', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
     }
 
     const validIds = recommendationIds.filter((recId) =>
       Types.ObjectId.isValid(recId)
     );
     if (validIds.length !== recommendationIds.length) {
-      return next(
-        new AppError(
-          'One or more invalid recommendation IDs',
-          400,
-          ErrorCodes.VALIDATION_ERROR
-        )
-      );
+      throw new AppError('One or more invalid recommendation IDs', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
     }
 
     // Update event recommendations
@@ -763,30 +444,76 @@ export const updateEventRecommendations = async (
     );
 
     if (!event) {
-      return next(new AppError('Event not found', 404, ErrorCodes.NOT_FOUND));
+      res.notFound('Event not found');
+      return;
     }
 
     res.success(event, 'Event recommendations updated successfully');
-  } catch (error) {
-    next(
-      new AppError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to update event recommendations',
-        500,
-        ErrorCodes.INTERNAL_ERROR
-      )
-    );
   }
-};
+);
 
-export class EventController {
-  async createEvent(req: Request, _res: Response) {
-    const { title, description, startDate, endDate, location } = req.body;
+/**
+ * Update event image
+ */
+export const updateEventImage = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const { eventImage } = req.body;
     const userId = req.user?.id;
 
     if (!userId) {
-      throw new AuthorizationError('User not authenticated');
+      res.unauthorized('User not authenticated');
+      return;
+    }
+
+    if (!Types.ObjectId.isValid(id)) {
+      throw new AppError('Invalid event ID', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
+    }
+
+    // Find event and check permissions
+    const event = await Event.findById(id);
+
+    if (!event) {
+      res.notFound('Event not found');
+      return;
+    }
+
+    // Check if user is creator or admin
+    const isCreator = event.creatorId.toString() === userId.toString();
+    const isAdmin =
+      req.user?.role === 'admin' || req.user?.role === 'superadmin';
+
+    if (!isCreator && !isAdmin) {
+      res.failure(
+        'Not authorized to update this event',
+        ErrorCodes.FORBIDDEN,
+        HttpStatus.FORBIDDEN
+      );
+      return;
+    }
+
+    // Update event image
+    const updatedEvent = await Event.findByIdAndUpdate(
+      id,
+      { eventImage },
+      { new: true }
+    );
+
+    res.success({ event: updatedEvent }, 'Event image updated successfully');
+  }
+);
+
+/**
+ * Create a new event
+ */
+export const createEvent = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const { title, description, startDate, endDate, location, eventImage } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.unauthorized('User not authenticated');
+      return;
     }
 
     const event = await Event.create({
@@ -795,125 +522,120 @@ export class EventController {
       startDate,
       endDate,
       location,
+      eventImage,
       creatorId: new Types.ObjectId(userId),
       createdAt: new Date(),
       updatedAt: new Date(),
     });
 
-    return {
-      success: true,
-      data: {
-        event,
-      },
-    };
+    res.success({ event }, 'Event created successfully', HttpStatus.CREATED);
   }
+);
 
-  async getAllEvents(_req: Request, _res: Response) {
-    const events = await Event.find().exec();
-    return {
-      success: true,
-      data: {
-        events,
-      },
-    };
-  }
-
-  async getEventById(req: Request, _res: Response) {
-    const { id } = req.params;
-
-    if (!Types.ObjectId.isValid(id)) {
-      throw new ValidationError('Invalid event ID');
-    }
-
-    const event = await Event.findById(id).exec();
-    if (!event) {
-      throw new NotFoundError('Event not found');
-    }
-
-    return {
-      success: true,
-      data: {
-        event,
-      },
-    };
-  }
-
-  async updateEvent(req: Request, _res: Response) {
+/**
+ * Update an existing event
+ */
+export const updateEvent = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const { id } = req.params;
     const userId = req.user?.id;
 
     if (!userId) {
-      throw new AuthorizationError('User not authenticated');
+      res.unauthorized('User not authenticated');
+      return;
     }
 
     if (!Types.ObjectId.isValid(id)) {
-      throw new ValidationError('Invalid event ID');
+      res.badRequest('Invalid event ID');
+      return;
     }
 
     const event = await Event.findById(id).exec();
     if (!event) {
-      throw new NotFoundError('Event not found');
+      res.notFound('Event not found');
+      return;
     }
 
     if (event.creatorId.toString() !== userId) {
-      throw new AuthorizationError('Not authorized to update this event');
+      res.failure(
+        'Not authorized to update this event',
+        ErrorCodes.FORBIDDEN,
+        HttpStatus.FORBIDDEN
+      );
+      return;
     }
 
     await Event.updateOne({ _id: id }, { ...req.body, updatedAt: new Date() });
 
-    return {
-      success: true,
-      data: {
-        event: await Event.findById(id).exec(),
-      },
-    };
+    res.success(
+      { event: await Event.findById(id).exec() },
+      'Event updated successfully'
+    );
   }
+);
 
-  async deleteEvent(req: Request, _res: Response) {
+/**
+ * Delete an event
+ */
+export const deleteEvent = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const { id } = req.params;
     const userId = req.user?.id;
 
     if (!userId) {
-      throw new AuthorizationError('User not authenticated');
+      res.unauthorized('User not authenticated');
+      return;
     }
 
     if (!Types.ObjectId.isValid(id)) {
-      throw new ValidationError('Invalid event ID');
+      res.badRequest('Invalid event ID');
+      return;
     }
 
     const event = await Event.findById(id).exec();
     if (!event) {
-      throw new NotFoundError('Event not found');
+      res.notFound('Event not found');
+      return;
     }
 
     if (event.creatorId.toString() !== userId) {
-      throw new AuthorizationError('Not authorized to delete this event');
+      res.failure(
+        'Not authorized to delete this event',
+        ErrorCodes.FORBIDDEN,
+        HttpStatus.FORBIDDEN
+      );
+      return;
     }
 
     await Event.deleteOne({ _id: id });
 
-    return {
-      success: true,
-      message: 'Event deleted successfully',
-    };
+    res.success(null, 'Event deleted successfully');
   }
+);
 
-  async createOrUpdateRSVP(req: Request, _res: Response) {
-    const { id } = req.params;
+/**
+ * Create or update RSVP for an event
+ */
+export const createOrUpdateRSVP = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const { eventId } = req.params;
     const userId = req.user?.id;
     const { status } = req.body;
 
     if (!userId) {
-      throw new AuthorizationError('User not authenticated');
+      res.unauthorized('User not authenticated');
+      return;
     }
 
-    if (!Types.ObjectId.isValid(id)) {
-      throw new ValidationError('Invalid event ID');
+    if (!Types.ObjectId.isValid(eventId)) {
+      res.badRequest('Invalid event ID');
+      return;
     }
 
-    const event = await Event.findById(id).exec();
+    const event = await Event.findById(eventId).exec();
     if (!event) {
-      throw new NotFoundError('Event not found');
+      res.notFound('Event not found');
+      return;
     }
 
     const rsvp = {
@@ -922,37 +644,49 @@ export class EventController {
       updatedAt: new Date(),
     };
 
-    await Event.updateOne(
-      { _id: id },
+    // Use $addToSet with $each to avoid conflicts
+    const updatedEvent = await Event.findOneAndUpdate(
+      { _id: eventId },
       {
-        $pull: { rsvps: { userId: rsvp.userId } },
-        $push: { rsvps: rsvp },
-      }
+        $pull: { rsvps: { userId: rsvp.userId } }
+      },
+      { new: true }
     );
 
-    return {
-      success: true,
-      data: {
-        rsvp,
-      },
-    };
-  }
+    if (updatedEvent) {
+      // Now push the new RSVP in a separate operation
+      await Event.updateOne(
+        { _id: eventId },
+        { $push: { rsvps: rsvp } }
+      );
+    }
 
-  async getUserRSVP(req: Request, _res: Response) {
-    const { id } = req.params;
+    res.success({ rsvp }, 'RSVP updated successfully');
+  }
+);
+
+/**
+ * Get RSVP status for current user
+ */
+export const getUserRSVP = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const { eventId } = req.params;
     const userId = req.user?.id;
 
     if (!userId) {
-      throw new AuthorizationError('User not authenticated');
+      res.unauthorized('User not authenticated');
+      return;
     }
 
-    if (!Types.ObjectId.isValid(id)) {
-      throw new ValidationError('Invalid event ID');
+    if (!Types.ObjectId.isValid(eventId)) {
+      res.badRequest('Invalid event ID');
+      return;
     }
 
-    const event = await Event.findById(id).exec();
+    const event = await Event.findById(eventId).exec();
     if (!event) {
-      throw new NotFoundError('Event not found');
+      res.notFound('Event not found');
+      return;
     }
 
     const rsvp = event.rsvps.find(
@@ -960,59 +694,61 @@ export class EventController {
         r.userId.toString() === userId
     );
 
-    return {
-      success: true,
-      data: {
-        rsvp: rsvp || null,
-      },
-    };
+    res.success({ rsvp: rsvp || null }, 'RSVP retrieved successfully');
   }
+);
 
-  async deleteRSVP(req: Request, _res: Response) {
-    const { id } = req.params;
+/**
+ * Delete user's RSVP
+ */
+export const deleteRSVP = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const { eventId } = req.params;
     const userId = req.user?.id;
 
     if (!userId) {
-      throw new AuthorizationError('User not authenticated');
+      res.unauthorized('User not authenticated');
+      return;
     }
 
-    if (!Types.ObjectId.isValid(id)) {
-      throw new ValidationError('Invalid event ID');
+    if (!Types.ObjectId.isValid(eventId)) {
+      res.badRequest('Invalid event ID');
+      return;
     }
 
-    const event = await Event.findById(id).exec();
+    const event = await Event.findById(eventId).exec();
     if (!event) {
-      throw new NotFoundError('Event not found');
+      res.notFound('Event not found');
+      return;
     }
 
     await Event.updateOne(
-      { _id: id },
+      { _id: eventId },
       { $pull: { rsvps: { userId: new Types.ObjectId(userId) } } }
     );
 
-    return {
-      success: true,
-      message: 'RSVP deleted successfully',
-    };
+    res.success(null, 'RSVP deleted successfully');
   }
+);
 
-  async getEventRSVPs(req: Request, _res: Response) {
-    const { id } = req.params;
+/**
+ * Get all RSVPs for an event
+ */
+export const getEventRSVPs = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const { eventId } = req.params;
 
-    if (!Types.ObjectId.isValid(id)) {
-      throw new ValidationError('Invalid event ID');
+    if (!Types.ObjectId.isValid(eventId)) {
+      res.badRequest('Invalid event ID');
+      return;
     }
 
-    const event = await Event.findById(id).exec();
+    const event = await Event.findById(eventId).exec();
     if (!event) {
-      throw new NotFoundError('Event not found');
+      res.notFound('Event not found');
+      return;
     }
 
-    return {
-      success: true,
-      data: {
-        rsvps: event.rsvps || [],
-      },
-    };
+    res.success({ rsvps: event.rsvps || [] }, 'RSVPs retrieved successfully');
   }
-}
+);

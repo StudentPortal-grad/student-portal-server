@@ -1,14 +1,32 @@
 import Joi from 'joi';
 
 const attachmentSchema = Joi.object({
-  type: Joi.string().valid('document', 'file', 'poll').required().messages({
+  type: Joi.string().valid('document', 'image', 'video', 'audio', 'other', 'poll').required().messages({
     'string.base': 'type must be a string',
-    'any.only': 'type must be either "document", "file", or "poll"',
+    'any.only': 'type must be either "document", "image", "video", "audio", "other", or "poll"',
     'any.required': 'type is required',
   }),
   resource: Joi.string().uri().required().messages({
     'string.uri': 'resource must be a valid URL',
     'any.required': 'resource is required',
+  }),
+  mimeType: Joi.string().required().messages({
+    'string.base': 'mimeType must be a string',
+    'any.required': 'mimeType is required',
+  }),
+  originalFileName: Joi.string().required().messages({
+    'string.base': 'originalFileName must be a string',
+    'any.required': 'originalFileName is required',
+  }),
+  fileSize: Joi.number().min(0).max(100 * 1024 * 1024).required().messages({
+    'number.base': 'fileSize must be a number',
+    'number.min': 'fileSize must be at least 0',
+    'number.max': 'fileSize must not exceed 100MB',
+    'any.required': 'fileSize is required',
+  }),
+  checksum: Joi.string().required().messages({
+    'string.base': 'checksum must be a string',
+    'any.required': 'checksum is required',
   }),
 });
 

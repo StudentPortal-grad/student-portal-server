@@ -24,6 +24,10 @@ const EventSchema = new Schema<IEventDocument>(
       type: String,
       maxlength: 255,
     },
+    eventImage: {
+      type: String,
+      default: '',
+    },
     capacity: {
       type: Number,
       min: 1,
@@ -46,7 +50,7 @@ const EventSchema = new Schema<IEventDocument>(
       },
       status: {
         type: String,
-        enum: ['going', 'maybe', 'not_going'],
+        enum: ['attending', 'not_attending', 'interested'],
         required: true
       },
       updatedAt: {
@@ -93,11 +97,11 @@ const EventSchema = new Schema<IEventDocument>(
 
 // Methods
 EventSchema.methods = {
-  isAtCapacity: function(this: IEventDocument): boolean {
+  isAtCapacity: function (this: IEventDocument): boolean {
     return this.capacity ? this.attendees?.length >= this.capacity : false;
   },
 
-  updateStatus: async function(this: IEventDocument): Promise<void> {
+  updateStatus: async function (this: IEventDocument): Promise<void> {
     const now = new Date();
     if (this.startDate > now && this.status !== 'cancelled') {
       this.status = 'upcoming';
@@ -107,17 +111,17 @@ EventSchema.methods = {
     await this.save();
   },
 
-  addRating: async function(this: IEventDocument, _userId: Types.ObjectId, _rating: number): Promise<IEventDocument> {
+  addRating: async function (this: IEventDocument, _userId: Types.ObjectId, _rating: number): Promise<IEventDocument> {
     // Implementation
     return this;
   },
-  
-  addComment: async function(this: IEventDocument, _userId: Types.ObjectId, _content: string): Promise<IEventDocument> {
+
+  addComment: async function (this: IEventDocument, _userId: Types.ObjectId, _content: string): Promise<IEventDocument> {
     // Implementation
     return this;
   },
-  
-  getAverageRating: function(this: IEventDocument): number {
+
+  getAverageRating: function (this: IEventDocument): number {
     // Implementation
     return 0;
   }
@@ -125,14 +129,14 @@ EventSchema.methods = {
 
 // Statics
 EventSchema.statics = {
-  findUpcoming: function() {
+  findUpcoming: function () {
     return this.find({
       status: 'upcoming',
       startDate: { $gt: new Date() },
     }).sort({ startDate: 1 });
   },
 
-  findByCommunity: function(communityId: Types.ObjectId) {
+  findByCommunity: function (communityId: Types.ObjectId) {
     return this.find({
       communityId,
       status: { $in: ['upcoming', 'ongoing'] },

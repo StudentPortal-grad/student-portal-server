@@ -241,6 +241,10 @@ const UserSchema = new Schema<IUser>(
                     ref: "Conversation",
                 },
                 unreadCount: { type: Number, default: 0 },
+                lastReadMessageId: {
+                    type: Schema.Types.ObjectId,
+                    ref: "Message",
+                },
                 isPinned: { type: Boolean, default: false },
                 isMuted: { type: Boolean, default: false },
                 mutedUntil: Date,

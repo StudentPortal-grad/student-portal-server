@@ -231,8 +231,12 @@ export interface IDiscussion extends Document {
     content: string;
     creator: Types.ObjectId;
     attachments?: {
-        type: string;
+        type: 'document' | 'image' | 'video' | 'audio' | 'other' | 'poll';
         resource: string;
+        mimeType: string;
+        originalFileName: string;
+        fileSize: number;
+        checksum: string;
     }[];
     replies?: {
         id: Types.ObjectId;
@@ -240,8 +244,12 @@ export interface IDiscussion extends Document {
         creator: Types.ObjectId;
         createdAt: Date;
         attachments?: {
-            type: string;
+            type: 'document' | 'image' | 'video' | 'audio' | 'other' | 'poll';
             resource: string;
+            mimeType: string;
+            originalFileName: string;
+            fileSize: number;
+            checksum: string;
         }[];
     }[];
     votes?: {
@@ -253,6 +261,7 @@ export interface IDiscussion extends Document {
     createdAt: Date;
     updatedAt: Date;
 }
+
 export interface IMember {
     userId: Types.ObjectId;
     roleIds: Types.ObjectId[];
@@ -315,6 +324,10 @@ export interface IResource extends Document {
     title: string;
     description?: string;
     fileUrl: string;
+    fileType: 'document' | 'image' | 'video' | 'audio' | 'other';
+    mimeType: string;
+    originalFileName: string;
+    checksum: string;
     fileSize: number;
     tags: string[];
     visibility: "public" | "community" | "private";

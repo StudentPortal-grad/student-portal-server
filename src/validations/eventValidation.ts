@@ -27,6 +27,7 @@ export const eventValidation = {
     description: Joi.string().max(1000),
     dateTime: Joi.date().required().min('now'),
     location: Joi.string().max(255),
+    eventImage: Joi.string().uri().allow('', null),
     capacity: Joi.number().integer().min(1),
     visibility: Joi.string().valid('public', 'private', 'community').default('public'),
     communityId: Joi.when('visibility', {
@@ -42,8 +43,14 @@ export const eventValidation = {
     description: Joi.string().max(1000),
     dateTime: Joi.date().min('now'),
     location: Joi.string().max(255),
+    eventImage: Joi.string().uri().allow('', null),
     capacity: Joi.number().integer().min(1),
     visibility: Joi.string().valid('public', 'private', 'community'),
     communityId: objectId
-  }).min(1)
+  }).min(1),
+  
+  // Update event image validation
+  updateEventImage: Joi.object({
+    eventImage: Joi.string().uri().required()
+  })
 };

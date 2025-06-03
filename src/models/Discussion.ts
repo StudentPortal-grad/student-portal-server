@@ -1,6 +1,8 @@
 import { Schema, model, Types } from 'mongoose';
 import { IDiscussion } from './types';
 
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB limit
+
 interface SearchQuery {
   $text: { $search: string };
   communityId?: Types.ObjectId;
@@ -39,7 +41,7 @@ const DiscussionSchema = new Schema<IDiscussion>(
         _id: false,
         type: {
           type: String,
-          enum: ['document', 'file', 'poll'],
+          enum: ['document', 'image', 'video', 'audio', 'other', 'poll'],
           required: true,
         },
         resource: {
@@ -52,6 +54,30 @@ const DiscussionSchema = new Schema<IDiscussion>(
             message: 'Resource must be a valid URL',
           },
         },
+        mimeType: {
+          type: String,
+          required: true
+        },
+        originalFileName: {
+          type: String,
+          required: true
+        },
+        fileSize: {
+          type: Number,
+          required: true,
+          min: 0,
+          max: MAX_FILE_SIZE,
+          validate: {
+            validator: function(v: number) {
+              return v <= MAX_FILE_SIZE;
+            },
+            message: 'File size exceeds maximum allowed limit of 100MB'
+          }
+        },
+        checksum: {
+          type: String,
+          required: true
+        }
       },
     ],
     replies: [
@@ -78,7 +104,7 @@ const DiscussionSchema = new Schema<IDiscussion>(
             _id: false,
             type: {
               type: String,
-              enum: ['document', 'file', 'poll'],
+              enum: ['document', 'image', 'video', 'audio', 'other', 'poll'],
               required: true,
             },
             resource: {
@@ -91,6 +117,30 @@ const DiscussionSchema = new Schema<IDiscussion>(
                 message: 'Resource must be a valid URL',
               },
             },
+            mimeType: {
+              type: String,
+              required: true
+            },
+            originalFileName: {
+              type: String,
+              required: true
+            },
+            fileSize: {
+              type: Number,
+              required: true,
+              min: 0,
+              max: MAX_FILE_SIZE,
+              validate: {
+                validator: function(v: number) {
+                  return v <= MAX_FILE_SIZE;
+                },
+                message: 'File size exceeds maximum allowed limit of 100MB'
+              }
+            },
+            checksum: {
+              type: String,
+              required: true
+            }
           },
         ],
       },

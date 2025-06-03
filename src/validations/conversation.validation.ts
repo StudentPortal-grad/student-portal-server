@@ -59,10 +59,6 @@ export const conversationValidation = {
 
   // Add group members validation
   addGroupMembers: Joi.object({
-    id: objectId.required().messages({
-      'any.required': 'Conversation ID is required',
-      'any.invalid': 'Invalid conversation ID format',
-    }),
     userIds: Joi.array().items(objectId).min(1).required().messages({
       'array.min': 'At least one user ID is required',
       'array.base': 'User IDs must be an array',
@@ -84,10 +80,6 @@ export const conversationValidation = {
 
   // Update recent conversation settings validation
   updateRecentConversation: Joi.object({
-    id: objectId.required().messages({
-      'any.required': 'Conversation ID is required',
-      'any.invalid': 'Invalid conversation ID format',
-    }),
     isPinned: Joi.boolean(),
     isMuted: Joi.boolean(),
     mutedUntil: Joi.date().when('isMuted', {
@@ -95,7 +87,7 @@ export const conversationValidation = {
       then: Joi.date().min('now'),
       otherwise: Joi.optional().allow(null),
     }),
-  }).min(2),
+  }).min(1),
 
   // Remove from recent conversations validation
   removeFromRecentConversations: Joi.object({
@@ -104,4 +96,13 @@ export const conversationValidation = {
       'any.invalid': 'Invalid conversation ID format',
     }),
   }),
+
+  // Search conversations validation
+  searchConversations: Joi.object({
+    query: Joi.string().required().min(1).messages({
+      'string.base': 'Search query must be a string',
+      'string.empty': 'Search query cannot be empty',
+      'any.required': 'Search query is required',
+    }),
+  }).unknown(true),
 };
