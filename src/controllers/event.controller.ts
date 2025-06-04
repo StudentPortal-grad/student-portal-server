@@ -50,7 +50,8 @@ export const getAllEvents = asyncHandler(
       .skip(skip)
       .limit(limitNum)
       .populate('creatorId', 'name profilePicture')
-      .populate('communityId', 'name');
+      .populate('communityId', 'name')
+      .populate('rsvps.userId', 'name profilePicture');
 
     // Get total count for pagination
     const total = await Event.countDocuments(filter);
@@ -84,7 +85,8 @@ export const getEventById = asyncHandler(
 
     const event = await Event.findById(id)
       .populate('creatorId', 'name profilePicture')
-      .populate('communityId', 'name');
+      .populate('communityId', 'name')
+      .populate('rsvps.userId', 'name profilePicture');
 
     if (!event) {
       res.notFound('Event not found');
@@ -632,36 +634,40 @@ export const createOrUpdateRSVP = asyncHandler(
       return;
     }
 
-    const event = await Event.findById(eventId).exec();
-    if (!event) {
-      res.notFound('Event not found');
-      return;
-    }
-
-    const rsvp = {
+    const rsvpPayload = {
       userId: new Types.ObjectId(userId),
       status,
       updatedAt: new Date(),
     };
 
-    // Use $addToSet with $each to avoid conflicts
-    const updatedEvent = await Event.findOneAndUpdate(
+    // Step 1: Pull any existing RSVP for the user.
+    // This also checks if the event exists. If eventId is not found, eventAfterPull will be null.
+    const eventAfterPull = await Event.findOneAndUpdate(
       { _id: eventId },
-      {
-        $pull: { rsvps: { userId: rsvp.userId } }
-      },
-      { new: true }
-    );
+      { $pull: { rsvps: { userId: rsvpPayload.userId } } },
+      { new: true } // `new: true` ensures we get the document state after the pull or null if not found.
+    ).exec();
 
-    if (updatedEvent) {
-      // Now push the new RSVP in a separate operation
-      await Event.updateOne(
-        { _id: eventId },
-        { $push: { rsvps: rsvp } }
-      );
+    if (!eventAfterPull) {
+      res.notFound('Event not found');
+      return;
     }
 
-    res.success({ rsvp }, 'RSVP updated successfully');
+    // Step 2: Push the new RSVP.
+    // We use findOneAndUpdate again to confirm the operation's success and handle race conditions.
+    const finalEvent = await Event.findOneAndUpdate(
+      { _id: eventId },
+      { $push: { rsvps: rsvpPayload } },
+      { new: true, upsert: false } // `upsert: false` is default, explicitly stating we don't create event here.
+    ).exec();
+
+    if (!finalEvent) {
+      // This rare case means the event was deleted between the pull and push operations.
+      _next(new Error('Failed to save RSVP. Event may have been modified concurrently. Please try again.'));
+      return;
+    }
+
+    res.success({ rsvp: rsvpPayload }, 'RSVP updated successfully');
   }
 );
 
