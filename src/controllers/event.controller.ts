@@ -25,8 +25,9 @@ export const getAllEvents = asyncHandler(
       status,
       visibility,
       communityId,
-      sortBy = 'startDate',
+      sortBy = 'dateTime',
       sortOrder = 'asc',
+      rsvpStatus,
     } = req.query;
 
     // Build filter
@@ -34,6 +35,8 @@ export const getAllEvents = asyncHandler(
     if (status) filter.status = status;
     if (visibility) filter.visibility = visibility;
     if (communityId) filter.communityId = communityId;
+
+    const userId = req.user?._id;
 
     // Build sort
     const sort: any = {};
@@ -52,6 +55,13 @@ export const getAllEvents = asyncHandler(
       .populate('creatorId', 'name profilePicture')
       .populate('communityId', 'name')
       .populate('rsvps.userId', 'name profilePicture');
+
+    // If rsvpStatus is provided, filter each event's rsvps array
+    if (rsvpStatus) {
+      events.forEach(event => {
+        event.rsvps = event.rsvps.filter((rsvp: any) => rsvp.status === rsvpStatus.toString());
+      });
+    }
 
     // Get total count for pagination
     const total = await Event.countDocuments(filter);
@@ -78,6 +88,7 @@ export const getAllEvents = asyncHandler(
 export const getEventById = asyncHandler(
   async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const { id } = req.params;
+    const { rsvpStatus } = req.query;
 
     if (!Types.ObjectId.isValid(id)) {
       throw new AppError('Invalid event ID', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
@@ -110,6 +121,11 @@ export const getEventById = asyncHandler(
       if (item._id === 'maybe') rsvpStats.maybe = item.count;
       if (item._id === 'declined') rsvpStats.declined = item.count;
     });
+
+    // If rsvpStatus is provided, filter event's rsvps array
+    if (rsvpStatus) {
+      event.rsvps = event.rsvps.filter(rsvp => rsvp.status === rsvpStatus.toString());
+    }
 
     res.success({
       event,
