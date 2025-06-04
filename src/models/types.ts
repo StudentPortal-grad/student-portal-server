@@ -266,6 +266,7 @@ export interface IMember {
     userId: Types.ObjectId;
     roleIds: Types.ObjectId[];
     joinedAt: Date;
+    admin: boolean;
 }
 
 export interface ICommunity extends Document {

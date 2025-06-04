@@ -73,13 +73,16 @@ export class DiscussionService {
     
     // Build query
     const query: any = {};
-    if (communityId) {
-      query.communityId = new Types.ObjectId(communityId);
+    if (params.communityId) {
+      query.communityId = new Types.ObjectId(params.communityId);
+    } else {
+      // If no communityId is specified, fetch only global discussions
+      query.communityId = { $exists: false };
     }
     
     // Add text search if provided
-    if (search) {
-      query.$text = { $search: search };
+    if (params.search) {
+      query.$text = { $search: params.search };
     }
     
     // Build sort

@@ -14,11 +14,62 @@ export const createDiscussion = async (req: Request, res: Response, next: NextFu
     if (!userId) {
       return next(new AppError('User not authenticated', 401, ErrorCodes.UNAUTHORIZED));
     }
-    
-    const discussionData = {
+
+    console.log(req.body);
+
+    const attachmentsData: any[] = [];
+    if (req.files && Array.isArray(req.files)) {
+      for (const file of req.files as Express.Multer.File[]) {
+        // Attempt to infer type from mimetype
+        let type = 'other';
+        if (file.mimetype.startsWith('image/')) {
+          type = 'image';
+        } else if (file.mimetype.startsWith('video/')) {
+          type = 'video';
+        } else if (file.mimetype.startsWith('audio/')) {
+          type = 'audio';
+        } else if (file.mimetype === 'application/pdf') {
+          type = 'pdf'; // Specifically assign 'pdf'
+        } else if (
+          file.mimetype === 'application/msword' || // .doc
+          file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || // .docx
+          file.mimetype === 'application/vnd.oasis.opendocument.text' // .odt
+        ) {
+          type = 'document';
+        }
+        // 'poll' type would typically be set based on req.body data, not file mimetype
+
+        attachmentsData.push({
+          type,
+          resource: file.path, // For Cloudinary, file.path is the secure_url
+          mimeType: file.mimetype,
+          originalFileName: file.originalname,
+          fileSize: file.size,
+          checksum: file.filename, // For Cloudinary, file.filename is the public_id, used as checksum
+        });
+      }
+    }
+
+    const discussionData: any = {
       ...req.body,
-      creator: userId
+      creator: userId,
     };
+
+    // If communityId is explicitly provided as null or empty string, remove it to signify a global discussion
+    if (discussionData.communityId === null || discussionData.communityId === '') {
+      delete discussionData.communityId;
+    }
+
+    // If files were uploaded, use the processed attachmentsData.
+    // This overrides any 'attachments' array potentially sent in req.body if req.files is present.
+    if (attachmentsData.length > 0) {
+      discussionData.attachments = attachmentsData;
+    } else if (req.body.attachments) {
+      // If no files uploaded via req.files, but req.body.attachments exists (e.g. pre-uploaded links)
+      discussionData.attachments = req.body.attachments;
+    } else {
+      discussionData.attachments = []; // Ensure attachments is an empty array if none provided
+    }
     
     const discussion = await discussionService.createDiscussion(discussionData);
     res.success(discussion, 'Discussion created successfully', 201);
@@ -47,23 +98,63 @@ export const getDiscussionById = async (req: Request, res: Response, next: NextF
  */
 export const addReply = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { id } = req.params;
+    const { id: discussionId } = req.params; // Renamed for clarity
     const userId = req.user?._id;
-    
+
     if (!userId) {
       return next(new AppError('User not authenticated', 401, ErrorCodes.UNAUTHORIZED));
     }
-    
-    const replyData = {
-      ...req.body,
-      creator: userId
-    };
-    
-    const discussion = await discussionService.addReply(id, replyData);
-    if (!discussion) {
-      return next(new AppError('Discussion not found', 404, ErrorCodes.NOT_FOUND));
+
+    const attachmentsData: any[] = [];
+    if (req.files && Array.isArray(req.files)) {
+      for (const file of req.files as Express.Multer.File[]) {
+        let type = 'other';
+        if (file.mimetype.startsWith('image/')) {
+          type = 'image';
+        } else if (file.mimetype.startsWith('video/')) {
+          type = 'video';
+        } else if (file.mimetype.startsWith('audio/')) {
+          type = 'audio';
+        } else if (file.mimetype === 'application/pdf') {
+          type = 'pdf'; // Specifically assign 'pdf'
+        } else if (
+          file.mimetype === 'application/msword' || // .doc
+          file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || // .docx
+          file.mimetype === 'application/vnd.oasis.opendocument.text' // .odt
+        ) {
+          type = 'document';
+        }
+        // 'poll' type would typically be set based on req.body data, not file mimetype
+
+        attachmentsData.push({
+          type,
+          resource: file.path, 
+          mimeType: file.mimetype,
+          originalFileName: file.originalname,
+          fileSize: file.size,
+          checksum: file.filename,
+        });
+      }
     }
-    
+
+    const replyData: any = {
+      ...req.body,
+      creator: userId,
+    };
+
+    if (attachmentsData.length > 0) {
+      replyData.attachments = attachmentsData;
+    } else if (req.body.attachments) {
+      replyData.attachments = req.body.attachments;
+    } else {
+      replyData.attachments = [];
+    }
+
+    const discussion = await discussionService.addReply(discussionId, replyData);
+    if (!discussion) {
+      return next(new AppError('Discussion not found for reply', 404, ErrorCodes.NOT_FOUND));
+    }
+
     res.success(discussion, 'Reply added successfully');
   } catch (error) {
     next(new AppError(error instanceof Error ? error.message : 'An unknown error occurred', 500, ErrorCodes.INTERNAL_ERROR));

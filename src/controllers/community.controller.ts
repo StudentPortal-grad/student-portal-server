@@ -76,19 +76,6 @@ export const getCommunityMembers = async (req: Request, res: Response) => {
   res.paginated(members, metadata, 'Community members retrieved successfully');
 };
 
-export const updateCommunityIcon = async (req: Request, res: Response) => {
-  if (!req.file) {
-    throw new AppError('No file uploaded', 400, 'BAD_REQUEST');
-  }
-
-  const community = await communityService.updateCommunityIcon(
-    req.params.id,
-    req.file.path
-  );
-  
-  res.success(community, 'Community icon updated successfully');
-};
-
 export const getCommunityRoles = async (req: Request, res: Response) => {
   const roles = await communityService.getCommunityRoles(req.params.id);
   res.success(roles, 'Community roles retrieved successfully');

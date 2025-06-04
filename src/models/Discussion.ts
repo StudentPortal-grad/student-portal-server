@@ -19,7 +19,7 @@ const DiscussionSchema = new Schema<IDiscussion>(
     communityId: {
       type: Schema.Types.ObjectId,
       ref: 'Community',
-      required: true,
+      required: false,
     },
     title: {
       type: String,
@@ -33,7 +33,7 @@ const DiscussionSchema = new Schema<IDiscussion>(
     },
     creator: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Users',
       required: true,
     },
     attachments: [
@@ -41,7 +41,7 @@ const DiscussionSchema = new Schema<IDiscussion>(
         _id: false,
         type: {
           type: String,
-          enum: ['document', 'image', 'video', 'audio', 'other', 'poll'],
+          enum: ['document', 'image', 'video', 'audio', 'pdf', 'other', 'poll'],
           required: true,
         },
         resource: {
@@ -82,17 +82,13 @@ const DiscussionSchema = new Schema<IDiscussion>(
     ],
     replies: [
       {
-        id: {
-          type: Schema.Types.ObjectId,
-          default: () => new Types.ObjectId(),
-        },
         content: {
           type: String,
           required: true,
         },
         creator: {
           type: Schema.Types.ObjectId,
-          ref: 'User',
+          ref: 'Users',
           required: true,
         },
         createdAt: {
@@ -104,7 +100,7 @@ const DiscussionSchema = new Schema<IDiscussion>(
             _id: false,
             type: {
               type: String,
-              enum: ['document', 'image', 'video', 'audio', 'other', 'poll'],
+              enum: ['document', 'image', 'video', 'audio', 'pdf', 'other', 'poll'],
               required: true,
             },
             resource: {
@@ -150,7 +146,7 @@ const DiscussionSchema = new Schema<IDiscussion>(
         _id: false,
         userId: {
           type: Schema.Types.ObjectId,
-          ref: 'User',
+          ref: 'Users',
         },
         voteType: {
           type: String,

@@ -1,4 +1,4 @@
-import { Schema, model, Types } from 'mongoose';
+import { Schema, model, Types, Model } from 'mongoose';
 import { ICommunity } from './types';
 import crypto from 'crypto';
 
@@ -8,6 +8,7 @@ interface IMember {
   userId: Types.ObjectId;
   roleIds: Types.ObjectId[];
   joinedAt: Date;
+  admin: boolean;
 }
 
 const CommunitySchema = new Schema<ICommunity>(
@@ -20,10 +21,10 @@ const CommunitySchema = new Schema<ICommunity>(
     name: {
       type: String,
       required: true,
-      unique: true,
       maxlength: 255,
       trim: true,
     },
+    // handle is used for community url (url-friendly name)
     handle: {
       type: String,
       required: true,
@@ -31,6 +32,7 @@ const CommunitySchema = new Schema<ICommunity>(
       maxlength: 100,
       trim: true,
       lowercase: true,
+      validate: { validator: (v) => /^[a-z0-9-]+$/.test(v) }
     },
     description: {
       type: String,
@@ -67,7 +69,7 @@ const CommunitySchema = new Schema<ICommunity>(
         _id: false,
         userId: {
           type: Schema.Types.ObjectId,
-          ref: 'User',
+          ref: 'Users',
         },
         roleIds: [
           {
@@ -79,18 +81,10 @@ const CommunitySchema = new Schema<ICommunity>(
           type: Date,
           default: Date.now,
         },
-      },
-    ],
-    roles: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: 'Role',
-      },
-    ],
-    discussions: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: 'Discussion',
+        admin: {
+          type: Boolean,
+          default: false,
+        },
       },
     ],
     resources: [
@@ -367,6 +361,7 @@ CommunitySchema.pre('save', function (next) {
       userId: this.owner,
       roleIds: [],
       joinedAt: new Date(),
+      admin: true,
     };
     this.members = [ownerMember];
   }
@@ -374,15 +369,59 @@ CommunitySchema.pre('save', function (next) {
 });
 
 CommunitySchema.pre('save', async function (next) {
+  // Auto-generate handle from name if new (and handle not explicitly set)
+  if (this.isNew && !this.handle) {
+    let baseHandle = this.name
+      .toLowerCase()       // Convert to lowercase
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/[^a-z0-9-]/g, '') // Remove special chars (keep only letters, numbers, hyphens)
+      .trim();             // Trim whitespace
+
+    // Ensure handle is not empty (fallback to 'community' if name was all special chars)
+    if (!baseHandle) baseHandle = 'community';
+
+    // Ensure uniqueness by appending a sequential number if needed
+    let uniqueHandle = baseHandle; // Initialize with baseHandle, to be potentially updated
+    let suffixCounter = 1;
+    let currentHandleToTest = baseHandle; // Start by testing the base handle itself
+
+    // Loop to find a unique handle by checking existence in the database
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const existingCommunity = await (this.constructor as Model<ICommunity>).findOne({ handle: currentHandleToTest });
+      if (!existingCommunity) {
+        uniqueHandle = currentHandleToTest; // Found a unique handle
+        break; // Exit loop
+      }
+      // If currentHandleToTest is taken, generate the next one with a suffix
+      currentHandleToTest = `${baseHandle}-${suffixCounter}`;
+      suffixCounter++;
+    }
+    this.handle = uniqueHandle;
+  }
+
+  // Add owner as the first admin member (if new)
+  if (this.isNew) {
+    const ownerMember = {
+      userId: this.owner,
+      roleIds: [],
+      joinedAt: new Date(),
+      admin: true,
+    };
+    this.members = [ownerMember];
+  }
+
+  // Update stats if fields are modified
   if (this.isModified('members')) {
     this.stats.membersCount = this.members.length;
   }
   if (this.isModified('discussions')) {
-    this.stats.discussionsCount = this.discussions.length;
+    this.stats.discussionsCount = this.discussions?.length || 0;
   }
   if (this.isModified('resources')) {
-    this.stats.resourcesCount = this.resources.length;
+    this.stats.resourcesCount = this.resources?.length || 0;
   }
+
   next();
 });
 

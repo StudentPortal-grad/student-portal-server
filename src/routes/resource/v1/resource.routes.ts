@@ -17,7 +17,7 @@ import {
   getRecommendedResources
 } from '@controllers/resource.controller';
 import { resourceValidation } from '../../../validations/resourceValidation';
-import { uploadFile } from '@utils/uploadService';
+import { uploadSingleResourceFile } from '@utils/uploadService';
 
 const router = express.Router();
 
@@ -35,7 +35,7 @@ router.get('/metrics/dashboard', asyncHandler(getResourceMetrics));
 // Protected routes (need specific permissions)
 router.post(
   '/',
-  uploadFile,
+  uploadSingleResourceFile,
   validate(resourceValidation.createResource),
   asyncHandler(createResource)
 );

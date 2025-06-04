@@ -2,7 +2,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import { AppError, ErrorCodes } from './appError';
-import { Request, Response, NextFunction, Express } from 'express';
+import { Request, Response, NextFunction, Express, RequestHandler } from 'express';
 import { config } from 'dotenv';
 
 config();
@@ -78,22 +78,31 @@ const imageFileFilter = (
 
 // Create a generic upload middleware
 export const createUploadMiddleware = (
-  fieldName: string,
+  fieldConfig: string | multer.Field[],
   folder: string = 'uploads'
 ) => {
   try {
     validateCloudinaryConfig();
-    const upload = multer({
+    const multerOptions: multer.Options = {
       storage: createCloudinaryStorage(folder),
       limits: {
         fileSize: 5 * 1024 * 1024, // 5MB limit
       },
       fileFilter: imageFileFilter,
-    }).single(fieldName);
+    };
 
-    // Return middleware that handles the upload and sets the field
+    const uploader = multer(multerOptions);
+    let uploadHandler: RequestHandler;
+
+    if (typeof fieldConfig === 'string') {
+      uploadHandler = uploader.single(fieldConfig);
+    } else {
+      uploadHandler = uploader.fields(fieldConfig);
+    }
+
+    // Return middleware that handles the upload and sets the field(s)
     return (req: Request, res: Response, next: NextFunction) => {
-      upload(req, res, (err) => {
+      uploadHandler(req, res, (err: any) => {
         if (err) {
           return next(
             new AppError(
@@ -104,11 +113,20 @@ export const createUploadMiddleware = (
           );
         }
 
-        // If file was uploaded, set the URL in the request body
-        if (req.file) {
-          req.body[fieldName] = req.file.path;
+        // If file(s) were uploaded, set the URL(s) in the request body
+        if (typeof fieldConfig === 'string' && req.file) {
+          req.body[fieldConfig] = req.file.path;
+        } else if (typeof fieldConfig !== 'string' && req.files) {
+          const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+          for (const field of fieldConfig) {
+            if (files[field.name] && files[field.name][0]) {
+              req.body[field.name] = files[field.name][0].path;
+            }
+          }
         }
-        console.log(req.body, req.file?.path);
+        // console.log('Request body after upload:', req.body);
+        // console.log('Uploaded req.file:', req.file);
+        // console.log('Uploaded req.files:', req.files);
         next();
       });
     };
@@ -144,10 +162,50 @@ export const uploadEventImage = createUploadMiddleware(
   'event_images'
 );
 
-// Specific middleware for resource files
-export const uploadFile = createUploadMiddleware(
+// Specific middleware for resource files (likely for single, generic file uploads)
+export const uploadSingleResourceFile = createUploadMiddleware(
   'fileUrl',
   'resources'
+);
+
+// --- New Configuration for Discussion Attachments ---
+const discussionAttachmentStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'student_portal/discussion_attachments',
+    resource_type: 'auto',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'odt', 'mp4', 'mov', 'avi', 'mkv', 'webm'],
+    // No specific transformations applied here to keep original files for docs/videos etc.
+  } as any,
+});
+
+const attachmentFileFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) => {
+  // More permissive filter for general attachments, or remove if not needed
+  // For now, accept all files and let Cloudinary handle validation/errors for unsupported types
+  cb(null, true);
+};
+
+export const uploadDiscussionAttachments = multer({
+  storage: discussionAttachmentStorage,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB limit, consistent with Discussion model
+  },
+  fileFilter: attachmentFileFilter, // Using a more permissive filter
+}).array('attachments', 10); // Expects an array of files from a field named 'attachments', max 10 files
+
+// --- End New Configuration for Discussion Attachments ---
+
+// Specific middleware for community icon and banner
+export const uploadCommunityImages = createUploadMiddleware(
+  [
+    { name: 'icon', maxCount: 1 },
+    { name: 'banner', maxCount: 1 },
+  ],
+  'community_assets' // Folder name in Cloudinary
 );
 
 export class UploadService {

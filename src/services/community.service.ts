@@ -202,19 +202,19 @@ export class CommunityService {
             throw new AppError("User is already a member", 400, "BAD_REQUEST");
         }
 
-        // Validate roles exist in community
-        if (memberData.roleIds.length) {
-            const invalidRoles = memberData.roleIds.filter(
-                (roleId) =>
-                    !community.roles.includes(new Types.ObjectId(roleId))
-            );
+        // Validate roles exist in this community
+        if (memberData.roleIds && memberData.roleIds.length > 0) {
+            const existingCommunityRoles = await this.communityRepository.findCommunityRoles(communityId);
+            const existingRoleIds = new Set(existingCommunityRoles.map(role => role._id.toString()));
 
-            if (invalidRoles.length) {
-                throw new AppError(
-                    "Invalid role IDs provided",
-                    400,
-                    "BAD_REQUEST"
-                );
+            for (const requestedRoleId of memberData.roleIds) {
+                if (!existingRoleIds.has(requestedRoleId)) {
+                    throw new AppError(
+                        `Role with ID '${requestedRoleId}' does not exist or does not belong to this community.`,
+                        400,
+                        "BAD_REQUEST"
+                    );
+                }
             }
         }
 

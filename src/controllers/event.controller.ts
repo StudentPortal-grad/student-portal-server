@@ -689,15 +689,19 @@ export const getUserRSVP = asyncHandler(
       return;
     }
 
-    const event = await Event.findById(eventId).exec();
+    const event = await Event.findById(eventId)
+      .populate({
+        path: 'rsvps.userId',
+        select: 'name profilePicture email', // Populating user details
+      })
+      .exec();
     if (!event) {
       res.notFound('Event not found');
       return;
     }
 
     const rsvp = event.rsvps.find(
-      (r: { userId: Types.ObjectId; status: string; updatedAt: Date }) =>
-        r.userId.toString() === userId
+      (r: any) => r.userId && r.userId._id.toString() === userId
     );
 
     res.success({ rsvp: rsvp || null }, 'RSVP retrieved successfully');
@@ -749,7 +753,12 @@ export const getEventRSVPs = asyncHandler(
       return;
     }
 
-    const event = await Event.findById(eventId).exec();
+    const event = await Event.findById(eventId)
+      .populate({
+        path: 'rsvps.userId',
+        select: 'name profilePicture email', // Populating user details
+      })
+      .exec();
     if (!event) {
       res.notFound('Event not found');
       return;
