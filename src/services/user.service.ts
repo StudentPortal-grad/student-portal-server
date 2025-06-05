@@ -83,6 +83,34 @@ export class UserService {
   }
 
   /**
+   * Create new admin user (SuperAdmin only)
+   */
+  static async createAdmin(userData: Partial<IUser>) {
+    const existingUser = await UserRepository.findByEmail(userData.email!);
+    if (existingUser) {
+      throw new AppError(
+        'Email already registered',
+        400,
+        ErrorCodes.ALREADY_EXISTS
+      );
+    }
+    // Always set role to 'admin'
+    userData.role = 'admin';
+    const user = await DbOperations.create(User, userData);
+
+    // Generate and send verification OTP
+    const { otp, hashedOtp } = generateHashedOTP();
+    user.otp = {
+      code: hashedOtp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+    };
+    await user.save();
+    await EmailService.sendVerificationOTP(user.email, otp);
+
+    return { user };
+  }
+
+  /**
    * Update user
    */
   static async updateUser(userId: Types.ObjectId, updateData: Partial<IUser>) {

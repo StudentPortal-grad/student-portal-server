@@ -60,6 +60,7 @@ export const authenticate = async (
  */
 export const authorize = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
+    
     if (process.env.SKIP_RBAC === 'true') {
       return next();
     }

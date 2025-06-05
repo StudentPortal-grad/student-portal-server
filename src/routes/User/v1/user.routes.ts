@@ -13,6 +13,14 @@ const router = Router();
 // All routes require authentication
 router.use(authenticate);
 
+// Route for SuperAdmin to create Admin users
+router.post(
+  '/admin',
+  authorize('superadmin'),
+  validate(userValidation.createUser),
+  UserController.createAdmin
+);
+
 router.use("/friends", friendRoutes);
 
 // Mount /me routes
