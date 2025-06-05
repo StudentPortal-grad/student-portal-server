@@ -70,13 +70,13 @@ const ResourceSchema = new Schema<IResource>(
     },
     uploader: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Users',
       required: true
     },
     community: {
       type: Schema.Types.ObjectId,
       ref: 'Community',
-      required: true
+      required: false
     },
     interactionStats: {
       downloads: {

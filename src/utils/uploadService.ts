@@ -162,11 +162,40 @@ export const uploadEventImage = createUploadMiddleware(
   'event_images'
 );
 
-// Specific middleware for resource files (likely for single, generic file uploads)
-export const uploadSingleResourceFile = createUploadMiddleware(
-  'fileUrl',
-  'resources'
-);
+// Permissive file filter for attachments and general resources
+const attachmentFileFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) => {
+  // Accept all files and let Cloudinary handle validation/errors for unsupported types
+  cb(null, true);
+};
+
+// --- Configuration for Single Resource File Uploads ---
+const resourceFileStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'student_portal/resources',
+    resource_type: 'auto', // Automatically detect resource type
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'odt', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'mp4', 'mov', 'avi', 'mkv', 'webm', 'mp3', 'wav', 'zip', 'rar'], // Broad list of common formats
+    // No specific transformations to keep original files for documents/videos etc.
+  } as any, // Use 'as any' to bypass strict type checking for params if needed for Cloudinary specific options
+});
+
+// Reusing attachmentFileFilter as it's permissive, or define a specific one if needed
+// const resourceFileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+//   cb(null, true); // Accept all files, Cloudinary will handle validation for supported types
+// };
+
+export const uploadSingleResourceFile = multer({
+  storage: resourceFileStorage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit for resources (adjust as needed)
+  },
+  fileFilter: attachmentFileFilter, // Using the permissive filter from discussion attachments
+}).single('fileUrl'); // Expects a single file from a field named 'fileUrl'
+// --- End Configuration for Single Resource File Uploads ---
 
 // --- New Configuration for Discussion Attachments ---
 const discussionAttachmentStorage = new CloudinaryStorage({
@@ -179,15 +208,7 @@ const discussionAttachmentStorage = new CloudinaryStorage({
   } as any,
 });
 
-const attachmentFileFilter = (
-  req: Request,
-  file: Express.Multer.File,
-  cb: multer.FileFilterCallback
-) => {
-  // More permissive filter for general attachments, or remove if not needed
-  // For now, accept all files and let Cloudinary handle validation/errors for unsupported types
-  cb(null, true);
-};
+
 
 export const uploadDiscussionAttachments = multer({
   storage: discussionAttachmentStorage,

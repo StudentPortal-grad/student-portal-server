@@ -133,34 +133,54 @@ export const createResource = async (
   next: NextFunction
 ) => {
   try {
-    const {
-      title,
-      description,
-      fileUrl,
-      fileSize,
-      tags,
-      visibility,
-      category,
-      community,
-    } = req.body;
+    const { title, description, tags, visibility, category, community } = req.body;
     const userId = req.user?.id;
 
     if (!userId) {
       throw new AuthorizationError('User not authenticated');
     }
 
-    // Create resource
-    const resource = await Resource.create({
+    if (!req.file) {
+      throw new AppError('Resource file is required.', 400, ErrorCodes.VALIDATION_ERROR);
+    }
+
+    // Infer fileType from mimetype
+    let fileType = 'other';
+    if (req.file.mimetype.startsWith('image/')) {
+      fileType = 'image';
+    } else if (req.file.mimetype.startsWith('video/')) {
+      fileType = 'video';
+    } else if (req.file.mimetype.startsWith('audio/')) {
+      fileType = 'audio';
+    } else if (req.file.mimetype === 'application/pdf') {
+      fileType = 'document'; // Or 'pdf' if your model/enum supports it distinctly
+    } else if (
+      req.file.mimetype === 'application/msword' ||
+      req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      req.file.mimetype === 'application/vnd.oasis.opendocument.text' ||
+      req.file.mimetype.startsWith('text/')
+    ) {
+      fileType = 'document';
+    }
+
+    const resourceData = {
       title,
       description,
-      fileUrl,
-      fileSize,
-      tags: tags ? tags.split(',').map((tag: string) => tag.trim()) : [],
+      fileUrl: req.file.path,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype,
+      checksum: req.file.filename, // Cloudinary public_id
+      originalFileName: req.file.originalname,
+      fileType: fileType,
+      tags: tags ? (Array.isArray(tags) ? tags : tags.split(',').map((tag: string) => tag.trim())) : [],
       visibility,
       category,
       uploader: new Types.ObjectId(userId),
       community,
-    });
+    };
+
+    // Create resource
+    const resource = await Resource.create(resourceData);
 
     res.success({ resource }, 'Resource created successfully', 201);
   } catch (_error) {
@@ -208,27 +228,84 @@ export const updateResource = async (
       throw new AuthorizationError('Not authorized to update this resource');
     }
 
+    const updateData: any = {};
+    let oldFilePublicId: string | undefined = undefined;
+
+    // Handle new file upload
+    if (req.file) {
+      if (resource.checksum) {
+        oldFilePublicId = resource.checksum;
+      }
+      updateData.fileUrl = req.file.path;
+      updateData.fileSize = req.file.size;
+      updateData.mimeType = req.file.mimetype;
+      updateData.checksum = req.file.filename; // Cloudinary public_id
+      updateData.originalFileName = req.file.originalname;
+
+      // Infer fileType from mimetype
+      let fileType = 'other';
+      if (req.file.mimetype.startsWith('image/')) {
+        fileType = 'image';
+      } else if (req.file.mimetype.startsWith('video/')) {
+        fileType = 'video';
+      } else if (req.file.mimetype.startsWith('audio/')) {
+        fileType = 'audio';
+      } else if (req.file.mimetype === 'application/pdf') {
+        fileType = 'document'; // Or 'pdf' if your model/enum supports it distinctly for resources
+      } else if (
+        req.file.mimetype === 'application/msword' ||
+        req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        req.file.mimetype === 'application/vnd.oasis.opendocument.text' ||
+        req.file.mimetype.startsWith('text/')
+      ) {
+        fileType = 'document';
+      }
+      updateData.fileType = fileType;
+    }
+
+    // Handle metadata updates from req.body
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (visibility !== undefined) updateData.visibility = visibility;
+    if (category !== undefined) updateData.category = category;
+    if (community !== undefined) updateData.community = community; // Ensure community can be nullified if passed as null
+
     // Process tags if provided
-    let processedTags;
     if (tags) {
-      processedTags = Array.isArray(tags)
+      updateData.tags = Array.isArray(tags)
         ? tags
         : tags.split(',').map((tag: string) => tag.trim());
+    } else if (req.body.hasOwnProperty('tags') && tags === null) {
+      updateData.tags = []; // Allow clearing tags by sending null or empty array
+    }
+
+    // Check if there's anything to update
+    if (Object.keys(updateData).length === 0) {
+      res.success({ resource }, 'No changes detected. Resource not updated.');
+      return;
     }
 
     // Update resource
     const updatedResource = await Resource.findByIdAndUpdate(
       id,
-      {
-        title,
-        description,
-        tags: processedTags,
-        visibility,
-        category,
-        community,
-      },
+      updateData,
       { new: true, runValidators: true }
     );
+
+    // If a new file was uploaded and an old file existed, try to delete the old file from Cloudinary
+    if (req.file && oldFilePublicId && oldFilePublicId !== req.file.filename) {
+      try {
+        console.log(`Attempting to delete old resource file from Cloudinary: ${oldFilePublicId}`);
+        await UploadService.deleteFromCloudinary(oldFilePublicId);
+        console.log(`Successfully deleted old resource file: ${oldFilePublicId}`);
+      } catch (cloudinaryError) {
+        console.error(
+          `Failed to delete old resource file ${oldFilePublicId} from Cloudinary:`,
+          cloudinaryError
+        );
+        // Do not fail the overall request if Cloudinary deletion fails, but log it.
+      }
+    }
 
     res.success({ resource: updatedResource }, 'Resource updated successfully');
   } catch (_error) {

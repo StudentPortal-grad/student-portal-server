@@ -42,6 +42,7 @@ router.post(
 
 router.patch(
   '/:id',
+  uploadSingleResourceFile, // Add middleware for file upload
   validate(resourceValidation.updateResource),
   asyncHandler(updateResource)
 );

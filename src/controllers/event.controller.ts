@@ -19,6 +19,7 @@ import { IEventDocument } from '../interfaces/event.interface';
  */
 export const getAllEvents = asyncHandler(
   async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    // TODO: Optimization needed
     const {
       page = 1,
       limit = 10,
