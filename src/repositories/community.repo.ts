@@ -62,4 +62,17 @@ export class CommunityRepository {
       .lean();
     return community?.roles || [];
   }
+
+  async getMetrics() {
+    const [total, official, user] = await Promise.all([
+      Community.countDocuments(),
+      Community.countDocuments({ type: 'Official' }),
+      Community.countDocuments({ type: 'Community' })
+    ]);
+    return {
+      totalCommunities: total,
+      officialCommunities: official,
+      userCommunities: user
+    };
+  }
 }

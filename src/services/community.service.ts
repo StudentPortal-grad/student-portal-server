@@ -247,4 +247,16 @@ export class CommunityService {
 
         await community.removeMember(new Types.ObjectId(userId));
     }
+
+    async getMetrics() {
+        const metrics = await this.communityRepository.getMetrics();
+        if (!metrics) {
+            throw new AppError(
+                'Could not retrieve community metrics',
+                 500, 
+                 'INTERNAL_SERVER_ERROR'
+            );
+        }
+        return metrics;
+    }
 }

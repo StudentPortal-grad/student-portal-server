@@ -121,3 +121,8 @@ export const removeCommunityMember = async (req: Request, res: Response) => {
 
   res.success(null, 'Member removed successfully');
 };
+
+export const getCommunityMetrics = async (_req: Request, res: Response) => {
+  const metrics = await communityService.getMetrics();
+  res.success(metrics, 'Community metrics retrieved successfully');
+};
