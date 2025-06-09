@@ -10,7 +10,18 @@ export class CommunityRepository {
   }
 
   async findAllPaginated(options: PaginationOptions) {
-    return DbOperations.paginate(Community, {}, options);
+    return DbOperations.paginate(
+      Community,
+      {},
+      {
+        ...options,
+        select: '_id name createdAt type icon stats.membersCount owner',
+        populate: {
+          path: 'owner',
+          select: '_id profilePicture'
+        }
+      }
+    );
   }
 
   async findById(id: string): Promise<ICommunity | null> {
