@@ -10,6 +10,9 @@ import {
   ValidationError,
   AuthorizationError,
 } from '../utils/errors';
+import { ResourceService } from '../services/resource.service';
+
+const resourceService = new ResourceService();
 
 
 /**
@@ -710,6 +713,82 @@ export const getResourceComments = async (
   } catch (_error) {
     next(
       new AppError('Failed to get comments', 500, ErrorCodes.INTERNAL_ERROR)
+    );
+  }
+};
+
+/**
+ * @description Edit a comment on a resource
+ * @route PATCH /v1/resources/:id/comments/:commentId
+ */
+export const editComment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id, commentId } = req.params;
+    const { content } = req.body;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      throw new AuthorizationError('User not authenticated');
+    }
+
+    if (!content) {
+      throw new ValidationError('Content is required');
+    }
+
+    const resource = await resourceService.editComment(
+      id,
+      commentId,
+      userId,
+      content
+    );
+    res.success(resource, 'Comment updated successfully');
+  } catch (error) {
+    if (error instanceof AppError) {
+      return next(error);
+    }
+    next(
+      new AppError(
+        error instanceof Error ? error.message : 'Failed to edit comment',
+        500,
+        ErrorCodes.INTERNAL_ERROR
+      )
+    );
+  }
+};
+
+/**
+ * @description Delete a comment on a resource
+ * @route DELETE /v1/resources/:id/comments/:commentId
+ */
+export const deleteComment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id, commentId } = req.params;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      throw new AuthorizationError('User not authenticated');
+    }
+
+    const resource = await resourceService.deleteComment(id, commentId, userId);
+    res.success(resource, 'Comment deleted successfully');
+  } catch (error) {
+    if (error instanceof AppError) {
+      return next(error);
+    }
+    next(
+      new AppError(
+        error instanceof Error ? error.message : 'Failed to delete comment',
+        500,
+        ErrorCodes.INTERNAL_ERROR
+      )
     );
   }
 };

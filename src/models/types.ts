@@ -240,6 +240,13 @@ export interface IVote {
     createdAt: Date;
 }
 
+export interface IComment {
+    _id: Types.ObjectId;
+    userId: Types.ObjectId;
+    content: string;
+    createdAt: Date;
+}
+
 export interface IReport {
     userId: Types.ObjectId;
     reason: string;
@@ -373,11 +380,7 @@ export interface IResource extends Document {
         reason: string;
         createdAt: Date;
     }[];
-    comments: {
-        userId: Types.ObjectId;
-        content: string;
-        createdAt: Date;
-    }[];
+    comments: IComment[];
     createdAt: Date;
     updatedAt: Date;
     upvotesCount: number;

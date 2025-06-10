@@ -70,6 +70,11 @@ export const resourceValidation = {
     content: Joi.string().required().min(1).max(500).trim()
   }),
 
+  // Edit a comment validation
+  editComment: Joi.object({
+    content: Joi.string().required().min(1).max(500).trim()
+  }),
+
   // Get resource comments validation
   getResourceComments: Joi.object({
     page: Joi.number().integer().min(1),

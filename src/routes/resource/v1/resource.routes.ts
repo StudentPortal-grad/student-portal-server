@@ -15,7 +15,9 @@ import {
   getResourceComments,
   trackDownload,
   trackView,
-  getRecommendedResources
+  getRecommendedResources,
+  editComment,
+  deleteComment
 } from '@controllers/resource.controller';
 import { resourceValidation } from '../../../validations/resourceValidation';
 import { uploadSingleResourceFile } from '@utils/uploadService';
@@ -70,6 +72,17 @@ router.post(
   '/:id/comment',
   validate(resourceValidation.commentResource),
   asyncHandler(commentResource)
+);
+
+router.patch(
+  '/:id/comments/:commentId',
+  validate(resourceValidation.editComment),
+  asyncHandler(editComment)
+);
+
+router.delete(
+  '/:id/comments/:commentId',
+  asyncHandler(deleteComment)
 );
 
 router.post(
