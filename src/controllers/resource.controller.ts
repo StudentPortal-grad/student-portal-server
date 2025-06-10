@@ -472,16 +472,16 @@ export const getResourceMetrics = async (
 };
 
 /**
- * Rate a resource
+ * Vote on a resource
  */
-export const rateResource = async (
+export const voteResource = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const { id } = req.params;
-    const { rating } = req.body;
+    const { voteType } = req.body;
     const userId = req.user?.id;
 
     if (!userId) {
@@ -492,23 +492,69 @@ export const rateResource = async (
       throw new ValidationError('Invalid resource ID');
     }
 
-    // Find resource
     const resource = await Resource.findById(id);
 
     if (!resource) {
       throw new NotFoundError('Resource not found');
     }
 
-    // Add rating
-    await resource.addRating(new Types.ObjectId(userId), rating);
+    await resource.vote(new Types.ObjectId(userId), voteType);
 
-    // Get updated average rating
-    const averageRating = resource.getAverageRating();
-
-    res.success({ averageRating }, 'Resource rated successfully');
-  } catch (_error) {
+    res.success(
+      {
+        upvotes: resource.upvotesCount,
+        downvotes: resource.downvotesCount,
+      },
+      'Resource voted successfully'
+    );
+  } catch (error) {
     next(
-      new AppError('Failed to rate resource', 500, ErrorCodes.INTERNAL_ERROR)
+      new AppError(
+        error instanceof Error ? error.message : 'Failed to vote on resource',
+        500,
+        ErrorCodes.INTERNAL_ERROR
+      )
+    );
+  }
+};
+
+/**
+ * Report a resource
+ */
+export const reportResource = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      throw new AuthorizationError('User not authenticated');
+    }
+
+    if (!Types.ObjectId.isValid(id)) {
+      throw new ValidationError('Invalid resource ID');
+    }
+
+    const resource = await Resource.findById(id);
+
+    if (!resource) {
+      throw new NotFoundError('Resource not found');
+    }
+
+    await resource.report(new Types.ObjectId(userId), reason);
+
+    res.success(null, 'Resource reported successfully');
+  } catch (error) {
+    next(
+      new AppError(
+        error instanceof Error ? error.message : 'Failed to report resource',
+        500,
+        ErrorCodes.INTERNAL_ERROR
+      )
     );
   }
 };

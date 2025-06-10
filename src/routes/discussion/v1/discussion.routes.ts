@@ -12,6 +12,7 @@ import {
   updateDiscussion,
   deleteDiscussion,
   voteDiscussion,
+  reportDiscussion,
   togglePinDiscussion,
   getDiscussionReplies,
   getTrendingDiscussions
@@ -66,6 +67,11 @@ router.delete('/:id',
 router.post('/:id/vote', 
   validate(discussionValidation.voteDiscussion),
   asyncHandler(voteDiscussion)
+);
+
+router.post('/:id/report',
+  validate(discussionValidation.reportDiscussion),
+  asyncHandler(reportDiscussion)
 );
 
 // Admin routes

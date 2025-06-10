@@ -3,6 +3,18 @@ import { IResource } from './types';
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB limit
 
+interface IVote {
+  userId: Types.ObjectId;
+  voteType: 'upvote' | 'downvote';
+  createdAt: Date;
+}
+
+interface IReport {
+  userId: Types.ObjectId;
+  reason: string;
+  createdAt: Date;
+}
+
 const ResourceSchema = new Schema<IResource>(
   {
     title: {
@@ -88,17 +100,34 @@ const ResourceSchema = new Schema<IResource>(
         default: 0
       }
     },
-    ratings: [{
+    votes: [
+      {
+        _id: false,
+        userId: {
+          type: Schema.Types.ObjectId,
+          ref: 'Users',
+        },
+        voteType: {
+          type: String,
+          enum: ['upvote', 'downvote'],
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    reports: [{
+      _id: false,
       userId: {
         type: Schema.Types.ObjectId,
-        ref: 'User',
+        ref: 'Users',
         required: true
       },
-      rating: {
-        type: Number,
+      reason: {
+        type: String,
         required: true,
-        min: 1,
-        max: 5
+        maxlength: 500
       },
       createdAt: {
         type: Date,
@@ -108,7 +137,7 @@ const ResourceSchema = new Schema<IResource>(
     comments: [{
       userId: {
         type: Schema.Types.ObjectId,
-        ref: 'User',
+        ref: 'Users',
         required: true
       },
       content: {
@@ -126,6 +155,26 @@ const ResourceSchema = new Schema<IResource>(
     timestamps: true
   }
 );
+
+// Virtual properties for vote counts
+ResourceSchema.virtual('upvotesCount').get(function(this: IResource) {
+  if (this.votes && Array.isArray(this.votes)) {
+    return this.votes.filter((v: { voteType: string }) => v.voteType === 'upvote').length;
+  }
+  return 0;
+});
+
+ResourceSchema.virtual('downvotesCount').get(function(this: IResource) {
+  if (this.votes && Array.isArray(this.votes)) {
+    return this.votes.filter((v: { voteType: string }) => v.voteType === 'downvote').length;
+  }
+  return 0;
+});
+
+// Ensure virtuals are included in toJSON and toObject outputs
+ResourceSchema.set('toJSON', { virtuals: true });
+ResourceSchema.set('toObject', { virtuals: true });
+
 
 // Indexes for better query performance
 ResourceSchema.index({ title: 'text', description: 'text' });
@@ -153,18 +202,27 @@ ResourceSchema.methods = {
     await this.save();
   },
 
-  async addRating(userId: Types.ObjectId, rating: number): Promise<void> {
-    // Remove existing rating by this user if it exists
-    const existingRatingIndex = this.ratings.findIndex((r: { userId: Types.ObjectId }) => 
-      r.userId.toString() === userId.toString()
-    );
-    
-    if (existingRatingIndex !== -1) {
-      this.ratings.splice(existingRatingIndex, 1);
+  async vote(userId: Types.ObjectId, voteType: 'upvote' | 'downvote'): Promise<void> {
+    const existingVote = this.votes.find((v: IVote) => v.userId.equals(userId));
+
+    if (existingVote) {
+      if (existingVote.voteType === voteType) {
+        // Remove vote if same type (toggle)
+        this.votes = this.votes.filter((v: IVote) => !v.userId.equals(userId));
+      } else {
+        // Update vote type
+        existingVote.voteType = voteType;
+        existingVote.createdAt = new Date();
+      }
+    } else {
+      // Add new vote
+      this.votes.push({
+        userId,
+        voteType,
+        createdAt: new Date(),
+      });
     }
-    
-    // Add new rating
-    this.ratings.push({ userId, rating });
+
     await this.save();
   },
 
@@ -173,11 +231,13 @@ ResourceSchema.methods = {
     await this.save();
   },
 
-  getAverageRating(): number {
-    if (this.ratings.length === 0) return 0;
-    
-    const sum = this.ratings.reduce((acc: number, curr: { rating: number }) => acc + curr.rating, 0);
-    return parseFloat((sum / this.ratings.length).toFixed(1));
+  async report(this: IResource, userId: Types.ObjectId, reason: string): Promise<void> {
+    const existingReport = this.reports.find((r: IReport) => r.userId.equals(userId));
+    if (existingReport) {
+      return;
+    }
+    this.reports.push({ userId, reason, createdAt: new Date() });
+    await this.save();
   }
 };
 

@@ -225,41 +225,63 @@ export interface INotification extends Document {
     };
 }
 
+export interface IAttachment {
+    type: 'document' | 'image' | 'video' | 'audio' | 'pdf' | 'other' | 'poll';
+    resource: string;
+    mimeType: string;
+    originalFileName: string;
+    fileSize: number;
+    checksum: string;
+}
+
+export interface IVote {
+    userId: Types.ObjectId;
+    voteType: 'upvote' | 'downvote';
+    createdAt: Date;
+}
+
+export interface IReport {
+    userId: Types.ObjectId;
+    reason: string;
+    createdAt: Date;
+}
+
+export interface IReply extends Document {
+    content: string;
+    creator: Types.ObjectId;
+    attachments: IAttachment[];
+    votes: IVote[];
+    reports: IReport[];
+    replies: IReply[];
+    createdAt: Date;
+    updatedAt: Date;
+}
+
 export interface IDiscussion extends Document {
-    communityId: Types.ObjectId;
+    _id: Types.ObjectId;
+    communityId?: Types.ObjectId;
     title: string;
     content: string;
     creator: Types.ObjectId;
-    attachments?: {
-        type: 'document' | 'image' | 'video' | 'audio' | 'other' | 'poll';
-        resource: string;
-        mimeType: string;
-        originalFileName: string;
-        fileSize: number;
-        checksum: string;
-    }[];
-    replies?: {
-        id: Types.ObjectId;
-        content: string;
-        creator: Types.ObjectId;
-        createdAt: Date;
-        attachments?: {
-            type: 'document' | 'image' | 'video' | 'audio' | 'other' | 'poll';
-            resource: string;
-            mimeType: string;
-            originalFileName: string;
-            fileSize: number;
-            checksum: string;
-        }[];
-    }[];
-    votes?: {
-        userId: Types.ObjectId;
-        voteType: "upvote" | "downvote";
-        createdAt: Date;
-    }[];
-    status: "open" | "closed" | "archived";
+    attachments: IAttachment[];
+    replies: IReply[];
+    votes: IVote[];
+    status: 'open' | 'closed' | 'archived';
+    reports: IReport[];
     createdAt: Date;
     updatedAt: Date;
+    upvotesCount: number;
+    downvotesCount: number;
+
+    // Methods
+    addReply(
+        content: string,
+        creator: Types.ObjectId,
+        attachments: IAttachment[]
+    ): Promise<any>;
+    vote(userId: Types.ObjectId, voteType: 'upvote' | 'downvote'): Promise<void>;
+    report(userId: Types.ObjectId, reason: string): Promise<void>;
+    getVoteCounts(): { upvotes: number; downvotes: number };
 }
 
 export interface IMember {
@@ -339,9 +361,14 @@ export interface IResource extends Document {
         downloads: number;
         views: number;
     };
-    ratings: {
+    votes: {
         userId: Types.ObjectId;
-        rating: number;
+        voteType: 'upvote' | 'downvote';
+        createdAt: Date;
+    }[];
+    reports: {
+        userId: Types.ObjectId;
+        reason: string;
         createdAt: Date;
     }[];
     comments: {
@@ -351,6 +378,8 @@ export interface IResource extends Document {
     }[];
     createdAt: Date;
     updatedAt: Date;
+    upvotesCount: number;
+    downvotesCount: number;
 
     // Methods
     isAccessibleBy(
@@ -359,9 +388,9 @@ export interface IResource extends Document {
     ): boolean;
     incrementDownloads(): Promise<void>;
     incrementViews(): Promise<void>;
-    addRating(userId: Types.ObjectId, rating: number): Promise<void>;
+    vote(userId: Types.ObjectId, voteType: 'upvote' | 'downvote'): Promise<void>;
+    report(userId: Types.ObjectId, reason: string): Promise<void>;
     addComment(userId: Types.ObjectId, content: string): Promise<void>;
-    getAverageRating(): number;
 }
 
 export interface IEvent {

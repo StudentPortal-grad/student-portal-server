@@ -162,6 +162,16 @@ export const discussionValidation = {
         'any.required': 'Vote type is required'
       })
   }),
+
+  reportDiscussion: Joi.object({
+    reason: Joi.string().required().min(10).max(500)
+      .messages({
+        'string.base': 'Reason must be a string',
+        'any.required': 'Reason is required',
+        'string.min': 'Reason must be at least 10 characters long',
+        'string.max': 'Reason must not exceed 500 characters'
+      })
+  }),
   
   pinDiscussion: Joi.object({
     pinned: Joi.boolean().required()

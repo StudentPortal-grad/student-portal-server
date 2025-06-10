@@ -1,6 +1,7 @@
 import { DiscussionRepository } from '../repositories/discussion.repo';
 import { Types } from 'mongoose';
-import { IDiscussion, IDiscussionDocument } from '../interfaces/discussion.interface';
+import Discussion from '../models/Discussion';
+import { IDiscussion } from '../models/types';
 import { ICustomPaginateResult } from '../repositories/discussion.repo';
 import { NotFoundError } from '../utils/errors';
 
@@ -26,39 +27,70 @@ export class DiscussionService {
   /**
    * Create a new discussion
    */
-  async createDiscussion(discussion: Partial<IDiscussion>): Promise<IDiscussionDocument> {
+  async createDiscussion(discussion: Partial<IDiscussion>): Promise<IDiscussion> {
     const result = await this.discussionRepository.create(discussion as unknown as RepoDiscussion);
-    return result as unknown as IDiscussionDocument;
+    return result as unknown as IDiscussion;
   }
 
   /**
-   * Get a discussion by ID
+   * Generates a nested population object to a specified depth.
+   * @param depth - The maximum depth to populate.
+   * @returns A Mongoose population object.
    */
-  async getDiscussionById(id: string): Promise<IDiscussionDocument | null> {
-    const discussion = await this.discussionRepository.findById(id);
+  private generateNestedPopulate(depth: number): any {
+    const creatorPopulate = { path: 'creator', select: 'name username profilePicture' };
+
+    if (depth <= 0) {
+      return [creatorPopulate];
+    }
+
+    return [
+      creatorPopulate,
+      {
+        path: 'replies',
+        populate: this.generateNestedPopulate(depth - 1),
+      },
+    ];
+  }
+
+  /**
+   * Get a discussion by ID, recursively populating creators for all replies up to a fixed depth.
+   */
+  async getDiscussionById(id: string): Promise<IDiscussion | null> {
+    const maxDepth = 10; // Set a reasonable depth limit
+
+    const discussion = await Discussion.findById(id).populate([
+      { path: 'creator', select: 'name username profilePicture' },
+      {
+        path: 'replies',
+        populate: this.generateNestedPopulate(maxDepth),
+      },
+    ]);
+
     if (!discussion) {
       throw new NotFoundError('Discussion not found');
     }
-    return discussion as unknown as IDiscussionDocument;
+
+    return discussion;
   }
 
   /**
    * Add a reply to a discussion
    */
-  async addReply(discussionId: string, reply: any): Promise<IDiscussionDocument | null> {
+  async addReply(discussionId: string, reply: any): Promise<IDiscussion | null> {
     const discussion = await this.discussionRepository.addReply(discussionId, reply);
     if (!discussion) {
       throw new NotFoundError('Discussion not found');
     }
-    return discussion as unknown as IDiscussionDocument;
+    return discussion as unknown as IDiscussion;
   }
 
   /**
    * Get all discussions with pagination and filtering
    */
   async getAllDiscussions(params: DiscussionQueryParams): Promise<{
-    discussions: IDiscussionDocument[];
-    pagination: ICustomPaginateResult<IDiscussionDocument>;
+    discussions: IDiscussion[];
+    pagination: ICustomPaginateResult<IDiscussion>;
   }> {
     const { page, limit, communityId, sortBy = 'createdAt', sortOrder = 'desc', search } = params;
 
@@ -97,20 +129,20 @@ export class DiscussionService {
     const { docs, ...pagination } = result;
 
     return {
-      discussions: docs as unknown as IDiscussionDocument[],
-      pagination: pagination as ICustomPaginateResult<IDiscussionDocument>
+      discussions: docs as unknown as IDiscussion[],
+      pagination: pagination as ICustomPaginateResult<IDiscussion>
     };
   }
 
   /**
    * Update a discussion
    */
-  async updateDiscussion(id: string, updateData: Partial<IDiscussion>): Promise<IDiscussionDocument | null> {
+  async updateDiscussion(id: string, updateData: Partial<IDiscussion>): Promise<IDiscussion | null> {
     const discussion = await this.discussionRepository.findByIdAndUpdate(id, updateData as unknown as RepoDiscussion);
     if (!discussion) {
       throw new NotFoundError('Discussion not found');
     }
-    return discussion as unknown as IDiscussionDocument;
+    return discussion as unknown as IDiscussion;
   }
 
   /**
@@ -124,22 +156,20 @@ export class DiscussionService {
   /**
    * Vote on a discussion
    */
-  async voteDiscussion(discussionDocument: IDiscussionDocument, userId: Types.ObjectId, voteType: 'upvote' | 'downvote'): Promise<IDiscussionDocument> {
-    // We assume IDiscussionDocument has the .vote() and .save() methods.
-    (discussionDocument as any).vote(userId, voteType); // Using 'as any' temporarily if type hints are missing for methods
-
+  async voteDiscussion(discussionDocument: IDiscussion, userId: Types.ObjectId, voteType: 'upvote' | 'downvote'): Promise<IDiscussion> {
+    await discussionDocument.vote(userId, voteType);
     return discussionDocument;
   }
 
   /**
    * Pin or unpin a discussion
    */
-  async togglePinDiscussion(id: string, pinned: boolean): Promise<IDiscussionDocument | null> {
+  async togglePinDiscussion(id: string, pinned: boolean): Promise<IDiscussion | null> {
     const discussion = await this.discussionRepository.findByIdAndUpdate(id, { isPinned: pinned } as unknown as RepoDiscussion);
     if (!discussion) {
       throw new NotFoundError('Discussion not found');
     }
-    return discussion as unknown as IDiscussionDocument;
+    return discussion as unknown as IDiscussion;
   }
 
   /**
@@ -193,13 +223,13 @@ export class DiscussionService {
   /**
    * Get trending discussions
    */
-  async getTrendingDiscussions(communityId?: string, limit: number = 10): Promise<IDiscussionDocument[]> {
+  async getTrendingDiscussions(communityId?: string, limit: number = 10): Promise<IDiscussion[]> {
     if (communityId) {
       const result = await this.discussionRepository.findTrending(new Types.ObjectId(communityId), limit);
-      return result as unknown as IDiscussionDocument[];
+      return result as unknown as IDiscussion[];
     } else {
       const result = await this.discussionRepository.findTrending(undefined, limit);
-      return result as unknown as IDiscussionDocument[];
+      return result as unknown as IDiscussion[];
     }
   }
 }

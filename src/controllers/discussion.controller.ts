@@ -84,6 +84,7 @@ export const createDiscussion = async (req: Request, res: Response, next: NextFu
 export const getDiscussionById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const discussion = await discussionService.getDiscussionById(req.params.id);
+
     if (!discussion) {
       return next(new AppError('Discussion not found', 404, ErrorCodes.NOT_FOUND));
     }
@@ -279,6 +280,33 @@ export const voteDiscussion = async (req: Request, res: Response, next: NextFunc
     res.success(updatedDiscussion, 'Vote recorded successfully');
   } catch (error) {
     next(new AppError(error instanceof Error ? error.message : 'An unknown error occurred', 500, ErrorCodes.INTERNAL_ERROR));
+  }
+};
+
+/**
+ * Report a discussion
+ */
+export const reportDiscussion = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return next(new AppError('User not authenticated', 401, ErrorCodes.UNAUTHORIZED));
+    }
+
+    const discussion = await discussionService.getDiscussionById(id);
+    if (!discussion) {
+      return next(new AppError('Discussion not found', 404, ErrorCodes.NOT_FOUND));
+    }
+
+    const mongooseUserId = new Types.ObjectId(userId as string);
+    await discussion.report(mongooseUserId, reason);
+
+    res.success(null, 'Discussion reported successfully');
+  } catch (error) {
+    next(new AppError(error instanceof Error ? error.message : 'Failed to report discussion', 500, ErrorCodes.INTERNAL_ERROR));
   }
 };
 

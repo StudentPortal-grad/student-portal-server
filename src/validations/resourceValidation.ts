@@ -55,9 +55,14 @@ export const resourceValidation = {
     community: objectId.optional()
   }).min(1),
 
-  // Rate resource validation
-  rateResource: Joi.object({
-    rating: Joi.number().required().min(1).max(5).integer()
+  // Vote on a resource validation
+  voteResource: Joi.object({
+    voteType: Joi.string().valid('upvote', 'downvote').required()
+  }),
+
+  // Report a resource validation
+  reportResource: Joi.object({
+    reason: Joi.string().required().min(10).max(500)
   }),
 
   // Comment on resource validation

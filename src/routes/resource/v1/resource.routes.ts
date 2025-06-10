@@ -9,7 +9,8 @@ import {
   updateResource,
   deleteResource,
   getResourceMetrics,
-  rateResource,
+  voteResource,
+  reportResource,
   commentResource,
   getResourceComments,
   trackDownload,
@@ -54,9 +55,15 @@ router.delete(
 
 // Resource interaction routes
 router.post(
-  '/:id/rate',
-  validate(resourceValidation.rateResource),
-  asyncHandler(rateResource)
+  '/:id/vote',
+  validate(resourceValidation.voteResource),
+  asyncHandler(voteResource)
+);
+
+router.post(
+  '/:id/report',
+  validate(resourceValidation.reportResource),
+  asyncHandler(reportResource)
 );
 
 router.post(

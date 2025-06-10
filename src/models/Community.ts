@@ -386,7 +386,7 @@ CommunitySchema.pre('save', async function (next) {
     let currentHandleToTest = baseHandle; // Start by testing the base handle itself
 
     // Loop to find a unique handle by checking existence in the database
-    // eslint-disable-next-line no-constant-condition
+     
     while (true) {
       const existingCommunity = await (this.constructor as Model<ICommunity>).findOne({ handle: currentHandleToTest });
       if (!existingCommunity) {
