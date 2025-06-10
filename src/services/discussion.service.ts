@@ -3,7 +3,7 @@ import { Types } from 'mongoose';
 import Discussion from '../models/Discussion';
 import { IDiscussion, IReply, IVote } from '../models/types';
 import { ICustomPaginateResult } from '../repositories/discussion.repo';
-import { NotFoundError } from '../utils/errors';
+import { NotFoundError, AuthorizationError } from '../utils/errors';
 
 // Use type alias to avoid conflicts with the imported interfaces
 type RepoDiscussion = any;
@@ -257,5 +257,97 @@ export class DiscussionService {
       const result = await this.discussionRepository.findTrending(undefined, limit);
       return result as unknown as IDiscussion[];
     }
+  }
+
+  /**
+   * Edit a reply in a discussion.
+   */
+  async editReply(
+    discussionId: string,
+    replyId: string,
+    userId: Types.ObjectId,
+    content: string
+  ): Promise<IDiscussion> {
+    const discussion = await Discussion.findById(discussionId);
+    if (!discussion) {
+      throw new NotFoundError('Discussion not found');
+    }
+
+    const reply = this.findReplyRecursive(discussion.replies, replyId);
+    if (!reply) {
+      throw new NotFoundError('Reply not found');
+    }
+
+    if (!reply.creator.equals(userId)) {
+      throw new AuthorizationError('You are not authorized to edit this reply');
+    }
+
+    reply.content = content;
+    await discussion.save();
+    return discussion;
+  }
+
+  /**
+   * Delete a reply from a discussion.
+   */
+  async deleteReply(
+    discussionId: string,
+    replyId: string,
+    userId: Types.ObjectId
+  ): Promise<IDiscussion> {
+    const discussion = await Discussion.findById(discussionId);
+    if (!discussion) {
+      throw new NotFoundError('Discussion not found');
+    }
+
+    const deleted = this.findAndRemoveReplyRecursive(
+      discussion.replies,
+      replyId,
+      userId
+    );
+    if (!deleted) {
+      throw new NotFoundError('Reply not found or you do not have permission to delete it');
+    }
+
+    await discussion.save();
+    return discussion;
+  }
+
+  private findReplyRecursive(replies: IReply[], replyId: string): IReply | null {
+    for (const reply of replies) {
+      if ((reply as any)._id.equals(replyId)) {
+        return reply;
+      }
+      if (reply.replies && reply.replies.length > 0) {
+        const found = this.findReplyRecursive(reply.replies, replyId);
+        if (found) {
+          return found;
+        }
+      }
+    }
+    return null;
+  }
+
+  private findAndRemoveReplyRecursive(
+    replies: IReply[],
+    replyId: string,
+    userId: Types.ObjectId
+  ): boolean {
+    for (let i = 0; i < replies.length; i++) {
+      const reply = replies[i];
+      if ((reply as any)._id.equals(replyId)) {
+        if (!reply.creator.equals(userId)) {
+          throw new AuthorizationError('You are not authorized to delete this reply');
+        }
+        replies.splice(i, 1);
+        return true;
+      }
+      if (reply.replies && reply.replies.length > 0) {
+        if (this.findAndRemoveReplyRecursive(reply.replies, replyId, userId)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 }

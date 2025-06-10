@@ -15,7 +15,9 @@ import {
   reportDiscussion,
   togglePinDiscussion,
   getDiscussionReplies,
-  getTrendingDiscussions
+  getTrendingDiscussions,
+  editReply,
+  deleteReply
 } from '@controllers/discussion.controller';
 
 const router = express.Router();
@@ -53,6 +55,15 @@ router.post('/:id/reply',
   uploadDiscussionAttachments,
   validate(discussionValidation.addReply),
   asyncHandler(addReply)
+);
+
+router.patch('/:id/replies/:replyId',
+  validate(discussionValidation.editReply),
+  asyncHandler(editReply)
+);
+
+router.delete('/:id/replies/:replyId',
+  asyncHandler(deleteReply)
 );
 
 router.patch('/:id', 

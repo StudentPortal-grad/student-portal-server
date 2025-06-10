@@ -153,6 +153,13 @@ export const discussionValidation = {
         'array.base': 'Attachments must be an array'
       })
   }),
+
+  editReply: Joi.object({
+    content: Joi.string().required().messages({
+      'string.base': 'Content must be a string',
+      'any.required': 'Content is required',
+    }),
+  }),
   
   voteDiscussion: Joi.object({
     voteType: Joi.string().valid('upvote', 'downvote').required()

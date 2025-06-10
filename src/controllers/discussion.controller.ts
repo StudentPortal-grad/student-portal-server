@@ -391,3 +391,48 @@ export const getTrendingDiscussions = async (req: Request, res: Response, next: 
     next(new AppError(error instanceof Error ? error.message : 'An unknown error occurred', 500, ErrorCodes.INTERNAL_ERROR));
   }
 };
+
+/**
+ * @description Edit a reply
+ * @route PATCH /v1/discussions/:discussionId/replies/:replyId
+ */
+export const editReply = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id, replyId } = req.params;
+    const { content } = req.body;
+    const userId = req.user?._id;
+
+    if (!content) {
+      return next(new AppError('Content is required', 400, ErrorCodes.VALIDATION_ERROR));
+    }
+
+    if (!userId) {
+      return next(new AppError('User not found', 401, ErrorCodes.UNAUTHORIZED));
+    }
+
+    const discussion = await discussionService.editReply(id, replyId, userId, content);
+    res.success(discussion, 'Reply updated successfully');
+  } catch (error) {
+    next(new AppError(error instanceof Error ? error.message : 'An unknown error occurred', 500, ErrorCodes.INTERNAL_ERROR));
+  }
+};
+
+/**
+ * @description Delete a reply
+ * @route DELETE /v1/discussions/:discussionId/replies/:replyId
+ */
+export const deleteReply = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id, replyId } = req.params;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return next(new AppError('User not found', 401, ErrorCodes.UNAUTHORIZED));
+    }
+
+    const discussion = await discussionService.deleteReply(id, replyId, userId);
+    res.success(discussion, 'Reply deleted successfully');
+  } catch (error) {
+    next(new AppError(error instanceof Error ? error.message : 'An unknown error occurred', 500, ErrorCodes.INTERNAL_ERROR));
+  }
+};
