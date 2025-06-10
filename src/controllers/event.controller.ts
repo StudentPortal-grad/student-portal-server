@@ -19,14 +19,16 @@ import { IEventDocument } from '../interfaces/event.interface';
  */
 export const getAllEvents = asyncHandler(
   async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    // TODO: Optimization needed
     const {
       page = 1,
       limit = 10,
       status,
       visibility,
       communityId,
-      sortBy = 'startDate',
+      sortBy = 'dateTime',
       sortOrder = 'asc',
+      rsvpStatus,
     } = req.query;
 
     // Build filter
@@ -34,6 +36,8 @@ export const getAllEvents = asyncHandler(
     if (status) filter.status = status;
     if (visibility) filter.visibility = visibility;
     if (communityId) filter.communityId = communityId;
+
+    const userId = req.user?._id;
 
     // Build sort
     const sort: any = {};
@@ -50,7 +54,15 @@ export const getAllEvents = asyncHandler(
       .skip(skip)
       .limit(limitNum)
       .populate('creatorId', 'name profilePicture')
-      .populate('communityId', 'name');
+      .populate('communityId', 'name')
+      .populate('rsvps.userId', 'name profilePicture');
+
+    // If rsvpStatus is provided, filter each event's rsvps array
+    if (rsvpStatus) {
+      events.forEach(event => {
+        event.rsvps = event.rsvps.filter((rsvp: any) => rsvp.status === rsvpStatus.toString());
+      });
+    }
 
     // Get total count for pagination
     const total = await Event.countDocuments(filter);
@@ -77,6 +89,7 @@ export const getAllEvents = asyncHandler(
 export const getEventById = asyncHandler(
   async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const { id } = req.params;
+    const { rsvpStatus } = req.query;
 
     if (!Types.ObjectId.isValid(id)) {
       throw new AppError('Invalid event ID', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
@@ -84,7 +97,8 @@ export const getEventById = asyncHandler(
 
     const event = await Event.findById(id)
       .populate('creatorId', 'name profilePicture')
-      .populate('communityId', 'name');
+      .populate('communityId', 'name')
+      .populate('rsvps.userId', 'name profilePicture');
 
     if (!event) {
       res.notFound('Event not found');
@@ -108,6 +122,11 @@ export const getEventById = asyncHandler(
       if (item._id === 'maybe') rsvpStats.maybe = item.count;
       if (item._id === 'declined') rsvpStats.declined = item.count;
     });
+
+    // If rsvpStatus is provided, filter event's rsvps array
+    if (rsvpStatus) {
+      event.rsvps = event.rsvps.filter(rsvp => rsvp.status === rsvpStatus.toString());
+    }
 
     res.success({
       event,
@@ -632,36 +651,40 @@ export const createOrUpdateRSVP = asyncHandler(
       return;
     }
 
-    const event = await Event.findById(eventId).exec();
-    if (!event) {
-      res.notFound('Event not found');
-      return;
-    }
-
-    const rsvp = {
+    const rsvpPayload = {
       userId: new Types.ObjectId(userId),
       status,
       updatedAt: new Date(),
     };
 
-    // Use $addToSet with $each to avoid conflicts
-    const updatedEvent = await Event.findOneAndUpdate(
+    // Step 1: Pull any existing RSVP for the user.
+    // This also checks if the event exists. If eventId is not found, eventAfterPull will be null.
+    const eventAfterPull = await Event.findOneAndUpdate(
       { _id: eventId },
-      {
-        $pull: { rsvps: { userId: rsvp.userId } }
-      },
-      { new: true }
-    );
+      { $pull: { rsvps: { userId: rsvpPayload.userId } } },
+      { new: true } // `new: true` ensures we get the document state after the pull or null if not found.
+    ).exec();
 
-    if (updatedEvent) {
-      // Now push the new RSVP in a separate operation
-      await Event.updateOne(
-        { _id: eventId },
-        { $push: { rsvps: rsvp } }
-      );
+    if (!eventAfterPull) {
+      res.notFound('Event not found');
+      return;
     }
 
-    res.success({ rsvp }, 'RSVP updated successfully');
+    // Step 2: Push the new RSVP.
+    // We use findOneAndUpdate again to confirm the operation's success and handle race conditions.
+    const finalEvent = await Event.findOneAndUpdate(
+      { _id: eventId },
+      { $push: { rsvps: rsvpPayload } },
+      { new: true, upsert: false } // `upsert: false` is default, explicitly stating we don't create event here.
+    ).exec();
+
+    if (!finalEvent) {
+      // This rare case means the event was deleted between the pull and push operations.
+      _next(new Error('Failed to save RSVP. Event may have been modified concurrently. Please try again.'));
+      return;
+    }
+
+    res.success({ rsvp: rsvpPayload }, 'RSVP updated successfully');
   }
 );
 
@@ -683,15 +706,19 @@ export const getUserRSVP = asyncHandler(
       return;
     }
 
-    const event = await Event.findById(eventId).exec();
+    const event = await Event.findById(eventId)
+      .populate({
+        path: 'rsvps.userId',
+        select: 'name profilePicture email', // Populating user details
+      })
+      .exec();
     if (!event) {
       res.notFound('Event not found');
       return;
     }
 
     const rsvp = event.rsvps.find(
-      (r: { userId: Types.ObjectId; status: string; updatedAt: Date }) =>
-        r.userId.toString() === userId
+      (r: any) => r.userId && r.userId._id.toString() === userId
     );
 
     res.success({ rsvp: rsvp || null }, 'RSVP retrieved successfully');
@@ -743,7 +770,12 @@ export const getEventRSVPs = asyncHandler(
       return;
     }
 
-    const event = await Event.findById(eventId).exec();
+    const event = await Event.findById(eventId)
+      .populate({
+        path: 'rsvps.userId',
+        select: 'name profilePicture email', // Populating user details
+      })
+      .exec();
     if (!event) {
       res.notFound('Event not found');
       return;

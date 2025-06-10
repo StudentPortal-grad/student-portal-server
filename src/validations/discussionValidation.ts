@@ -1,9 +1,9 @@
 import Joi from 'joi';
 
 const attachmentSchema = Joi.object({
-  type: Joi.string().valid('document', 'image', 'video', 'audio', 'other', 'poll').required().messages({
+  type: Joi.string().valid('document', 'image', 'video', 'audio', 'pdf', 'other', 'poll').required().messages({
     'string.base': 'type must be a string',
-    'any.only': 'type must be either "document", "image", "video", "audio", "other", or "poll"',
+    'any.only': 'type must be either "document", "image", "video", "audio", "pdf", "other", or "poll"',
     'any.required': 'type is required',
   }),
   resource: Joi.string().uri().required().messages({
@@ -48,10 +48,9 @@ const voteSchema = Joi.object({
 });
 
 export const createDiscussionSchema = Joi.object({
-  communityId: Joi.string().hex().length(24).required().messages({
+  communityId: Joi.string().hex().length(24).optional().messages({
     'string.hex': 'communityId must be a valid ObjectId',
     'string.length': 'communityId must be 24 characters long',
-    'any.required': 'communityId is required',
   }),
   title: Joi.string().max(255).required().messages({
     'string.max': 'title must not exceed 255 characters',
@@ -60,18 +59,18 @@ export const createDiscussionSchema = Joi.object({
   content: Joi.string().required().messages({
     'any.required': 'content is required',
   }),
-  creator: Joi.string().hex().length(24).required().messages({
+  creator: Joi.string().hex().length(24).optional().messages({
     'string.hex': 'creator must be a valid ObjectId',
     'string.length': 'creator must be 24 characters long',
     'any.required': 'creator is required',
   }),
-  attachments: Joi.array().items(attachmentSchema).default([]).messages({
+  attachments: Joi.array().optional().items(attachmentSchema).default([]).messages({
     'array.base': 'attachments must be an array',
   }),
-  replies: Joi.array().items(replySchema).default([]).messages({
+  replies: Joi.array().optional().items(replySchema).default([]).messages({
     'array.base': 'replies must be an array',
   }),
-  votes: Joi.array().items(voteSchema).default([]).messages({
+  votes: Joi.array().optional().items(voteSchema).default([]).messages({
     'array.base': 'votes must be an array',
   }),
   status: Joi.string().valid('open', 'closed', 'archived').default('open').messages({

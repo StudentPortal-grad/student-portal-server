@@ -19,7 +19,7 @@ const DiscussionSchema = new Schema<IDiscussion>(
     communityId: {
       type: Schema.Types.ObjectId,
       ref: 'Community',
-      required: true,
+      required: false,
     },
     title: {
       type: String,
@@ -33,7 +33,7 @@ const DiscussionSchema = new Schema<IDiscussion>(
     },
     creator: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Users',
       required: true,
     },
     attachments: [
@@ -41,7 +41,7 @@ const DiscussionSchema = new Schema<IDiscussion>(
         _id: false,
         type: {
           type: String,
-          enum: ['document', 'image', 'video', 'audio', 'other', 'poll'],
+          enum: ['document', 'image', 'video', 'audio', 'pdf', 'other', 'poll'],
           required: true,
         },
         resource: {
@@ -82,17 +82,13 @@ const DiscussionSchema = new Schema<IDiscussion>(
     ],
     replies: [
       {
-        id: {
-          type: Schema.Types.ObjectId,
-          default: () => new Types.ObjectId(),
-        },
         content: {
           type: String,
           required: true,
         },
         creator: {
           type: Schema.Types.ObjectId,
-          ref: 'User',
+          ref: 'Users',
           required: true,
         },
         createdAt: {
@@ -104,7 +100,7 @@ const DiscussionSchema = new Schema<IDiscussion>(
             _id: false,
             type: {
               type: String,
-              enum: ['document', 'image', 'video', 'audio', 'other', 'poll'],
+              enum: ['document', 'image', 'video', 'audio', 'pdf', 'other', 'poll'],
               required: true,
             },
             resource: {
@@ -150,7 +146,7 @@ const DiscussionSchema = new Schema<IDiscussion>(
         _id: false,
         userId: {
           type: Schema.Types.ObjectId,
-          ref: 'User',
+          ref: 'Users',
         },
         voteType: {
           type: String,
@@ -172,6 +168,25 @@ const DiscussionSchema = new Schema<IDiscussion>(
     timestamps: true,
   }
 );
+
+// Virtual properties for vote counts
+DiscussionSchema.virtual('upvotesCount').get(function(this: IDiscussion) {
+  if (this.votes && Array.isArray(this.votes)) {
+    return this.votes.filter((v: { voteType: string }) => v.voteType === 'upvote').length;
+  }
+  return 0;
+});
+
+DiscussionSchema.virtual('downvotesCount').get(function(this: IDiscussion) {
+  if (this.votes && Array.isArray(this.votes)) {
+    return this.votes.filter((v: { voteType: string }) => v.voteType === 'downvote').length;
+  }
+  return 0;
+});
+
+// Ensure virtuals are included in toJSON and toObject outputs
+DiscussionSchema.set('toJSON', { virtuals: true });
+DiscussionSchema.set('toObject', { virtuals: true });
 
 // Indexes
 DiscussionSchema.index({ communityId: 1, createdAt: -1 });

@@ -18,7 +18,8 @@ export const eventValidation = {
     visibility: Joi.string().valid('public', 'private', 'community'),
     communityId: objectId,
     sortBy: Joi.string().valid('dateTime', 'title', 'createdAt'),
-    sortOrder: Joi.string().valid('asc', 'desc')
+    sortOrder: Joi.string().valid('asc', 'desc'),
+    rsvpStatus: Joi.string().valid('attending', 'maybe', 'declined').optional()
   }),
 
   // Create event validation

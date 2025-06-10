@@ -32,19 +32,14 @@ export const resourceValidation = {
   createResource: Joi.object({
     title: Joi.string().required().max(255).trim(),
     description: Joi.string().max(1000),
-    fileUrl: Joi.string().uri().required(),
-    fileType: Joi.string().valid('document', 'image', 'video', 'audio', 'other').required(),
-    mimeType: Joi.string().required(),
-    originalFileName: Joi.string().required(),
-    checksum: Joi.string().required(),
-    fileSize: Joi.number().required().min(0),
+    // fileUrl, fileType, mimeType, originalFileName, checksum, fileSize are now handled by req.file in the controller
     tags: Joi.alternatives().try(
       Joi.string(),
       Joi.array().items(Joi.string())
-    ),
+    ).allow(null, ''), // Allow tags to be explicitly null or empty string, controller handles conversion to array
     visibility: Joi.string().valid('public', 'private', 'community').default('community'),
     category: Joi.string().required(),
-    community: objectId.required()
+    community: objectId.optional()
   }),
 
   // Update resource validation
@@ -57,7 +52,7 @@ export const resourceValidation = {
     ),
     visibility: Joi.string().valid('public', 'private', 'community'),
     category: Joi.string(),
-    community: objectId
+    community: objectId.optional()
   }).min(1),
 
   // Rate resource validation

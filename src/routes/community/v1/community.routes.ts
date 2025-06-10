@@ -2,7 +2,7 @@ import express from 'express';
 import asyncHandler from '@utils/asyncHandler';
 import { validate } from '@middleware/validate';
 import { authenticate, authorize } from '@middleware/auth';
-import { uploadProfilePicture } from '@utils/uploadService';
+import { uploadCommunityImages } from '@utils/uploadService';
 import {
   createCommunitySchema,
   updateCommunitySchema,
@@ -19,7 +19,6 @@ import {
   leaveCommunity,
   generateInviteLink,
   getCommunityMembers,
-  updateCommunityIcon,
   getCommunityRoles,
   getCommunityResources,
   addCommunityMember,
@@ -41,6 +40,7 @@ router.get('/:id/roles', asyncHandler(getCommunityRoles));
 router.post(
   '/create',
   authorize('createCommunity'),
+  uploadCommunityImages,
   validate(createCommunitySchema),
   asyncHandler(createCommunity)
 );
@@ -48,6 +48,7 @@ router.post(
 router.patch(
   '/:id',
   authorize('updateCommunity'),
+  uploadCommunityImages,
   validate(updateCommunitySchema),
   asyncHandler(updateCommunity)
 );
@@ -73,13 +74,6 @@ router.post(
   '/:id/invite',
   authorize('generateInviteLink'),
   asyncHandler(generateInviteLink)
-);
-
-router.patch(
-  '/:id/icon',
-  authorize('updateCommunity'),
-  uploadProfilePicture,
-  asyncHandler(updateCommunityIcon)
 );
 
 // Resources routes
