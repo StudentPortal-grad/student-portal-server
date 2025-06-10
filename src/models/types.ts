@@ -255,6 +255,7 @@ export interface IReply extends Document {
     replies: IReply[];
     createdAt: Date;
     updatedAt: Date;
+    currentVote?: number;
 }
 
 export interface IDiscussion extends Document {
@@ -272,6 +273,7 @@ export interface IDiscussion extends Document {
     updatedAt: Date;
     upvotesCount: number;
     downvotesCount: number;
+    currentVote?: number;
 
     // Methods
     addReply(

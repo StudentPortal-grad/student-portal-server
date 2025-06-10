@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { DiscussionService } from '../services/discussion.service';
+import { DiscussionService, DiscussionQueryParams } from '../services/discussion.service';
 import { Types } from 'mongoose';
 import { AppError, ErrorCodes } from '../utils/appError';
 
@@ -83,7 +83,14 @@ export const createDiscussion = async (req: Request, res: Response, next: NextFu
  */
 export const getDiscussionById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const discussion = await discussionService.getDiscussionById(req.params.id);
+    const { id } = req.params;
+    const { currVoteSpecified } = req.query;
+    const userId = req.user?._id;
+
+    const discussion = await discussionService.getDiscussionById(
+      id,
+      currVoteSpecified === 'true' && userId ? userId : undefined
+    );
 
     if (!discussion) {
       return next(new AppError('Discussion not found', 404, ErrorCodes.NOT_FOUND));
@@ -167,23 +174,21 @@ export const addReply = async (req: Request, res: Response, next: NextFunction):
  */
 export const getAllDiscussions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const {
-      page = 1,
-      limit = 10,
-      communityId,
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
-      search
-    } = req.query;
+    const { page = 1, limit = 10, communityId, sortBy, sortOrder, search, currVoteSpecified } = req.query;
+    const userId = req.user?._id;
 
-    const result = await discussionService.getAllDiscussions({
+    const params: DiscussionQueryParams = {
       page: Number(page),
       limit: Number(limit),
       communityId: communityId as string,
       sortBy: sortBy as string,
       sortOrder: sortOrder as 'asc' | 'desc',
-      search: search as string
-    });
+      search: search as string,
+      currVoteSpecified: currVoteSpecified === 'true',
+      userId: userId
+    };
+
+    const result = await discussionService.getAllDiscussions(params);
 
     res.success({
       discussions: result.discussions,

@@ -1,20 +1,22 @@
 import { DiscussionRepository } from '../repositories/discussion.repo';
 import { Types } from 'mongoose';
 import Discussion from '../models/Discussion';
-import { IDiscussion } from '../models/types';
+import { IDiscussion, IReply, IVote } from '../models/types';
 import { ICustomPaginateResult } from '../repositories/discussion.repo';
 import { NotFoundError } from '../utils/errors';
 
 // Use type alias to avoid conflicts with the imported interfaces
 type RepoDiscussion = any;
 
-interface DiscussionQueryParams {
+export interface DiscussionQueryParams {
   page: number;
   limit: number;
   communityId?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   search?: string;
+  currVoteSpecified?: boolean;
+  userId?: Types.ObjectId;
 }
 
 export class DiscussionService {
@@ -56,7 +58,7 @@ export class DiscussionService {
   /**
    * Get a discussion by ID, recursively populating creators for all replies up to a fixed depth.
    */
-  async getDiscussionById(id: string): Promise<IDiscussion | null> {
+  async getDiscussionById(id: string, userId?: Types.ObjectId): Promise<any> {
     const maxDepth = 10; // Set a reasonable depth limit
 
     const discussion = await Discussion.findById(id).populate([
@@ -69,6 +71,14 @@ export class DiscussionService {
 
     if (!discussion) {
       throw new NotFoundError('Discussion not found');
+    }
+
+    // If a userId is provided, convert the document to a plain object and add the currentVote property
+    if (userId) {
+      const discussionObj = discussion.toObject();
+      const vote = discussionObj.votes.find((v: IVote) => v.userId.equals(userId));
+      const currentVote = vote ? (vote.voteType === 'upvote' ? 1 : -1) : 0;
+      return { ...discussionObj, currentVote };
     }
 
     return discussion;
@@ -92,7 +102,7 @@ export class DiscussionService {
     discussions: IDiscussion[];
     pagination: ICustomPaginateResult<IDiscussion>;
   }> {
-    const { page, limit, communityId, sortBy = 'createdAt', sortOrder = 'desc', search } = params;
+    const { page, limit, communityId, sortBy = 'createdAt', sortOrder = 'desc', search, currVoteSpecified, userId } = params;
 
     // Build query
     const query: any = {};
@@ -128,8 +138,20 @@ export class DiscussionService {
 
     const { docs, ...pagination } = result;
 
+    let discussions: any[] = docs;
+
+    // If current vote is specified, convert docs to plain objects and add the vote status
+    if (currVoteSpecified && userId) {
+      discussions = docs.map(doc => {
+        const plainDoc = doc.toObject();
+        const vote = plainDoc.votes.find((v: IVote) => v.userId.equals(userId));
+        plainDoc.currentVote = vote ? (vote.voteType === 'upvote' ? 1 : -1) : 0;
+        return plainDoc;
+      });
+    }
+
     return {
-      discussions: docs as unknown as IDiscussion[],
+      discussions,
       pagination: pagination as ICustomPaginateResult<IDiscussion>
     };
   }
