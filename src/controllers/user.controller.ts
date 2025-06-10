@@ -292,7 +292,17 @@ export class UserController {
       // Always set role to 'admin' regardless of input
       const adminData = { ...req.body, role: 'admin' };
       const result = await UserService.createAdmin(adminData);
-      res.success(result, 'Admin user created successfully', 201);
+      const user = result.user;
+      res.success({
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          createdAt: user.createdAt,
+        }
+      }, 'Admin user created successfully', 201);
     }
   );
 }
