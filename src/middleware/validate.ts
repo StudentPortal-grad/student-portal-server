@@ -12,7 +12,7 @@ type ValidateSource = 'body' | 'query' | 'params';
  */
 export const validate = (schema: Schema, source: ValidateSource = 'body') => {
   return (req: Request, res: Response, next: NextFunction) => {
-    //console.log('req.body:', req.body, 'req.file:', req.file, 'req.files:', req.files);
+    console.log('userId:', req.params.userId);
 
     const { error } = schema.validate(req[source], {
       abortEarly: false,

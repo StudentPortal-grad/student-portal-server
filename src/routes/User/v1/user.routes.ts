@@ -39,6 +39,7 @@ router.get(
 router.get(
   '/:userId',
   authorize('superadmin', 'admin', 'faculty'),
+  validate(userValidation.getUserById, 'params'),
   UserController.getUserById
 );
 
@@ -64,7 +65,7 @@ router.patch(
 router.delete(
   '/:userId',
   authorize('superadmin', 'admin'),
-  validate(userValidation.deleteUser),
+  validate(userValidation.deleteUser, 'params'),
   UserController.deleteUser
 );
 

@@ -68,8 +68,9 @@ export class UserController {
    */
   static deleteUser = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      await UserService.deleteUser(new Types.ObjectId(req.params.userId));
-      res.success(null, 'User deleted successfully');
+      const userId = req.params.userId;
+      await UserService.deleteUser(new Types.ObjectId(userId));
+      res.success({ id: userId }, 'User deleted successfully');
     }
   );
 
