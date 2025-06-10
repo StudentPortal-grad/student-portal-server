@@ -11,6 +11,7 @@ import {
   AuthorizationError,
 } from '../utils/errors';
 
+
 /**
  * Get all resources with pagination, filtering and sorting
  */
@@ -30,6 +31,7 @@ export const getAllResources = async (
       sortBy = 'createdAt',
       sortOrder = 'desc',
       search,
+      populateCommentUser,
     } = req.query;
 
     // Build filter
@@ -58,13 +60,28 @@ export const getAllResources = async (
     const limitNum = parseInt(limit as string, 10);
     const skip = (pageNum - 1) * limitNum;
 
+    // Build population options
+    const populationOptions: any[] = [
+      { path: 'uploader', select: 'name profilePicture' },
+      { path: 'community', select: 'name' },
+    ];
+
+    if (populateCommentUser === 'true') {
+      populationOptions.push({
+        path: 'comments',
+        populate: {
+          path: 'userId',
+          select: 'name profilePicture',
+        },
+      });
+    }
+
     // Execute query with pagination
     const resources = await Resource.find(filter)
       .sort(sort)
       .skip(skip)
       .limit(limitNum)
-      .populate('uploader', 'name profilePicture')
-      .populate('community', 'name');
+      .populate(populationOptions);
 
     // Get total count for pagination
     const total = await Resource.countDocuments(filter);
@@ -103,14 +120,28 @@ export const getResourceById = async (
 ) => {
   try {
     const { id } = req.params;
+    const { populateCommentUser } = req.query;
 
     if (!Types.ObjectId.isValid(id)) {
       throw new ValidationError('Invalid resource ID');
     }
 
-    const resource = await Resource.findById(id)
-      .populate('uploader', 'name profilePicture')
-      .populate('community', 'name');
+    const populationOptions: any[] = [
+      { path: 'uploader', select: 'name profilePicture' },
+      { path: 'community', select: 'name' },
+    ];
+
+    if (populateCommentUser === 'true') {
+      populationOptions.push({
+        path: 'comments',
+        populate: {
+          path: 'userId',
+          select: 'name profilePicture',
+        },
+      });
+    }
+
+    const resource = await Resource.findById(id).populate(populationOptions);
 
     if (!resource) {
       throw new NotFoundError('Resource not found');
