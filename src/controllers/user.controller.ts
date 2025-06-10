@@ -114,8 +114,11 @@ export class UserController {
    */
   static bulkDeleteUsers = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      await UserService.bulkDeleteUsers(req.body.userIds);
-      res.success(null, 'Users deleted successfully');
+      const result = await UserService.bulkDeleteUsers(req.body.userIds);
+      res.success({
+        deletedIds: req.body.userIds,
+        count: result.count,
+      }, 'Users deleted successfully');
     }
   );
 
