@@ -22,7 +22,8 @@ import {
   getCommunityRoles,
   getCommunityResources,
   addCommunityMember,
-  removeCommunityMember
+  removeCommunityMember,
+  getCommunityMetrics
 } from '@controllers/community.controller';
 
 const router = express.Router();
@@ -32,6 +33,7 @@ router.use(authenticate);
 
 // Public routes (still need authentication)
 router.get('/', asyncHandler(getAllCommunities));
+router.get('/metrics', asyncHandler(getCommunityMetrics));
 router.get('/:id', asyncHandler(getCommunityById));
 router.get('/:id/members', asyncHandler(getCommunityMembers));
 router.get('/:id/roles', asyncHandler(getCommunityRoles));

@@ -79,7 +79,7 @@ export const generateEventRecommendations = async (
   });
 
   // Limit to requested number
-  return recommendations.slice(0, limit);
+  return recommendations.slice(0, limit) as unknown as IEvent[];
 };
 
 /**
