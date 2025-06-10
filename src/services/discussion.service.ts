@@ -1,6 +1,7 @@
 import { DiscussionRepository } from '../repositories/discussion.repo';
 import { Types } from 'mongoose';
 import { IDiscussion, IDiscussionDocument } from '../interfaces/discussion.interface';
+import { ICustomPaginateResult } from '../repositories/discussion.repo';
 import { NotFoundError } from '../utils/errors';
 
 // Use type alias to avoid conflicts with the imported interfaces
@@ -13,16 +14,6 @@ interface DiscussionQueryParams {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   search?: string;
-}
-
-interface PaginationResult<T> {
-  docs: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
 }
 
 export class DiscussionService {
@@ -67,10 +58,10 @@ export class DiscussionService {
    */
   async getAllDiscussions(params: DiscussionQueryParams): Promise<{
     discussions: IDiscussionDocument[];
-    pagination: PaginationResult<IDiscussionDocument>;
+    pagination: ICustomPaginateResult<IDiscussionDocument>;
   }> {
     const { page, limit, communityId, sortBy = 'createdAt', sortOrder = 'desc', search } = params;
-    
+
     // Build query
     const query: any = {};
     if (params.communityId) {
@@ -79,16 +70,16 @@ export class DiscussionService {
       // If no communityId is specified, fetch only global discussions
       query.communityId = { $exists: false };
     }
-    
+
     // Add text search if provided
     if (params.search) {
       query.$text = { $search: params.search };
     }
-    
+
     // Build sort
     const sort: any = {};
     sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
-    
+
     // Execute query with pagination
     const result = await this.discussionRepository.findWithPagination(
       query,
@@ -102,12 +93,12 @@ export class DiscussionService {
         ]
       }
     );
-    
+
     const { docs, ...pagination } = result;
-    
+
     return {
       discussions: docs as unknown as IDiscussionDocument[],
-      pagination: pagination as PaginationResult<IDiscussionDocument>
+      pagination: pagination as ICustomPaginateResult<IDiscussionDocument>
     };
   }
 
@@ -133,17 +124,11 @@ export class DiscussionService {
   /**
    * Vote on a discussion
    */
-  async voteDiscussion(id: string, userId: Types.ObjectId, voteType: 'upvote' | 'downvote'): Promise<IDiscussionDocument | null> {
-    const discussion = await this.discussionRepository.findById(id) as any;
-    if (!discussion) {
-      return null;
-    }
-    
-    // Add or update vote
-    discussion.vote(userId, voteType);
-    await discussion.save();
-    
-    return discussion as unknown as IDiscussionDocument;
+  async voteDiscussion(discussionDocument: IDiscussionDocument, userId: Types.ObjectId, voteType: 'upvote' | 'downvote'): Promise<IDiscussionDocument> {
+    // We assume IDiscussionDocument has the .vote() and .save() methods.
+    (discussionDocument as any).vote(userId, voteType); // Using 'as any' temporarily if type hints are missing for methods
+
+    return discussionDocument;
   }
 
   /**
@@ -162,28 +147,31 @@ export class DiscussionService {
    */
   async getDiscussionReplies(id: string, page: number, limit: number): Promise<{
     replies: any[];
-    pagination: PaginationResult<any>;
+    pagination: ICustomPaginateResult<any>;
   } | null> {
     const discussion = await this.discussionRepository.findById(id) as any;
     if (!discussion) {
       return null;
     }
-    
+
     // Calculate pagination
     const total = discussion.replies.length;
     const totalPages = Math.ceil(total / limit);
     const skip = (page - 1) * limit;
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;
-    
+
     // Get paginated replies
     const replies = discussion.replies
       .sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(skip, skip + limit);
-    
+
     // Populate creator information for each reply
     const populatedReplies = await this.discussionRepository.populateReplies(replies);
-    
+
+    const offset = skip;
+    const pagingCounter = offset + 1;
+
     return {
       replies: populatedReplies,
       pagination: {
@@ -193,7 +181,11 @@ export class DiscussionService {
         limit,
         totalPages,
         hasNextPage,
-        hasPrevPage
+        hasPrevPage,
+        pagingCounter,
+        prevPage: hasPrevPage ? page - 1 : null,
+        nextPage: hasNextPage ? page + 1 : null,
+        offset
       }
     };
   }

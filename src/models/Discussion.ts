@@ -169,6 +169,25 @@ const DiscussionSchema = new Schema<IDiscussion>(
   }
 );
 
+// Virtual properties for vote counts
+DiscussionSchema.virtual('upvotesCount').get(function(this: IDiscussion) {
+  if (this.votes && Array.isArray(this.votes)) {
+    return this.votes.filter((v: { voteType: string }) => v.voteType === 'upvote').length;
+  }
+  return 0;
+});
+
+DiscussionSchema.virtual('downvotesCount').get(function(this: IDiscussion) {
+  if (this.votes && Array.isArray(this.votes)) {
+    return this.votes.filter((v: { voteType: string }) => v.voteType === 'downvote').length;
+  }
+  return 0;
+});
+
+// Ensure virtuals are included in toJSON and toObject outputs
+DiscussionSchema.set('toJSON', { virtuals: true });
+DiscussionSchema.set('toObject', { virtuals: true });
+
 // Indexes
 DiscussionSchema.index({ communityId: 1, createdAt: -1 });
 DiscussionSchema.index({ creator: 1 });
