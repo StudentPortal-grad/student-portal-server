@@ -230,7 +230,15 @@ export class UserController {
         new Types.ObjectId(req.params.userId),
         { reason, duration }
       );
-      res.success(result, 'User suspended successfully');
+      const user = result.user;
+      res.success({
+        user: {
+          id: user._id,
+          isSuspended: user.isSuspended,
+          suspensionReason: user.suspensionReason,
+          suspendedUntil: user.suspendedUntil,
+        }
+      }, 'User suspended successfully');
     }
   );
 
@@ -244,7 +252,13 @@ export class UserController {
       const result = await UserService.unsuspendUser(
         new Types.ObjectId(req.params.userId)
       );
-      res.success(result, 'User unsuspended successfully');
+      const user = result.user;
+      res.success({
+        user: {
+          id: user._id,
+          isSuspended: user.isSuspended,
+        }
+      }, 'User unsuspended successfully');
     }
   );
 
