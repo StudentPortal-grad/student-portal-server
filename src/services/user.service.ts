@@ -24,7 +24,7 @@ export class UserService {
     } = query;
 
     // Build query
-    const queryObj = { ...filters };
+    const queryObj: any = {};
     if (role) queryObj.role = role;
     if (status) queryObj.status = status;
     if (search) {
@@ -43,6 +43,7 @@ export class UserService {
 
     // Add field selection
     paginationOptions.select = '_id name email role createdAt';
+
 
     return await DbOperations.findWithPagination(
       User,
