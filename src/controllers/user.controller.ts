@@ -82,7 +82,16 @@ export class UserController {
   static bulkCreateUsers = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
       const result = await UserService.bulkCreateUsers(req.body.users);
-      res.success(result, 'Users created successfully', 201);
+      // Map users to only include allowed fields
+      const users = (result.users || []).map((user: any) => ({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        createdAt: user.createdAt,
+      }));
+      res.success({ users }, 'Users created successfully', 201);
     }
   );
 
