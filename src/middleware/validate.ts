@@ -12,6 +12,8 @@ type ValidateSource = 'body' | 'query' | 'params';
  */
 export const validate = (schema: Schema, source: ValidateSource = 'body') => {
   return (req: Request, res: Response, next: NextFunction) => {
+    //console.log('req.body:', req.body, 'req.file:', req.file, 'req.files:', req.files);
+
     const { error } = schema.validate(req[source], {
       abortEarly: false,
       stripUnknown: true,

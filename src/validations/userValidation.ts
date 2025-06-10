@@ -87,6 +87,7 @@ export const userValidation = {
     name: Joi.string(),
     role: Joi.string().valid('student', 'faculty', 'admin'),
     status: Joi.string().valid('online', 'offline', 'idle', 'dnd'),
+    profilePicture: Joi.string(),
   }).min(1),
 
   deleteUser: Joi.object({
