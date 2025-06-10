@@ -244,4 +244,18 @@ export class UserController {
       res.success(result, 'User unsuspended successfully');
     }
   );
+
+  /**
+   * @route   POST /v1/users/admin
+   * @desc    Create new admin user (SuperAdmin only)
+   * @access  SuperAdmin
+   */
+  static createAdmin = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      // Always set role to 'admin' regardless of input
+      const adminData = { ...req.body, role: 'admin' };
+      const result = await UserService.createAdmin(adminData);
+      res.success(result, 'Admin user created successfully', 201);
+    }
+  );
 }

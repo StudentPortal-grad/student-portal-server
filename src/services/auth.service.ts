@@ -60,6 +60,7 @@ export class AuthService {
     await EmailService.sendVerificationOTP(user.email, otp);
 
     const token = user.generateAuthToken();
+    
     return { user, token };
   }
 
@@ -96,7 +97,7 @@ export class AuthService {
     // Update user status to online
     await user.updateStatus('online');
 
-    const token = user.generateAuthToken();
+    const token = user.generateAuthToken();    
     return { user, token };
   }
 

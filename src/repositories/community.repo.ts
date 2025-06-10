@@ -10,7 +10,18 @@ export class CommunityRepository {
   }
 
   async findAllPaginated(options: PaginationOptions) {
-    return DbOperations.paginate(Community, {}, options);
+    return DbOperations.paginate(
+      Community,
+      {},
+      {
+        ...options,
+        select: '_id name createdAt type icon stats.membersCount owner',
+        populate: {
+          path: 'owner',
+          select: '_id profilePicture'
+        }
+      }
+    );
   }
 
   async findById(id: string): Promise<ICommunity | null> {
@@ -61,5 +72,18 @@ export class CommunityRepository {
       .select('roles')
       .lean();
     return community?.roles || [];
+  }
+
+  async getMetrics() {
+    const [total, official, user] = await Promise.all([
+      Community.countDocuments(),
+      Community.countDocuments({ type: 'Official' }),
+      Community.countDocuments({ type: 'Community' })
+    ]);
+    return {
+      totalCommunities: total,
+      officialCommunities: official,
+      userCommunities: user
+    };
   }
 }
