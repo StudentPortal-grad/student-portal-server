@@ -58,7 +58,11 @@ export class DiscussionService {
   /**
    * Get a discussion by ID, recursively populating creators for all replies up to a fixed depth.
    */
-  async getDiscussionById(id: string, userId?: Types.ObjectId): Promise<any> {
+  async getDiscussionById(
+    id: string,
+    params: { currVoteSpecified?: boolean; userId?: Types.ObjectId } = {}
+  ): Promise<any> {
+    const { currVoteSpecified, userId } = params;
     const maxDepth = 10; // Set a reasonable depth limit
 
     const discussion = await Discussion.findById(id).populate([
@@ -74,7 +78,7 @@ export class DiscussionService {
     }
 
     // If a userId is provided, convert the document to a plain object and add the currentVote property
-    if (userId) {
+    if (currVoteSpecified && userId) {
       const discussionObj = discussion.toObject();
       const vote = discussionObj.votes.find((v: IVote) => v.userId.equals(userId));
       const currentVote = vote ? (vote.voteType === 'upvote' ? 1 : -1) : 0;

@@ -87,10 +87,10 @@ export const getDiscussionById = async (req: Request, res: Response, next: NextF
     const { currVoteSpecified } = req.query;
     const userId = req.user?._id;
 
-    const discussion = await discussionService.getDiscussionById(
-      id,
-      currVoteSpecified === 'true' && userId ? userId : undefined
-    );
+    const discussion = await discussionService.getDiscussionById(id, {
+      currVoteSpecified: currVoteSpecified === 'true',
+      userId: userId,
+    });
 
     if (!discussion) {
       return next(new AppError('Discussion not found', 404, ErrorCodes.NOT_FOUND));
