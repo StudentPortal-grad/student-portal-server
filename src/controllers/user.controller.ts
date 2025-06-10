@@ -117,11 +117,13 @@ export class UserController {
    */
   static updateUserStatus = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      const result = await UserService.updateUserStatus(
-        new Types.ObjectId(req.params.userId),
-        req.body.status
+      const userId = req.params.userId;
+      const status = req.body.status;
+      await UserService.updateUserStatus(
+        new Types.ObjectId(userId),
+        status
       );
-      res.success(result, 'User status updated successfully');
+      res.success({ id: userId, status }, 'User status updated successfully');
     }
   );
 
