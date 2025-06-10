@@ -138,7 +138,15 @@ export class UserController {
         new Types.ObjectId(req.params.userId),
         req.body.role
       );
-      res.success(result, 'User role updated successfully');
+      const user = result.user;
+      res.success({
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        }
+      }, 'User role updated successfully');
     }
   );
 
