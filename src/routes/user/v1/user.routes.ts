@@ -30,7 +30,7 @@ router.use('/me', meRoutes);
 // Get users with filtering, sorting, and pagination
 router.get(
   '/',
-  authorize('admin', 'faculty'),
+  authorize('superadmin', 'admin', 'faculty'),
   validate(userValidation.getUsersQuery),
   UserController.getUsers
 );
@@ -38,14 +38,15 @@ router.get(
 // Get specific user by ID
 router.get(
   '/:userId',
-  authorize('admin', 'faculty'),
+  authorize('superadmin', 'admin', 'faculty'),
+  validate(userValidation.getUserById, 'params'),
   UserController.getUserById
 );
 
 // Create new user (admin only)
 router.post(
   '/',
-  authorize('admin'),
+  authorize('superadmin', 'admin'),
   uploadProfilePicture,
   validate(userValidation.createUser),
   UserController.createUser
@@ -54,7 +55,7 @@ router.post(
 // Update user (admin only)
 router.patch(
   '/:userId',
-  authorize('admin'),
+  authorize('superadmin', 'admin'),
   uploadProfilePicture,
   validate(userValidation.updateUser),
   UserController.updateUser
@@ -63,29 +64,29 @@ router.patch(
 // Delete user (admin only)
 router.delete(
   '/:userId',
-  authorize('admin'),
-  validate(userValidation.deleteUser),
+  authorize('superadmin', 'admin'),
+  validate(userValidation.deleteUser, 'params'),
   UserController.deleteUser
 );
 
 // Bulk operations (admin only)
 router.post(
   '/bulk/create',
-  authorize('admin'),
+  authorize('superadmin', 'admin'),
   validate(userValidation.bulkCreateUsers),
   UserController.bulkCreateUsers
 );
 
 router.patch(
   '/bulk/update',
-  authorize('admin'),
+  authorize('superadmin', 'admin'),
   validate(userValidation.bulkUpdateUsers),
   UserController.bulkUpdateUsers
 );
 
 router.delete(
   '/bulk/delete',
-  authorize('admin'),
+  authorize('superadmin', 'admin'),
   validate(userValidation.bulkDeleteUsers),
   UserController.bulkDeleteUsers
 );
@@ -93,7 +94,7 @@ router.delete(
 // User status management
 router.patch(
   '/:userId/status',
-  authorize('admin'),
+  authorize('superadmin', 'admin'),
   validate(userValidation.updateUserStatus),
   UserController.updateUserStatus
 );
@@ -115,7 +116,7 @@ router.patch(
 // Role management
 router.patch(
   '/:userId/role',
-  authorize('admin'),
+  authorize('superadmin', 'admin'),
   validate(userValidation.updateUserRole),
   UserController.updateUserRole
 );

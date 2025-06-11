@@ -24,7 +24,7 @@ export class UserService {
     } = query;
 
     // Build query
-    const queryObj = { ...filters };
+    const queryObj: any = {};
     if (role) queryObj.role = role;
     if (status) queryObj.status = status;
     if (search) {
@@ -42,7 +42,8 @@ export class UserService {
     });
 
     // Add field selection
-    paginationOptions.select = '-password';
+    paginationOptions.select = '_id name email role createdAt';
+
 
     return await DbOperations.findWithPagination(
       User,
@@ -58,7 +59,11 @@ export class UserService {
    * @returns The user object
    */
   static async getUserById(userId: Types.ObjectId, fields?: string[]) {
-    const user = await User.findById(userId).select(fields?.join(' ') || '');
+    // If fields are provided, use them; otherwise, select only the UI-needed fields
+    const selectFields = fields?.length
+      ? fields.join(' ')
+      : '_id name email role createdAt profilePicture profile status level';
+    const user = await User.findById(userId).select(selectFields);
     if (!user) {
       throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
     }

@@ -68,8 +68,9 @@ export class UserController {
    */
   static deleteUser = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      await UserService.deleteUser(new Types.ObjectId(req.params.userId));
-      res.success(null, 'User deleted successfully');
+      const userId = req.params.userId;
+      await UserService.deleteUser(new Types.ObjectId(userId));
+      res.success({ id: userId }, 'User deleted successfully');
     }
   );
 
@@ -81,7 +82,16 @@ export class UserController {
   static bulkCreateUsers = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
       const result = await UserService.bulkCreateUsers(req.body.users);
-      res.success(result, 'Users created successfully', 201);
+      // Map users to only include allowed fields
+      const users = (result.users || []).map((user: any) => ({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        createdAt: user.createdAt,
+      }));
+      res.success({ users }, 'Users created successfully', 201);
     }
   );
 
@@ -104,8 +114,11 @@ export class UserController {
    */
   static bulkDeleteUsers = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      await UserService.bulkDeleteUsers(req.body.userIds);
-      res.success(null, 'Users deleted successfully');
+      const result = await UserService.bulkDeleteUsers(req.body.userIds);
+      res.success({
+        deletedIds: req.body.userIds,
+        count: result.count,
+      }, 'Users deleted successfully');
     }
   );
 
@@ -116,11 +129,13 @@ export class UserController {
    */
   static updateUserStatus = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      const result = await UserService.updateUserStatus(
-        new Types.ObjectId(req.params.userId),
-        req.body.status
+      const userId = req.params.userId;
+      const status = req.body.status;
+      await UserService.updateUserStatus(
+        new Types.ObjectId(userId),
+        status
       );
-      res.success(result, 'User status updated successfully');
+      res.success({ id: userId, status }, 'User status updated successfully');
     }
   );
 
@@ -135,7 +150,15 @@ export class UserController {
         new Types.ObjectId(req.params.userId),
         req.body.role
       );
-      res.success(result, 'User role updated successfully');
+      const user = result.user;
+      res.success({
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        }
+      }, 'User role updated successfully');
     }
   );
 
@@ -227,7 +250,15 @@ export class UserController {
         new Types.ObjectId(req.params.userId),
         { reason, duration }
       );
-      res.success(result, 'User suspended successfully');
+      const user = result.user;
+      res.success({
+        user: {
+          id: user._id,
+          isSuspended: user.isSuspended,
+          suspensionReason: user.suspensionReason,
+          suspendedUntil: user.suspendedUntil,
+        }
+      }, 'User suspended successfully');
     }
   );
 
@@ -241,7 +272,13 @@ export class UserController {
       const result = await UserService.unsuspendUser(
         new Types.ObjectId(req.params.userId)
       );
-      res.success(result, 'User unsuspended successfully');
+      const user = result.user;
+      res.success({
+        user: {
+          id: user._id,
+          isSuspended: user.isSuspended,
+        }
+      }, 'User unsuspended successfully');
     }
   );
 
@@ -255,7 +292,17 @@ export class UserController {
       // Always set role to 'admin' regardless of input
       const adminData = { ...req.body, role: 'admin' };
       const result = await UserService.createAdmin(adminData);
-      res.success(result, 'Admin user created successfully', 201);
+      const user = result.user;
+      res.success({
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          createdAt: user.createdAt,
+        }
+      }, 'Admin user created successfully', 201);
     }
   );
 }
