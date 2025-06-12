@@ -26,6 +26,13 @@ router.use("/friends", friendRoutes);
 // Mount /me routes
 router.use('/me', meRoutes);
 
+// Get sibling students
+router.get(
+  '/siblings',
+  validate(userValidation.getSiblingStudentsQuery),
+  UserController.getSiblingStudents
+);
+
 // Admin/Dashboard routes
 // Get users with filtering, sorting, and pagination
 router.get(

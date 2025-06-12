@@ -64,12 +64,21 @@ export const userValidation = {
 
   // New schemas for user management
   getUsersQuery: Joi.object({
-    page: Joi.number().min(1),
-    limit: Joi.number().min(1).max(100),
-    sort: Joi.string(),
+    page: Joi.number().integer().min(1),
+    limit: Joi.number().integer().min(1),
     role: Joi.string().valid('student', 'faculty', 'admin'),
+    search: Joi.string().allow(''),
     status: Joi.string().valid('online', 'offline', 'idle', 'dnd'),
-    search: Joi.string(),
+    sortBy: Joi.string().valid('createdAt', 'name', 'email', 'role'),
+    sortOrder: Joi.string().valid('asc', 'desc')
+  }),
+
+  getSiblingStudentsQuery: Joi.object({
+    page: Joi.number().integer().min(1),
+    limit: Joi.number().integer().min(1),
+    search: Joi.string().allow(''),
+    sortBy: Joi.string().valid('name', 'username', 'level'),
+    sortOrder: Joi.string().valid('asc', 'desc')
   }),
 
   getUserById: Joi.object({

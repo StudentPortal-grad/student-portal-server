@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { AuthorizationError } from '../utils/errors';
 import asyncHandler from '../utils/asyncHandler';
 import { UserService } from '../services/user.service';
 import { Types } from 'mongoose';
@@ -12,6 +13,20 @@ export class UserController {
     async (req: Request, res: Response, _next: NextFunction) => {
       const { data, pagination } = await UserService.getUsers(req.query);
       res.paginated(data, pagination, 'Users retrieved successfully');
+    }
+  );
+
+  static getSiblingStudents = asyncHandler(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const user = req.user;
+      if (!user) {
+        throw new AuthorizationError('User not authenticated');
+      }
+      const { data, pagination } = await UserService.getSiblingStudents(
+        user,
+        req.query
+      );
+      res.paginated(data, pagination, 'Sibling students retrieved successfully');
     }
   );
 
