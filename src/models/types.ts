@@ -98,6 +98,7 @@ export interface IUser extends Document {
         bookmarkedAt: Date;
         note?: string;
     }[];
+    fcmToken?: string;
 
     // Instance methods
     generateAuthToken(): string;

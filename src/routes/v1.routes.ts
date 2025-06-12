@@ -11,6 +11,7 @@ import resourceRoutes from "./resource/v1/resource.routes";
 import dashboardRoutes from "./dashboard/v1/dashboard.routes";
 import roleRoutes from "./role/v1/role.routes";
 import { AppError, ErrorCodes } from "@utils/appError";
+import notificationRoutes from "./user/v1/notification.routes";
 
 const router = Router();
 
@@ -25,6 +26,7 @@ router.use("/events", eventRoutes);
 router.use("/resources", resourceRoutes);
 router.use("/dashboard", dashboardRoutes);
 router.use("/roles", roleRoutes);
+router.use("/notifications", notificationRoutes);
 
 router.use("*", (req, res, next) => {
     next(

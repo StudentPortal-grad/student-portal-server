@@ -306,6 +306,10 @@ const UserSchema = new Schema<IUser>(
                 note: String,
             },
         ],
+        fcmToken: {
+            type: String,
+            default: null,
+        }
     },
     {
         timestamps: true,

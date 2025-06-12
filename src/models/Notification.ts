@@ -34,8 +34,8 @@ const NotificationSchema = new Schema<INotification>(
 );
 
 // Indexes
-NotificationSchema.index({ user_id: 1, status: 1 });
-NotificationSchema.index({ timestamp: -1 });
+NotificationSchema.index({ userId: 1, status: 1 });
+NotificationSchema.index({ createdAt: -1 });
 
 // Methods
 NotificationSchema.methods = {
@@ -58,15 +58,15 @@ NotificationSchema.statics = {
   // Find unread notifications
   findUnreadNotifications: function (userId: Types.ObjectId) {
     return this.find({
-      user_id: userId,
+      userId: userId,
       status: 'unread',
-    }).sort({ timestamp: -1 });
+    }).sort({ createdAt: -1 });
   },
 
   // Mark all as read
   markAllAsRead: async function (userId: Types.ObjectId): Promise<void> {
     await this.updateMany(
-      { user_id: userId, status: 'unread' },
+      { userId: userId, status: 'unread' },
       { status: 'read' }
     );
   },
