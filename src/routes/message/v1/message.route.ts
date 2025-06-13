@@ -17,7 +17,7 @@ router.use(authenticate);
 // Get messages for a conversation with pagination
 router.get(
     "/conversation/:conversationId",
-    validate(messageValidation.getMessages),
+    // validate(messageValidation.getMessages),
     getMessages
 );
 
