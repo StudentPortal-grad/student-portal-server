@@ -327,6 +327,9 @@ UserSchema.index(
 UserSchema.index({ "friends.userId": 1 });
 UserSchema.index({ "mutedConversations.conversationId": 1 });
 
+// Add text index for searching
+UserSchema.index({ name: 'text', username: 'text', universityEmail: 'text' });
+
 // Pre-save middleware for password validation and hashing
 UserSchema.pre("save", async function (next) {
     if (!this.isModified("password")) return next();

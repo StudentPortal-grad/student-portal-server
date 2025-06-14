@@ -29,6 +29,7 @@ export class SearchService {
       $or: [
         { signupStep: 'completed' },
         { signupStep: 'verified' },
+        { signupStep: 'complete' }, // Handle inconsistent data
       ],
       isGraduated: false,
       level: currentUser.level,
@@ -36,19 +37,37 @@ export class SearchService {
 
     // Add text search if query provided
     if (query && query.length > 2) {
-      searchQuery.$or = [
-        ...searchQuery.$or,
-        { name: { $regex: query, $options: 'i' } },
-        { username: { $regex: query, $options: 'i' } },
-        { universityEmail: { $regex: query, $options: 'i' } },
-      ];
+      searchQuery.$text = { $search: query };
     }
 
+    const queryBuilder = User.find(searchQuery);
+
     // Use projection and lean for better performance
-    const peers = await User.find(searchQuery)
-      .select('name username profilePicture level status lastSeen college gpa profile.bio profile.interests')
-      .limit(20)
-      .lean();
+    if (query && query.length > 2) {
+      // When searching, project the score and sort by it
+      queryBuilder
+        .select({
+          name: 1,
+          username: 1,
+          profilePicture: 1,
+          level: 1,
+          status: 1,
+          lastSeen: 1,
+          college: 1,
+          gpa: 1,
+          'profile.bio': 1,
+          'profile.interests': 1,
+          score: { $meta: 'textScore' },
+        })
+        .sort({ score: { $meta: 'textScore' } });
+    } else {
+      // Default projection without search
+      queryBuilder.select(
+        'name username profilePicture level status lastSeen college gpa profile.bio profile.interests'
+      );
+    }
+
+    const peers = await queryBuilder.limit(20).lean();
 
     return peers;
   }
