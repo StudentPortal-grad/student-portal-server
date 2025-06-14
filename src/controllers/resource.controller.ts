@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Resource from '@models/Resource';
 import { Types } from 'mongoose';
+import { IVote } from '@models/types';
 import { AppError, ErrorCodes } from '@utils/appError';
 import { UploadService } from '@utils/uploadService';
 import User from '@models/User';
@@ -35,7 +36,9 @@ export const getAllResources = async (
       sortOrder = 'desc',
       search,
       populateCommentUser,
+      currVoteSpecified,
     } = req.query;
+    const userId = req.user?._id;
 
     // Build filter
     const filter: any = {};
@@ -92,8 +95,19 @@ export const getAllResources = async (
     // Get all available categories for filtering
     const categories = await Resource.distinct('category');
 
+    // Add currentVote if specified
+    let resourcesWithVote: any[] = resources;
+    if (currVoteSpecified === 'true' && userId) {
+      resourcesWithVote = resources.map(resource => {
+        const resourceObj = resource.toObject();
+        const vote = resourceObj.votes.find((v: IVote) => v.userId.equals(userId));
+        const currentVote = vote ? (vote.voteType === 'upvote' ? 1 : -1) : 0;
+        return { ...resourceObj, currentVote };
+      });
+    }
+
     res.success({
-      resources,
+      resources: resourcesWithVote,
       categories,
       pagination: {
         total,
@@ -123,7 +137,8 @@ export const getResourceById = async (
 ) => {
   try {
     const { id } = req.params;
-    const { populateCommentUser } = req.query;
+    const { populateCommentUser, currVoteSpecified } = req.query;
+    const userId = req.user?._id;
 
     if (!Types.ObjectId.isValid(id)) {
       throw new ValidationError('Invalid resource ID');
@@ -150,7 +165,14 @@ export const getResourceById = async (
       throw new NotFoundError('Resource not found');
     }
 
-    res.success({ resource });
+    if (currVoteSpecified === 'true' && userId) {
+      const resourceObj = resource.toObject();
+      const vote = resourceObj.votes.find((v: IVote) => v.userId.equals(userId));
+      const currentVote = vote ? (vote.voteType === 'upvote' ? 1 : -1) : 0;
+      res.success({ resource: { ...resourceObj, currentVote } });
+    } else {
+      res.success({ resource });
+    }
   } catch (_error) {
     next(
       new AppError('Failed to fetch resource', 500, ErrorCodes.INTERNAL_ERROR)

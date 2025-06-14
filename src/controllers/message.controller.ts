@@ -13,7 +13,7 @@ import asyncHandler from "../utils/asyncHandler";
  */
 export const getMessages = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const { conversationId } = req.params;
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
     const userId = req.user?._id;
 
     if (!userId) {
@@ -41,10 +41,13 @@ export const getMessages = asyncHandler(async (req: Request, res: Response, next
     const limitNum = Number(limit);
     const skip = (pageNum - 1) * limitNum;
 
+    const sortOrderVal = sortOrder === 'asc' ? 1 : -1;
+    const sort: { [key: string]: 1 | -1 } = { [sortBy as string]: sortOrderVal };
+
     // Use aggregation pipeline for efficient querying
     const messagesAggregation = [
         { $match: { conversationId: new Types.ObjectId(conversationId) } },
-        { $sort: { createdAt: -1 } },
+        { $sort: sort },
         { $skip: skip },
         { $limit: limitNum },
         {

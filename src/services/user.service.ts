@@ -7,6 +7,7 @@ import { generateHashedOTP } from '@utils/helpers';
 import { DbOperations } from '../utils/dbOperations';
 import User from '../models/User';
 import { getPaginationOptions } from '@utils/pagination';
+import { NotFoundError } from '../utils/errors';
 import { UploadService } from '../utils/uploadService';
 
 export class UserService {
@@ -44,6 +45,49 @@ export class UserService {
     // Add field selection
     paginationOptions.select = '_id name email role createdAt';
 
+
+    return await DbOperations.findWithPagination(
+      User,
+      queryObj,
+      paginationOptions
+    );
+  }
+
+  static async getSiblingStudents(currentUser: IUser, query: any) {
+    if (!currentUser.level) {
+      throw new NotFoundError('User level not set, cannot find siblings.');
+    }
+
+    const {
+      search,
+      sortBy = 'name',
+      sortOrder = 'asc',
+      ...filters
+    } = query;
+
+    const queryObj: any = {
+      level: currentUser.level,
+      _id: { $ne: currentUser._id }, // Exclude the current user
+      role: 'student', // Ensure we only get students
+    };
+
+    if (search) {
+      const searchRegex = { $regex: search, $options: 'i' };
+      queryObj.$or = [
+        { name: searchRegex },
+        { username: searchRegex },
+        { email: searchRegex },
+      ];
+    }
+
+    const paginationOptions = getPaginationOptions({
+      ...query,
+      sortBy,
+      sortOrder,
+    });
+
+    // Fields to be returned
+    paginationOptions.select = '_id name username profilePicture level';
 
     return await DbOperations.findWithPagination(
       User,

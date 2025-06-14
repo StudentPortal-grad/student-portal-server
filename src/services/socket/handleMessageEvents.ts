@@ -102,7 +102,7 @@ export const handleMessageEvents = (socket: Socket) => {
                 conversationId: data.conversationId,
             });
 
-            SocketUtils.emitSuccess(socket, "messageSent");
+            SocketUtils.emitSuccess(socket, "messageSent", messageToSend);
         } catch (error) {
             console.error("Error sending message:", error);
             SocketUtils.emitError(socket, "messageSent");
