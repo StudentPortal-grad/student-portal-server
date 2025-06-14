@@ -5,6 +5,7 @@ import User from "@models/User";
 import { DbOperations } from "@utils/dbOperations";
 import { SocketService } from "@services/socket.service";
 import { SocketErrorService } from "@services/socketError.service";
+import { EventsManager } from '@utils/EventsManager';
 
 /* global process */
 
@@ -15,6 +16,7 @@ interface ServerToClientEvents {
         status: string;
         lastSeen: Date;
     }) => void;
+    notification: (data: any) => void;
     newMessage: (data: { message: any; conversationId: string }) => void;
     messageRead: (data: {
         messageId: string;
@@ -67,6 +69,9 @@ interface ClientToServerEvents {
     }) => void;
     startTyping: (conversationId: string) => void;
     stopTyping: (conversationId: string) => void;
+
+    'join-notifications': (userId: string) => void;
+    'leave-notifications': (userId: string) => void;
 
     // New events
     createConversation: (
@@ -160,6 +165,46 @@ let io: Server<
     SocketData
 >;
 
+export { io };
+
+// Handle notification-specific socket events
+const handleNotificationEvents = (
+    socket: Socket<
+        ClientToServerEvents,
+        ServerToClientEvents,
+        InterServerEvents,
+        SocketData
+    >
+) => {
+    // Join user's notification room
+    socket.on('join-notifications', (userId: string) => {
+        socket.join(userId);
+        
+        // Confirm joining
+        socket.emit('notification', {
+            type: 'system',
+            content: 'Successfully joined notification room',
+            userId: userId
+        });
+    });
+
+    // Leave user's notification room
+    socket.on('leave-notifications', (userId: string) => {
+        socket.leave(userId);
+    });
+};
+
+const setupNotificationGlobalListener = (ioInstance: any) => {    
+    EventsManager.on('notification:created', async (notification) => {
+      // Check how many sockets are in this room
+      const sockets = await ioInstance.in(notification.userId.toString()).fetchSockets();
+      
+      // Emit the notification
+      ioInstance.to(notification.userId.toString()).emit('notification', notification);
+    });
+    
+  };
+
 export const initializeSocket = (
     server: HttpServer
 ): Server<
@@ -185,6 +230,9 @@ export const initializeSocket = (
         maxHttpBufferSize: 1e8, // 100MB
         transports: ["websocket", "polling"],
     });
+
+    // SETUP GLOBAL NOTIFICATION LISTENER 
+    setupNotificationGlobalListener(io);
 
     // Socket middleware for authentication
     io.use(
@@ -243,7 +291,20 @@ export const initializeSocket = (
                 return;
             }
 
-            console.log(`User ${userId} connected. with ID: ${socket.id}`);
+            socket.join(userId);
+
+            // Handle notification events
+            socket.on('join-notifications', (joinUserId: string) => {
+                socket.join(joinUserId);
+                
+                // Send confirmation
+                socket.emit('notification', {
+                type: 'system',
+                content: 'Successfully joined notification room',
+                userId: joinUserId,
+                timestamp: new Date()
+                });
+            });
 
             try {
                 // Handle user connection
