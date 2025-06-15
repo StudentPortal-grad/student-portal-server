@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { AuthService } from "../../services/auth.service";
 import asyncHandler from "../../utils/asyncHandler";
+import notificationService from "@services/notification.service";
 
 export class AuthController {
     /**
@@ -90,6 +91,21 @@ export class AuthController {
                 resetToken,
                 password
             );
+
+            // Get user from the reset token
+            const user = await AuthService.getUserFromResetToken(resetToken);
+            if (user) {
+                // Create notification for password reset
+                await notificationService.createNotification(
+                    user._id,
+                    'PASSWORD_RESET',
+                    'Your password has been reset successfully',
+                    {
+                        resetAt: new Date()
+                    }
+                );
+            }
+
             res.success(result, "Password reset successful");
         }
     );
@@ -106,6 +122,17 @@ export class AuthController {
                 currentPassword,
                 newPassword
             );
+
+            // Create notification for password change
+            await notificationService.createNotification(
+                req.user!._id,
+                'PASSWORD_CHANGED',
+                'Your password has been changed successfully',
+                {
+                    changedAt: new Date()
+                }
+            );
+
             res.success(result, "Password changed successfully");
         }
     );

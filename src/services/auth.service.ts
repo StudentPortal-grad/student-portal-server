@@ -588,4 +588,21 @@ export class AuthService {
 
     return {};
   }
+
+  /**
+   * Get user from reset token
+   */
+  static async getUserFromResetToken(resetToken: string) {
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    const user = await User.findOne({
+      'otp.code': hashedToken,
+      'otp.expiresAt': { $gt: new Date() },
+    });
+
+    return user;
+  }
 }
