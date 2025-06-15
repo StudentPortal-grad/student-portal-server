@@ -139,6 +139,7 @@ export interface IChatbotMetadata {
 }
 
 export interface IConversation extends Document {
+    _id: Types.ObjectId;
     chatbotMetadata?: IChatbotMetadata;
     type: "DM" | "GroupDM" | "CHATBOT";
     participants: {
@@ -190,6 +191,7 @@ export interface IConversation extends Document {
 }
 
 export interface IMessage extends Document {
+    _id: Types.ObjectId;
     senderId: Types.ObjectId;
     conversationId: Types.ObjectId;
     content?: string;

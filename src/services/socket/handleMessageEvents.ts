@@ -5,10 +5,16 @@ import Message from "@models/Message";
 import { SocketUtils } from "../../utils/socketUtils";
 import { ConversationUtils } from "../../utils/conversationUtils";
 import { ChatbotService } from "../chatbot.service";
+import { IConversation, IMessage } from "../../models/types";
 import { Types } from "mongoose";
 
 interface SendMessageData {
     conversationId: string;
+    content: string;
+}
+
+interface StartMessageData {
+    recipientId: string;
     content: string;
 }
 
@@ -61,7 +67,7 @@ export const handleMessageEvents = (socket: Socket) => {
                 path: "senderId",
                 select: "name profilePicture",
             });
-            
+
             const messageToSend = populatedUserMessage.toObject();
 
             // --- Update Conversation ---
@@ -72,10 +78,10 @@ export const handleMessageEvents = (socket: Socket) => {
             });
 
             // Emit the user's own message back to them immediately
-            socket.emit("newMessage", {
+            /*socket.emit("newMessage", {
                 message: messageToSend,
                 conversationId: data.conversationId,
-            });
+            });*/
 
             // Await conversation update before proceeding
             await conversationUpdatePromise;
@@ -95,9 +101,8 @@ export const handleMessageEvents = (socket: Socket) => {
                 try {
                     // Process message and get bot response
                     const botResponse = await ChatbotService.processUserMessage(
-                        new Types.ObjectId(data.conversationId),
-                        data.content,
-                        new Types.ObjectId(socket.data.userId)
+                        conversation,
+                        userMessage
                     );
 
                     if (botResponse && botResponse.message) {
@@ -136,7 +141,7 @@ export const handleMessageEvents = (socket: Socket) => {
                     conversation,
                     socket.data.userId as string,
                     data.conversationId,
-                    messageToSend._id as string
+                    messageToSend._id.toString()
                 );
             }
 
@@ -277,6 +282,78 @@ export const handleMessageEvents = (socket: Socket) => {
         } catch (error) {
             console.error("Error marking message as read:", error);
             socket.emit("messageMarkedRead", { success: false });
+        }
+    });
+
+    socket.on("startMessage", async (data: StartMessageData, _callback) => {
+        try {
+            if (!SocketUtils.validateRequest(socket, data, ["recipientId", "content"])) {
+                return;
+            }
+
+            const { recipientId, content } = data;
+            const senderId = socket.data.userId;
+
+            if (senderId === recipientId) {
+                return SocketUtils.emitError(socket, "conversationStartFailed", "You cannot start a conversation with yourself.");
+            }
+
+            const existingConversation = await Conversation.findOne({
+                type: 'DM',
+                participants: { $all: [senderId, recipientId] }
+            });
+
+            if (existingConversation) {
+                return SocketUtils.emitError(socket, "conversationStartFailed", "A conversation with this user already exists.");
+            }
+
+            const newConversation = new Conversation({
+                type: 'DM',
+                participants: [senderId, recipientId],
+                'metadata.createdBy': senderId,
+                'metadata.lastActivity': new Date(),
+            });
+
+            const newMessage: IMessage = new Message({
+                senderId,
+                conversationId: newConversation._id,
+                content,
+            });
+
+            newConversation.lastMessage = newMessage._id as Types.ObjectId;
+
+            await Promise.all([newConversation.save(), newMessage.save()]);
+
+            const populatedConversation: IConversation | null = await Conversation.findById(newConversation._id)
+                .populate('participants', 'name profilePicture status lastSeen')
+                .populate({ path: 'lastMessage', populate: { path: 'senderId', select: 'name profilePicture' } });
+
+            // Notify sender that conversation has started
+            socket.emit('conversationStarted', populatedConversation);
+
+            // Notify recipient of new conversation/message request
+            socket.to(recipientId).emit('newConversation', populatedConversation);
+
+            // Also send the message to the recipient
+            if (populatedConversation && populatedConversation.lastMessage) {
+                socket.to(recipientId).emit('newMessage', {
+                    message: populatedConversation.lastMessage,
+                    conversationId: populatedConversation._id.toString()
+                });
+            }
+
+            await ConversationUtils.processNewMessage(
+                newConversation,
+                socket.data.userId as string,
+                newConversation._id.toString(),
+                newMessage._id.toString()
+            );
+
+            SocketUtils.emitSuccess(socket, "messageSent", newMessage);
+
+        } catch (error) {
+            console.error("Error starting conversation:", error);
+            SocketUtils.emitError(socket, "conversationStartFailed");
         }
     });
 };

@@ -3,7 +3,7 @@ import { Types } from 'mongoose';
 import User from '@models/User';
 import Conversation from '@models/Conversation';
 import Message from '@models/Message';
-import { IUser } from '@models/types';
+import { IUser, IConversation, IMessage } from '@models/types';
 import { config } from '../config';
 import { AppError, ErrorCodes } from '../utils/appError';
 
@@ -122,19 +122,9 @@ export class ChatbotService {
         });
     }
 
-    static async processUserMessage(conversationId: Types.ObjectId, userMessage: string, userId: Types.ObjectId): Promise<any> {
+    static async processUserMessage(conversation: IConversation, userMessageDoc: IMessage): Promise<any> {
         try {
-            const startTime = Date.now();
-
-            const userMessageDoc = new Message({
-                senderId: userId,
-                conversationId: conversationId,
-                content: userMessage,
-                status: 'sent',
-            });
-            await userMessageDoc.save();
-
-            const conversation = await Conversation.findById(conversationId).populate('chatbotMetadata');
+            const startTime = performance.now();
 
             if (!conversation || conversation.type !== 'CHATBOT') {
                 throw new Error('Invalid chatbot conversation');
@@ -154,14 +144,14 @@ export class ChatbotService {
                 timestamp: msg.createdAt
             }));*/
 
-            const aiResponse = await this.callAIChatAPI(userMessage);
+            const aiResponse = await this.callAIChatAPI(userMessageDoc.content!);
 
-            const processingTime = Date.now() - startTime;
+            const processingTime = performance.now() - startTime;
 
             const chatbotUser = await this.initializeChatbotUser();
             const responseMessage = new Message({
                 senderId: chatbotUser._id,
-                conversationId: conversationId,
+                conversationId: conversation._id,
                 content: aiResponse.answer, // Use the answer from the placeholder response
                 status: 'delivered',
                 metadata: {
@@ -172,7 +162,7 @@ export class ChatbotService {
 
             await responseMessage.save();
 
-            await Conversation.findByIdAndUpdate(conversationId, {
+            await Conversation.findByIdAndUpdate(conversation._id, {
                 $set: {
                     'chatbotMetadata.lastUserMessageId': userMessageDoc._id,
                     'chatbotMetadata.lastBotMessageId': responseMessage._id,
@@ -195,7 +185,7 @@ export class ChatbotService {
 
             const errorMessage = new Message({
                 senderId: chatbotUser._id,
-                conversationId: conversationId,
+                conversationId: conversation._id,
                 content: errorMessageContent,
                 status: 'delivered',
             });
