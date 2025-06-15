@@ -1,11 +1,14 @@
 import { Router } from 'express';
 import { authenticate } from '@middleware/auth';
-import { searchPeers, searchPeersByFilter, searchRecommendedPeers } from '../../../controllers/search.controller';
+import { globalSearch, searchPeers, searchPeersByFilter, searchRecommendedPeers } from '../../../controllers/search.controller';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+// Global search for discussions, resources, and users
+router.get('/', globalSearch);
 
 // Basic peer search
 router.get('/peers', searchPeers);

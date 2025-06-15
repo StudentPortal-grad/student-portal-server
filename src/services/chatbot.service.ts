@@ -24,7 +24,7 @@ export class ChatbotService {
                 chatbotUser = new User({
                     name: this.CHATBOT_NAME,
                     email: this.CHATBOT_EMAIL,
-                    password: 'N/A_CHATBOT_USER',
+                    // password: 'N/A_CHATBOT_USER',
                     isChatbot: true,
                     signupStep: 'completed',
                     role: 'admin',
@@ -216,6 +216,22 @@ export class ChatbotService {
 
     private static async callAIChatAPI(question: string): Promise<any> {
         try {
+            // --- UNCOMMENT THIS BLOCK TO USE THE ACTUAL API ---
+            /*
+            const chatApiUrl = new URL('/api/chat', config.aiApi.url).toString();
+            const response = await axios.post(chatApiUrl, {
+                question: question,
+            }, {
+                timeout: 30000,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${config.aiApi.key}`
+                }
+            });
+            return response.data;
+            */
+
+            // --- COMMENT OUT THE BLOCK BELOW WHEN USING THE ACTUAL API ---
             // AI model is not running, returning placeholder response.
             console.log('AI_MODEL_OFFLINE: Returning placeholder for callAIChatAPI');
             return Promise.resolve({
@@ -242,6 +258,23 @@ export class ChatbotService {
 
     private static async callAIConversationAPI(message: string, context: any[]): Promise<any> {
         try {
+            // --- UNCOMMENT THIS BLOCK TO USE THE ACTUAL API ---
+            /*
+            const conversationApiUrl = new URL('/api/conversation', config.aiApi.url).toString();
+            const response = await axios.post(conversationApiUrl, {
+                message: message,
+                context: context
+            }, {
+                timeout: 30000,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${config.aiApi.key}`
+                }
+            });
+            return response.data;
+            */
+
+            // --- COMMENT OUT THE BLOCK BELOW WHEN USING THE ACTUAL API ---
             // AI model is not running, returning placeholder response.
             console.log('AI_MODEL_OFFLINE: Returning placeholder for callAIConversationAPI');
             return Promise.resolve({
@@ -265,8 +298,6 @@ export class ChatbotService {
             );
         }
     }
-
-
 
     static async getChatbotConversation(userId: Types.ObjectId): Promise<any> {
         const user = await User.findById(userId);
