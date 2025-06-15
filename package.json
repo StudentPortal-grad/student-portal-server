@@ -11,12 +11,14 @@
     "lint:all": "eslint .",
     "lint": "eslint",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "migrate": "tsx src/scripts/migrateChatbotData.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.10.0",
     "bcrypt": "^5.1.1",
     "cloudinary": "^1.41.3",
     "cors": "^2.8.5",

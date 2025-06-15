@@ -20,7 +20,7 @@ export const authValidation = {
       'any.required': 'Password is required',
     }),
     role: Joi.string()
-      .valid('student', 'faculty')
+      .valid("student", "faculty", "admin", "superadmin")
       .optional()
       .messages({
         'any.only': 'Invalid role',

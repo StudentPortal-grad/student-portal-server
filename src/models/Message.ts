@@ -137,6 +137,9 @@ const MessageSchema = new Schema<IMessage>(
             type: Date,
             default: Date.now,
         },
+        metadata: {
+            type: Schema.Types.Mixed,
+        },
     },
     { timestamps: true }
 );

@@ -309,9 +309,32 @@ const UserSchema = new Schema<IUser>(
         fcmToken: {
             type: String,
             default: null,
-        }
+        },
+    // Chatbot specific fields
+    isChatbot: {
+        type: Boolean,
+        default: false,
     },
-    {
+    botSettings: {
+        type: {
+            isActive: { type: Boolean, default: true },
+            language: { type: String, enum: ['ar', 'en'], default: 'ar' },
+            personalityType: { type: String, enum: ['formal', 'friendly', 'academic'], default: 'academic' },
+            contextLimit: { type: Number, default: 10 }
+        },
+        default: null
+    },
+    hasChatbotConversation: {
+        type: Boolean,
+        default: false,
+    },
+    chatbotConversationId: {
+        type: Schema.Types.ObjectId,
+        ref: "Conversation",
+        default: null
+    }
+},
+{
         timestamps: true,
     }
 );

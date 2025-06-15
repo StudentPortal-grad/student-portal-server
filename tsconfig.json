@@ -4,13 +4,16 @@
     "module": "ESNext",
     "moduleResolution": "node",
     "outDir": "dist",
-    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "baseUrl": "./src",
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ],
     "paths": {
       "@config/*": [
         "config/*"
@@ -41,11 +44,18 @@
       ],
       "@models/*": [
         "models/*"
+      ],
+      "@queues/*": [
+        "queues/*"
+      ],
+      "@workers/*": [
+        "workers/*"
       ]
     }
   },
   "include": [
-    "src"
+    "src",
+    "__tests__"
   ],
   "exclude": [
     "dist"

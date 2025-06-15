@@ -14,6 +14,7 @@ export class UserService {
   /**
    * Get users with filtering, sorting, and pagination
    */
+  // TODO: Get Profile Pic
   static async getUsers(query: any) {
     const {
       role,

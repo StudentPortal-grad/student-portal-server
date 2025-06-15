@@ -1,4 +1,5 @@
 import User from '@models/User';
+import { IUser } from '@models/types';
 import { Types } from 'mongoose';
 import { AppError, ErrorCodes } from '@utils/appError';
 import { HttpStatus } from '@utils/ApiResponse';
@@ -12,19 +13,11 @@ export class SearchService {
   /**
    * Search for peers
    */
-  static async searchPeers(userId: string, query?: string) {
-    // Get current user's level
-    const currentUser = await User.findById(userId)
-      .select('level')
-      .lean();
-
-    if (!currentUser) {
-      return [];
-    }
+  static async searchPeers(currentUser: IUser, query?: string) {
 
     // Create optimized query with index-friendly conditions
     const searchQuery: any = {
-      _id: { $ne: userId },
+      _id: { $ne: currentUser._id },
       role: 'student',
       $or: [
         { signupStep: 'completed' },

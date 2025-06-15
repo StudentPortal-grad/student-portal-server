@@ -13,7 +13,7 @@ const ConversationSchema = new Schema<IConversation>(
         type: {
             type: String,
             required: true,
-            enum: ["DM", "GroupDM"],
+            enum: ["DM", "GroupDM", "CHATBOT"],
         },
         participants: [
             {
@@ -107,6 +107,18 @@ const ConversationSchema = new Schema<IConversation>(
                 type: Date,
                 default: Date.now,
             },
+        },
+        chatbotMetadata: {
+            type: {
+                aiModel: { type: String, required: false },
+                contextSummary: { type: String, required: false },
+                lastUserMessageId: { type: Schema.Types.ObjectId, ref: 'Message', required: false },
+                lastBotMessageId: { type: Schema.Types.ObjectId, ref: 'Message', required: false },
+            },
+            required: function(this: IConversation) {
+                return this.type === 'CHATBOT';
+            },
+            default: null,
         },
     },
     {

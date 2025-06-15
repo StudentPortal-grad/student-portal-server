@@ -99,6 +99,10 @@ export interface IUser extends Document {
         note?: string;
     }[];
     fcmToken?: string;
+    isChatbot?: boolean;
+    botSettings?: IChatbotSettings;
+    hasChatbotConversation?: boolean;
+    chatbotConversationId?: Types.ObjectId;
 
     // Instance methods
     generateAuthToken(): string;
@@ -119,8 +123,24 @@ export interface IUser extends Document {
     getFriendStatus(userId: Types.ObjectId): string | null;
 }
 
+export interface IChatbotSettings {
+    isActive: boolean;
+    language: 'ar' | 'en';
+    personalityType: 'formal' | 'friendly' | 'academic';
+    contextLimit: number;
+}
+
+export interface IChatbotMetadata {
+    totalQuestions: number;
+    averageResponseTime: number;
+    lastProcessingTime: number;
+    preferredLanguage: 'ar' | 'en';
+    contextWindowSize: number;
+}
+
 export interface IConversation extends Document {
-    type: "DM" | "GroupDM";
+    chatbotMetadata?: IChatbotMetadata;
+    type: "DM" | "GroupDM" | "CHATBOT";
     participants: {
         userId: Types.ObjectId;
         role: "owner" | "admin" | "member";
@@ -152,6 +172,7 @@ export interface IConversation extends Document {
     };
     createdAt: Date;
     updatedAt: Date;
+    chatbotSettings?: IChatbotSettings;
 
     // Instance methods
     addParticipant(userId: Types.ObjectId, role?: string): Promise<void>;
@@ -212,6 +233,7 @@ export interface IMessage extends Document {
     };
     createdAt: Date;
     updatedAt: Date;
+    metadata?: any;
 }
 
 export interface INotification extends Document {

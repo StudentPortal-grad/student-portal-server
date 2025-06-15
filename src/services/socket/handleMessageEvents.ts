@@ -2,8 +2,10 @@ import { Socket } from "socket.io";
 import User from "@models/User";
 import Conversation from "@models/Conversation";
 import Message from "@models/Message";
-import { SocketUtils } from "@utils/socketUtils";
-import { ConversationUtils } from "@utils/conversationUtils";
+import { SocketUtils } from "../../utils/socketUtils";
+import { ConversationUtils } from "../../utils/conversationUtils";
+import { ChatbotService } from "../chatbot.service";
+import { Types } from "mongoose";
 
 interface SendMessageData {
     conversationId: string;
@@ -26,7 +28,6 @@ export const handleMessageEvents = (socket: Socket) => {
                 return;
             }
 
-            // Check if user is participant
             if (
                 !(await SocketUtils.isConversationParticipant(
                     socket.data.userId,
@@ -40,18 +41,7 @@ export const handleMessageEvents = (socket: Socket) => {
                 );
             }
 
-            // Create message and update conversation in parallel
-            const messagePromise = Message.create({
-                senderId: socket.data.userId,
-                conversationId: data.conversationId,
-                content: data.content,
-            });
-
-            const conversationPromise = Conversation.findById(data.conversationId);
-
-            // Wait for both operations to complete
-            const [message, conversation] = await Promise.all([messagePromise, conversationPromise]);
-
+            const conversation = await Conversation.findById(data.conversationId);
             if (!conversation) {
                 return SocketUtils.emitError(
                     socket,
@@ -60,49 +50,98 @@ export const handleMessageEvents = (socket: Socket) => {
                 );
             }
 
-            // Use bulkWrite for better performance instead of multiple separate operations
-            // First, prepare the conversation update operation
-            const conversationUpdate = {
-                updateOne: {
-                    filter: { _id: data.conversationId },
-                    update: {
-                        $set: {
-                            lastMessage: message._id,
-                            "metadata.lastActivity": new Date()
-                        },
-                        $inc: { "metadata.totalMessages": 1 }
-                    }
-                }
-            };
-
-            // Execute the bulkWrite operation for the conversation update
-            await Conversation.bulkWrite([conversationUpdate]);
-
-            // Process any additional message-related updates that can't be included in bulkWrite
-            await ConversationUtils.processNewMessage(
-                conversation,
-                socket.data.userId as string,
-                data.conversationId,
-                message._id as string
-            );
-
-            // Populate message for broadcast using Model.populate() instead of a separate query
-            const populatedMessage = await Message.populate(message, {
-                path: "senderId",
-                select: "name profilePicture"
+            // --- Save User's Message ---
+            const userMessage = await Message.create({
+                senderId: socket.data.userId,
+                conversationId: data.conversationId,
+                content: data.content,
             });
 
-            // Convert to plain object for socket transmission
-            const messageToSend = populatedMessage.toObject ?
-                populatedMessage.toObject() : JSON.parse(JSON.stringify(populatedMessage));
+            const populatedUserMessage = await Message.populate(userMessage, {
+                path: "senderId",
+                select: "name profilePicture",
+            });
+            
+            const messageToSend = populatedUserMessage.toObject();
 
-            // Broadcast to other participants
-            socket.broadcast.to(data.conversationId).emit("newMessage", {
+            // --- Update Conversation ---
+            const conversationUpdatePromise = Conversation.findByIdAndUpdate(data.conversationId, {
+                lastMessage: userMessage._id,
+                "metadata.lastActivity": new Date(),
+                $inc: { "metadata.totalMessages": 1 },
+            });
+
+            // Emit the user's own message back to them immediately
+            socket.emit("newMessage", {
                 message: messageToSend,
                 conversationId: data.conversationId,
             });
 
+            // Await conversation update before proceeding
+            await conversationUpdatePromise;
+
+            // --- Branch Logic: Chatbot vs. Regular ---
+            if (conversation.type === 'CHATBOT') {
+                // --- Chatbot Logic ---
+                const chatbotUser = await ChatbotService.initializeChatbotUser();
+
+                // Emit typing indicator
+                socket.emit("typing", {
+                    userId: chatbotUser._id.toString(),
+                    conversationId: data.conversationId,
+                    isTyping: true,
+                });
+
+                try {
+                    // Process message and get bot response
+                    const botResponse = await ChatbotService.processUserMessage(
+                        new Types.ObjectId(data.conversationId),
+                        data.content,
+                        new Types.ObjectId(socket.data.userId)
+                    );
+
+                    if (botResponse && botResponse.message) {
+                        const populatedBotMessage = await Message.populate(botResponse.message, {
+                            path: "senderId",
+                            select: "name profilePicture",
+                        });
+
+                        // Emit bot's message
+                        socket.emit("newMessage", {
+                            message: populatedBotMessage.toObject(),
+                            conversationId: data.conversationId,
+                        });
+                    }
+                } catch (e) {
+                    console.error("Chatbot processing error:", e);
+                    // Optionally send an error message to the user
+                } finally {
+                    // Stop typing indicator
+                    socket.emit("typing", {
+                        userId: chatbotUser._id.toString(),
+                        conversationId: data.conversationId,
+                        isTyping: false,
+                    });
+                }
+
+            } else {
+                // --- Regular Message Logic ---
+                // Broadcast to other participants
+                socket.broadcast.to(data.conversationId).emit("newMessage", {
+                    message: messageToSend,
+                    conversationId: data.conversationId,
+                });
+
+                await ConversationUtils.processNewMessage(
+                    conversation,
+                    socket.data.userId as string,
+                    data.conversationId,
+                    messageToSend._id as string
+                );
+            }
+
             SocketUtils.emitSuccess(socket, "messageSent", messageToSend);
+
         } catch (error) {
             console.error("Error sending message:", error);
             SocketUtils.emitError(socket, "messageSent");

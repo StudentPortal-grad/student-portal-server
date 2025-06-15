@@ -37,7 +37,7 @@ router.get(
 // Get users with filtering, sorting, and pagination
 router.get(
   '/',
-  authorize('superadmin', 'admin', 'faculty'),
+  // authorize('superadmin', 'admin', 'faculty'),
   validate(userValidation.getUsersQuery),
   UserController.getUsers
 );
@@ -45,7 +45,7 @@ router.get(
 // Get specific user by ID
 router.get(
   '/:userId',
-  authorize('superadmin', 'admin', 'faculty'),
+  // authorize('superadmin', 'admin', 'faculty'), // For getting profiles in mobile app search
   validate(userValidation.getUserById, 'params'),
   UserController.getUserById
 );

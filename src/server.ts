@@ -1,12 +1,8 @@
 import { httpServer } from "./config/app";
-import { config } from "dotenv";
+import { config } from "./config";
 import connection from "./config/db";
 
-config();
-
-/* global process */
-
-const port = process.env.PORT || 3000;
+const port = config.port;
 
 process.on("uncaughtException", (error: Error) => {
     console.log("We handle it there", error);
