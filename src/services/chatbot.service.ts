@@ -73,6 +73,7 @@ export class ChatbotService {
                     { userId: userId, role: 'member' },
                     { userId: chatbotUser._id, role: 'admin' },
                 ],
+                groupImage: chatbotUser.profilePicture,
                 createdBy: chatbotUser._id,
                 name: `${this.CHATBOT_NAME}`,
                 description: 'محادثة مع المساعد الذكي للحصول على المساعدة والإجابة على استفساراتك',

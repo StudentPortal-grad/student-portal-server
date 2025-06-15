@@ -116,6 +116,7 @@ export const handleMessageEvents = (socket: Socket) => {
                             message: populatedBotMessage.toObject(),
                             conversationId: data.conversationId,
                         });
+
                     }
                 } catch (e) {
                     console.error("Chatbot processing error:", e);
@@ -304,7 +305,12 @@ export const handleMessageEvents = (socket: Socket) => {
             });
 
             if (existingConversation) {
-                return SocketUtils.emitError(socket, "conversationStartFailed", "A conversation with this user already exists.");
+                await existingConversation.populate([
+                    { path: 'participants', select: 'name profilePicture status lastSeen' },
+                    { path: 'lastMessage', populate: { path: 'senderId', select: 'name profilePicture' } }
+                ]);
+                socket.emit('conversationStarted', existingConversation);
+                return;
             }
 
             const newConversation = new Conversation({

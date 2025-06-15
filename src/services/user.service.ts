@@ -46,7 +46,6 @@ export class UserService {
     // Add field selection
     paginationOptions.select = '_id name email role createdAt';
 
-
     return await DbOperations.findWithPagination(
       User,
       queryObj,
