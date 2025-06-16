@@ -12,6 +12,7 @@ import {
   AuthorizationError,
 } from '../utils/errors';
 import { ResourceService } from '../services/resource.service';
+import notificationService from '../services/notification.service';
 
 const resourceService = new ResourceService();
 
@@ -209,7 +210,7 @@ export const createResource = async (
     } else if (req.file.mimetype.startsWith('audio/')) {
       fileType = 'audio';
     } else if (req.file.mimetype === 'application/pdf') {
-      fileType = 'document'; // Or 'pdf' if your model/enum supports it distinctly
+      fileType = 'document';
     } else if (
       req.file.mimetype === 'application/msword' ||
       req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
@@ -232,16 +233,52 @@ export const createResource = async (
       visibility,
       category,
       uploader: new Types.ObjectId(userId),
-      community,
+      community: community ? new Types.ObjectId(community) : undefined,
     };
 
     // Create resource
     const resource = await Resource.create(resourceData);
 
+    // Create notification for resource creator
+    await notificationService.createNotification(
+      new Types.ObjectId(userId),
+      'resource_created',
+      `You shared a new resource: ${title}`,
+      {
+        action: 'created',
+        timestamp: new Date()
+      }
+    );
+
+    // Notify all users about the new resource
+    const allUsers = await User.find().select('_id');
+    for (const user of allUsers) {
+      // Skip notification for the resource creator since they already got one
+      if (user._id.toString() !== userId) {
+        await notificationService.createNotification(
+          user._id,
+          'new_resource_shared',
+          `New ${category} resource shared: ${title}`,
+          {
+            action: 'created',
+            timestamp: new Date()
+          }
+        );
+      }
+    }
+
     res.success({ resource }, 'Resource created successfully', 201);
-  } catch (_error) {
+  } catch (error) {
+    console.error('Error creating resource:', error);
+    if (error instanceof AppError) {
+      return next(error);
+    }
     next(
-      new AppError('Failed to create resource', 500, ErrorCodes.INTERNAL_ERROR)
+      new AppError(
+        error instanceof Error ? error.message : 'Failed to create resource',
+        500,
+        ErrorCodes.INTERNAL_ERROR
+      )
     );
   }
 };
@@ -295,7 +332,7 @@ export const updateResource = async (
       updateData.fileUrl = req.file.path;
       updateData.fileSize = req.file.size;
       updateData.mimeType = req.file.mimetype;
-      updateData.checksum = req.file.filename; // Cloudinary public_id
+      updateData.checksum = req.file.filename;
       updateData.originalFileName = req.file.originalname;
 
       // Infer fileType from mimetype
@@ -307,7 +344,7 @@ export const updateResource = async (
       } else if (req.file.mimetype.startsWith('audio/')) {
         fileType = 'audio';
       } else if (req.file.mimetype === 'application/pdf') {
-        fileType = 'document'; // Or 'pdf' if your model/enum supports it distinctly for resources
+        fileType = 'document';
       } else if (
         req.file.mimetype === 'application/msword' ||
         req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
@@ -324,7 +361,7 @@ export const updateResource = async (
     if (description !== undefined) updateData.description = description;
     if (visibility !== undefined) updateData.visibility = visibility;
     if (category !== undefined) updateData.category = category;
-    if (community !== undefined) updateData.community = community; // Ensure community can be nullified if passed as null
+    if (community !== undefined) updateData.community = community;
 
     // Process tags if provided
     if (tags) {
@@ -332,7 +369,7 @@ export const updateResource = async (
         ? tags
         : tags.split(',').map((tag: string) => tag.trim());
     } else if (req.body.hasOwnProperty('tags') && tags === null) {
-      updateData.tags = []; // Allow clearing tags by sending null or empty array
+      updateData.tags = [];
     }
 
     // Check if there's anything to update
@@ -346,6 +383,17 @@ export const updateResource = async (
       id,
       updateData,
       { new: true, runValidators: true }
+    ) as NonNullable<typeof resource>;
+
+    // Create notification for resource update
+    await notificationService.createNotification(
+      new Types.ObjectId(userId),
+      'resource_updated',
+      `You updated the resource: ${updatedResource.title}`,
+      {
+        action: 'updated',
+        timestamp: new Date()
+      }
     );
 
     // If a new file was uploaded and an old file existed, try to delete the old file from Cloudinary
@@ -359,7 +407,6 @@ export const updateResource = async (
           `Failed to delete old resource file ${oldFilePublicId} from Cloudinary:`,
           cloudinaryError
         );
-        // Do not fail the overall request if Cloudinary deletion fails, but log it.
       }
     }
 
@@ -556,6 +603,17 @@ export const voteResource = async (
 
     await resource.vote(new Types.ObjectId(userId), voteType);
 
+    // Create notification for resource vote
+    await notificationService.createNotification(
+      resource.uploader,
+      'resource_voted',
+      `Someone ${voteType}ed your resource: ${resource.title}`,
+      {
+        action: 'voted',
+        timestamp: new Date()
+      }
+    );
+
     res.success(
       {
         upvotes: resource.upvotesCount,
@@ -603,6 +661,20 @@ export const reportResource = async (
 
     await resource.report(new Types.ObjectId(userId), reason);
 
+    // Notify admins about reported resource
+    const admins = await User.find({ role: { $in: ['admin', 'superadmin'] } });
+    for (const admin of admins) {
+      await notificationService.createNotification(
+        admin._id,
+        'resource_reported',
+        `Resource "${resource.title}" has been reported`,
+        {
+          action: 'reported',
+          timestamp: new Date()
+        }
+      );
+    }
+
     res.success(null, 'Resource reported successfully');
   } catch (error) {
     next(
@@ -645,6 +717,17 @@ export const commentResource = async (
 
     // Add comment
     await resource.addComment(new Types.ObjectId(userId), content);
+
+    // Create notification for new comment
+    await notificationService.createNotification(
+      resource.uploader,
+      'resource_commented',
+      `Someone commented on your resource: ${resource.title}`,
+      {
+        action: 'commented',
+        timestamp: new Date()
+      }
+    );
 
     res.success(
       { message: 'Comment added successfully' },
@@ -844,6 +927,17 @@ export const trackDownload = async (
 
     // Increment download count
     await resource.incrementDownloads();
+
+    // Create notification for resource download
+    await notificationService.createNotification(
+      resource.uploader,
+      'resource_downloaded',
+      `Someone downloaded your resource: ${resource.title}`,
+      {
+        action: 'downloaded',
+        timestamp: new Date()
+      }
+    );
 
     res.success(
       { downloads: resource.interactionStats.downloads },

@@ -29,6 +29,10 @@ const NotificationSchema = new Schema<INotification>(
         ref: 'Event',
       },
     },
+    action: {
+      type: String,
+      enum: ['created', 'updated', 'deleted', 'voted', 'commented', 'reported', 'downloaded'],
+    },
   },
   { timestamps: true }
 );

@@ -215,15 +215,19 @@ export interface IMessage extends Document {
 }
 
 export interface INotification extends Document {
+    _id: Types.ObjectId;
     userId: Types.ObjectId;
     type: string;
     content: string;
-    status: "read" | "unread";
-    timestamp: Date;
+    status: 'read' | 'unread';
     metadata?: {
         event_id?: Types.ObjectId;
-        [key: string]: any;
+        action?: 'created' | 'updated' | 'deleted' | 'voted' | 'commented' | 'reported' | 'downloaded';
+        timestamp?: Date;
     };
+    action?: 'created' | 'updated' | 'deleted' | 'voted' | 'commented' | 'reported' | 'downloaded';
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 export interface IAttachment {
