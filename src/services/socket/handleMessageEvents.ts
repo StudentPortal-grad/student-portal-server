@@ -301,7 +301,7 @@ export const handleMessageEvents = (socket: Socket) => {
 
             const existingConversation = await Conversation.findOne({
                 type: 'DM',
-                participants: { $all: [senderId, recipientId] }
+                'participants.userId': { $all: [senderId, recipientId] }
             });
 
             if (existingConversation) {
@@ -315,8 +315,11 @@ export const handleMessageEvents = (socket: Socket) => {
 
             const newConversation = new Conversation({
                 type: 'DM',
-                participants: [senderId, recipientId],
-                'metadata.createdBy': senderId,
+                participants: [
+                    { userId: senderId, role: 'member' },
+                    { userId: recipientId, role: 'member' },
+                ],
+                createdBy: senderId,
                 'metadata.lastActivity': new Date(),
             });
 
@@ -334,28 +337,35 @@ export const handleMessageEvents = (socket: Socket) => {
                 .populate('participants', 'name profilePicture status lastSeen')
                 .populate({ path: 'lastMessage', populate: { path: 'senderId', select: 'name profilePicture' } });
 
+            if (!populatedConversation) {
+                return SocketUtils.emitError(socket, "conversationStartFailed", "Failed to create and retrieve conversation.");
+            }
+
+            const cleanConversation = populatedConversation.toObject();
+            const messageToSend = cleanConversation.lastMessage;
+
             // Notify sender that conversation has started
-            socket.emit('conversationStarted', populatedConversation);
+            socket.emit('conversationStarted', cleanConversation);
 
             // Notify recipient of new conversation/message request
-            socket.to(recipientId).emit('newConversation', populatedConversation);
+            socket.to(recipientId).emit('newConversation', cleanConversation);
 
             // Also send the message to the recipient
-            if (populatedConversation && populatedConversation.lastMessage) {
+            if (messageToSend) {
                 socket.to(recipientId).emit('newMessage', {
-                    message: populatedConversation.lastMessage,
-                    conversationId: populatedConversation._id.toString()
+                    message: messageToSend,
+                    conversationId: cleanConversation._id.toString()
                 });
             }
 
             await ConversationUtils.processNewMessage(
-                newConversation,
+                newConversation, // Pass original Mongoose object to utility function
                 socket.data.userId as string,
                 newConversation._id.toString(),
                 newMessage._id.toString()
             );
 
-            SocketUtils.emitSuccess(socket, "messageSent", newMessage);
+            SocketUtils.emitSuccess(socket, "messageSent", messageToSend);
 
         } catch (error) {
             console.error("Error starting conversation:", error);

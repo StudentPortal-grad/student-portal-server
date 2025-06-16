@@ -13,6 +13,7 @@ declare global {
 
 export class SearchService {
 
+  // TODO: Search about part of the user names not working
   static async globalSearch(query: string): Promise<object> {
     if (!query || query.trim().length < 2) {
       throw new AppError(

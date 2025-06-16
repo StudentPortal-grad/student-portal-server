@@ -105,4 +105,12 @@ export const conversationValidation = {
       'any.required': 'Search query is required',
     }),
   }).unknown(true),
+
+  // Delete conversation validation
+  deleteConversation: Joi.object({
+    id: objectId.required().messages({
+      'any.required': 'Conversation ID is required',
+      'any.invalid': 'Invalid conversation ID format',
+    }),
+  }),
 };

@@ -10,6 +10,7 @@ import {
   updateRecentConversation,
   removeFromRecentConversations,
   leaveConversation,
+  deleteConversation,
   searchConversations,
 } from '@controllers/conversation.controller';
 import { authenticate } from '@middleware/auth';
@@ -32,6 +33,13 @@ router.post(
 
 // Get all conversations for the current user
 router.get('/', getConversations);
+
+// Delete a conversation and its messages
+router.delete(
+  '/:id',
+  validate(conversationValidation.deleteConversation, "params"),
+  deleteConversation
+);
 
 // Get recent conversations
 router.get('/recent', getRecentConversations);
@@ -65,7 +73,7 @@ router.patch(
   updateRecentConversation
 );
 
-// Remove conversation from recent list
-router.delete('/recent/:id', removeFromRecentConversations);
+// Leaving
+// router.delete('/:id', removeFromRecentConversations);
 
 export default router;

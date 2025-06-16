@@ -1,20 +1,16 @@
+import { pathsToModuleNameMapper } from 'ts-jest';
+import tsconfig from './tsconfig.json' assert { type: 'json' };
+
+const moduleNameMapper = pathsToModuleNameMapper(tsconfig.compilerOptions.paths, { prefix: '<rootDir>/src/' });
+
 /** @type {import('ts-jest').JestConfigWithTsJest} **/
 export default {
+  preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
-  transform: {
-    '^.+\.tsx?$': ['ts-jest', {}],
-  },
+  moduleDirectories: ['node_modules', 'src'],
   moduleNameMapper: {
-    '^@config/(.*)$': '<rootDir>/src/config/$1',
-    '^@routes/(.*)$': '<rootDir>/src/routes/$1',
-    '^@controllers/(.*)$': '<rootDir>/src/controllers/$1',
-    '^@services/(.*)$': '<rootDir>/src/services/$1',
-    '^@repositories/(.*)$': '<rootDir>/src/repositories/$1',
-    '^@utils/(.*)$': '<rootDir>/src/utils/$1',
-    '^@middleware/(.*)$': '<rootDir>/src/middleware/$1',
-    '^@validators/(.*)$': '<rootDir>/src/validators/$1',
-    '^@validations/(.*)$': '<rootDir>/src/validations/$1',
-    '^@models/(.*)$': '<rootDir>/src/models/$1'
+    ...moduleNameMapper,
+    '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   // Increase timeout for socket tests
   testTimeout: 60000,

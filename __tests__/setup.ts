@@ -18,7 +18,7 @@ export const mockResponse = () => {
   res.status = jest.fn().mockReturnValue(res);
   res.json = jest.fn().mockReturnValue(res);
   res.send = jest.fn().mockReturnValue(res);
-  
+
   // Add custom response methods used in the application
   res.success = jest.fn().mockReturnValue(res as any);
   res.paginated = jest.fn().mockReturnValue(res as any);
@@ -27,7 +27,7 @@ export const mockResponse = () => {
   res.badRequest = jest.fn().mockReturnValue(res as any);
   res.validationError = jest.fn().mockReturnValue(res as any);
   res.internalError = jest.fn().mockReturnValue(res as any);
-  
+
   return res as CustomResponse;
 };
 
@@ -82,7 +82,7 @@ export const setupTestDB = () => {
   beforeAll(() => {
     // Mock mongoose connect method
     jest.spyOn(mongoose, 'connect').mockImplementation(() => Promise.resolve(mongoose));
-    
+
     // Create a mock connection object
     const mockConnection = {
       collections: {},

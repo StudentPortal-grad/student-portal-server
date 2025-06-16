@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Conversation from '../models/Conversation';
+import Message from '../models/Message';
 import User from '../models/User';
 import { Types } from 'mongoose';
 import { AppError, ErrorCodes } from '../utils/appError';
@@ -705,65 +706,67 @@ export const updateRecentConversation = async (
  * Remove conversation from recent list
  * @route DELETE /api/v1/conversation/recent/:id
  */
-export const removeFromRecentConversations = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-    try {
-        const { id } = req.params;
-        const userId = req.user?._id;
+export const removeFromRecentConversations = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction) => {
+    const { id: conversationId } = req.params;
+    const userId = req.user?._id;
 
-        if (!userId) {
-      return next(
-        new AppError('User not authenticated', 401, ErrorCodes.UNAUTHORIZED)
+    if (!userId) {
+      throw new AppError('User not authenticated', HttpStatus.UNAUTHORIZED, ErrorCodes.UNAUTHORIZED);
+    }
+
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      throw new AppError('Conversation not found', HttpStatus.NOT_FOUND, ErrorCodes.NOT_FOUND);
+    }
+
+    const isParticipant = conversation.participants.some(p => p.userId.equals(userId));
+    if (!isParticipant) {
+      throw new AppError('You are not a member of this conversation', HttpStatus.FORBIDDEN, ErrorCodes.FORBIDDEN);
+    }
+
+    if (conversation.type === 'DM') {
+      // --- DM Deletion: Delete for all participants ---
+      const participantIds = conversation.participants.map(p => p.userId);
+
+      await Conversation.findByIdAndDelete(conversationId);
+      await Message.deleteMany({ conversationId: conversationId });
+      await User.updateMany(
+        { _id: { $in: participantIds } },
+        { $pull: { recentConversations: { conversationId: new Types.ObjectId(conversationId) } } }
       );
-        }
 
-        // Validate conversation ID
-        if (!Types.ObjectId.isValid(id)) {
-      return next(
-        new AppError(
-          'Invalid conversation ID',
-          400,
+      res.success(null, 'DM Conversation deleted successfully');
+
+    } else if (conversation.type === 'GroupDM') {
+      // --- Group Leaving: Remove only the current user ---
+      if (conversation.createdBy.equals(userId)) {
+        throw new AppError(
+          'Owner cannot leave the group using this action. You must delete the group entirely via the DELETE /conversations/:id endpoint.',
+          HttpStatus.BAD_REQUEST,
           ErrorCodes.VALIDATION_ERROR
-        )
-      );
-        }
-
-        const result = await User.updateOne(
-            { _id: userId },
-            {
-                $pull: {
-                    recentConversations: {
-                        conversationId: id,
-                    },
-                },
-            }
         );
+      }
 
-        if (result.modifiedCount === 0) {
-      return next(
-        new AppError(
-          'Conversation not found in recent list',
-          404,
-          ErrorCodes.NOT_FOUND
-        )
+      // 1. Remove user from conversation's participants list
+      await Conversation.updateOne(
+        { _id: conversationId },
+        { $pull: { participants: { userId: userId } } }
       );
-        }
 
-        res.success(null, 'Conversation removed from recent list');
-    } catch (error) {
-    console.error('Error removing from recent conversations:', error);
-    next(
-      new AppError(
-        'Failed to remove from recent conversations',
-        500,
-        ErrorCodes.INTERNAL_ERROR
-      )
-    );
+      // 2. Remove conversation from user's recent list
+      await User.updateOne(
+        { _id: userId },
+        { $pull: { recentConversations: { conversationId: new Types.ObjectId(conversationId) } } }
+      );
+      
+      res.success(null, 'Successfully left the group conversation');
+    } else {
+      throw new AppError('This action is not supported for this conversation type', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
+    }
   }
-};
+);
 
 /**
  * Search recent conversations by name
@@ -868,5 +871,72 @@ export const searchConversations = asyncHandler(
       { conversations: filteredConversations },
       'Conversations search results'
     );
+  }
+);
+
+/**
+ * Delete a conversation and its messages
+ * @route DELETE /v1/conversations/:id
+ */
+export const deleteConversation = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction) => {
+    const { id: conversationId } = req.params;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      throw new AppError(
+        'User not authenticated',
+        HttpStatus.UNAUTHORIZED,
+        ErrorCodes.UNAUTHORIZED
+      );
+    }
+
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      throw new AppError(
+        'Conversation not found',
+        HttpStatus.NOT_FOUND,
+        ErrorCodes.NOT_FOUND
+      );
+    }
+
+    // Authorization: User must be a participant.
+    const participant = conversation.participants.find(p => p.userId.equals(userId));
+    if (!participant) {
+      throw new AppError(
+        'You are not a participant of this conversation',
+        HttpStatus.FORBIDDEN,
+        ErrorCodes.FORBIDDEN
+      );
+    }
+
+    // For GroupDM, only the owner can delete the entire conversation.
+    if (conversation.type === 'GroupDM' && !conversation.createdBy.equals(userId)) {
+      throw new AppError(
+        'Only the group owner can delete this conversation. You can leave the group instead.',
+        HttpStatus.FORBIDDEN,
+        ErrorCodes.FORBIDDEN
+      );
+    }
+
+    // --- Deletion Process ---
+    const participantIds = conversation.participants.map(p => p.userId);
+
+    // 1. Delete the conversation itself
+    await Conversation.findByIdAndDelete(conversationId);
+
+    // 2. Delete all associated messages
+    await Message.deleteMany({ conversationId: conversationId });
+
+    // 3. Remove the conversation from all participants' recent conversation lists
+    await User.updateMany(
+      { _id: { $in: participantIds } },
+      { $pull: { recentConversations: { conversationId: new Types.ObjectId(conversationId) } } }
+    );
+
+    // TODO: Emit a socket event to notify clients to remove the conversation
+
+    res.success(null, 'Conversation deleted successfully');
   }
 );
