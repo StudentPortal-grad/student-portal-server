@@ -292,7 +292,7 @@ export const handleMessageEvents = (socket: Socket) => {
                 return;
             }
 
-            const { recipientId, content } = data;
+            const { recipientId } = data;
             const senderId = socket.data.userId;
 
             if (senderId === recipientId) {
@@ -323,15 +323,7 @@ export const handleMessageEvents = (socket: Socket) => {
                 'metadata.lastActivity': new Date(),
             });
 
-            const newMessage: IMessage = new Message({
-                senderId,
-                conversationId: newConversation._id,
-                content,
-            });
-
-            newConversation.lastMessage = newMessage._id as Types.ObjectId;
-
-            await Promise.all([newConversation.save(), newMessage.save()]);
+            await newConversation.save();
 
             const populatedConversation: IConversation | null = await Conversation.findById(newConversation._id)
                 .populate('participants', 'name profilePicture status lastSeen')
@@ -342,30 +334,12 @@ export const handleMessageEvents = (socket: Socket) => {
             }
 
             const cleanConversation = populatedConversation.toObject();
-            const messageToSend = cleanConversation.lastMessage;
 
             // Notify sender that conversation has started
             socket.emit('conversationStarted', cleanConversation);
 
             // Notify recipient of new conversation/message request
             socket.to(recipientId).emit('newConversation', cleanConversation);
-
-            // Also send the message to the recipient
-            if (messageToSend) {
-                socket.to(recipientId).emit('newMessage', {
-                    message: messageToSend,
-                    conversationId: cleanConversation._id.toString()
-                });
-            }
-
-            await ConversationUtils.processNewMessage(
-                newConversation, // Pass original Mongoose object to utility function
-                socket.data.userId as string,
-                newConversation._id.toString(),
-                newMessage._id.toString()
-            );
-
-            SocketUtils.emitSuccess(socket, "messageSent", messageToSend);
 
         } catch (error) {
             console.error("Error starting conversation:", error);

@@ -91,7 +91,7 @@ export const handleFriendEvents = (socket: Socket) => {
             await updateFriendshipRecords(
                 socket.data.userId,
                 data.senderId,
-                conversation._id as string
+                conversation._id.toString()
             );
 
             // Notify sender if online

@@ -70,7 +70,9 @@ export const userValidation = {
     search: Joi.string().allow(''),
     status: Joi.string().valid('online', 'offline', 'idle', 'dnd'),
     sortBy: Joi.string().valid('createdAt', 'name', 'email', 'role'),
-    sortOrder: Joi.string().valid('asc', 'desc')
+    sortOrder: Joi.string().valid('asc', 'desc'),
+    populateFollowers: Joi.boolean(),
+    populateFollowing: Joi.boolean(),
   }),
 
   getSiblingStudentsQuery: Joi.object({
@@ -81,9 +83,15 @@ export const userValidation = {
     sortOrder: Joi.string().valid('asc', 'desc')
   }),
 
-  getUserById: Joi.object({
-    userId: Joi.string().required(),
-  }),
+  getUserById: {
+    params: Joi.object({
+      userId: Joi.string().required(),
+    }),
+    query: Joi.object({
+      populateFollowers: Joi.boolean(),
+      populateFollowing: Joi.boolean(),
+    }),
+  },
 
   createUser: Joi.object({
     name: Joi.string().required(),
@@ -151,5 +159,10 @@ export const userValidation = {
   suspendUser: Joi.object({
     reason: Joi.string().required().min(5).max(500),
     duration: Joi.number().integer().min(1).max(365).optional(),
+  }),
+
+  getMe: Joi.object({
+    populateFollowers: Joi.boolean(),
+    populateFollowing: Joi.boolean(),
   }),
 };

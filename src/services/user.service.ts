@@ -22,6 +22,8 @@ export class UserService {
       status,
       sortBy = 'createdAt',
       sortOrder = 'desc',
+      populateFollowers,
+      populateFollowing,
       ...filters
     } = query;
 
@@ -37,14 +39,31 @@ export class UserService {
       ];
     }
 
+    // Add conditional population
+    const populatePaths: any[] = [];
+    if (populateFollowers === 'true') {
+      populatePaths.push({
+        path: 'followers',
+        select: '_id name username profilePicture'
+      });
+    }
+    if (populateFollowing === 'true') {
+      populatePaths.push({
+        path: 'following',
+        select: '_id name username profilePicture'
+      });
+    }
+
     const paginationOptions = getPaginationOptions({
-      ...query,
+      page: query.page,
+      limit: query.limit,
       sortBy,
       sortOrder,
+      populate: populatePaths.length > 0 ? populatePaths : undefined,
     });
 
     // Add field selection
-    paginationOptions.select = '_id name email role createdAt';
+    paginationOptions.select = '_id name email role createdAt followers following';
 
     return await DbOperations.findWithPagination(
       User,
@@ -102,12 +121,34 @@ export class UserService {
    * @param fields - The fields to select (optional)
    * @returns The user object
    */
-  static async getUserById(userId: Types.ObjectId, fields?: string[]) {
+  static async getUserById(
+    userId: Types.ObjectId,
+    fields?: string[],
+    options: { populateFollowers?: boolean; populateFollowing?: boolean } = {}
+  ) {
+    const { populateFollowers, populateFollowing } = options;
     // If fields are provided, use them; otherwise, select only the UI-needed fields
     const selectFields = fields?.length
       ? fields.join(' ')
       : '_id name email role createdAt profilePicture profile status level';
-    const user = await User.findById(userId).select(selectFields);
+
+    let query = User.findById(userId).select(selectFields);
+
+    if (populateFollowers) {
+      query = query.populate({
+        path: 'followers',
+        select: '_id name username profilePicture'
+      });
+    }
+
+    if (populateFollowing) {
+      query = query.populate({
+        path: 'following',
+        select: '_id name username profilePicture'
+      });
+    }
+
+    const user = await query;
     if (!user) {
       throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
     }

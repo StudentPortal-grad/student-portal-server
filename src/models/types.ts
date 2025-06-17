@@ -104,6 +104,13 @@ export interface IUser extends Document {
     hasChatbotConversation?: boolean;
     chatbotConversationId?: Types.ObjectId;
 
+    // Followers/Following/Blocking
+    followers?: Types.ObjectId[];
+    following?: Types.ObjectId[];
+    blockedUsers?: Types.ObjectId[];
+    followersCount?: number;
+    followingCount?: number;
+
     // Instance methods
     generateAuthToken(): string;
     comparePassword(candidatePassword: string): Promise<boolean>;

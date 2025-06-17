@@ -235,6 +235,24 @@ const UserSchema = new Schema<IUser>(
                 },
             },
         ],
+        followers: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "Users",
+            },
+        ],
+        following: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "Users",
+            },
+        ],
+        blockedUsers: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "Users",
+            },
+        ],
         recentConversations: [
             {
                 _id: false,
@@ -358,6 +376,19 @@ UserSchema.index({ "mutedConversations.conversationId": 1 });
 
 // Add text index for searching
 UserSchema.index({ name: 'text', username: 'text', universityEmail: 'text' });
+
+// Virtuals for followers and following counts
+UserSchema.virtual("followersCount").get(function () {
+    return this.followers?.length || 0;
+});
+
+UserSchema.virtual("followingCount").get(function () {
+    return this.following?.length || 0;
+});
+
+// Ensure virtuals are included when converting to JSON/object
+UserSchema.set("toJSON", { virtuals: true });
+UserSchema.set("toObject", { virtuals: true });
 
 // Pre-save middleware for password validation and hashing
 UserSchema.pre("save", async function (next) {
