@@ -30,11 +30,11 @@ const findOrCreateDmConversation = async (currentUserId: Types.ObjectId, recipie
         throw new AppError("Cannot start a conversation with yourself", HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
     }
 
-    // Find existing DM conversation
+    // Find existing DM conversation and populate participants
     let conversation = await Conversation.findOne({
         type: 'DM',
         'participants.userId': { $all: [currentUserId, recipient._id] }
-    });
+    }).populate('participants.userId', 'name profilePicture status lastSeen');
 
     if (conversation) {
         return { conversation, isNew: false };
@@ -59,6 +59,9 @@ const findOrCreateDmConversation = async (currentUserId: Types.ObjectId, recipie
             },
         }
     );
+    
+    // Populate the newly created conversation
+    await conversation.populate('participants.userId', 'name profilePicture status lastSeen');
 
     return { conversation, isNew: true };
 };
@@ -140,7 +143,7 @@ export const getMessages = asyncHandler(async (req: Request, res: Response, _nex
             _id: id,
             "participants.userId": userId,
             status: "active",
-        });
+        }).populate('participants.userId', 'name profilePicture status lastSeen');
     }
 
     // 2. If no conversation is found, treat 'id' as a user ID to find/create a DM
@@ -157,18 +160,13 @@ export const getMessages = asyncHandler(async (req: Request, res: Response, _nex
     }
 
     // 3. Fetch messages for the determined conversation
-    const { messages, pagination } = await fetchAndPaginateMessages(conversation._id.toString(), req.query);
+    const { messages, pagination } = await fetchAndPaginateMessages(conversation!._id.toString(), req.query);
 
     // 4. Update user's read status
-    await updateReadStatus(userId, conversation._id.toString());
+    await updateReadStatus(userId, conversation!._id.toString());
 
-    // 5. Send response
-    // For existing DM conversations found via user ID, include the conversation object
-    if (req.params.conversationId !== conversation._id.toString()) {
-        res.success({ messages, pagination, conversation }, 'Messages retrieved successfully');
-    } else {
-        res.paginated(messages, pagination, 'Messages retrieved successfully');
-    }
+    // 5. Send response, always including the conversation object
+    res.success({ messages, pagination, conversation }, 'Messages retrieved successfully');
 });
 
 /**
