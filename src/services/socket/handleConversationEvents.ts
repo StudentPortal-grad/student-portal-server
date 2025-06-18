@@ -14,7 +14,7 @@ export const handleConversationEvents = (socket: Socket) => {
         try {
             // Create conversation and prepare participant operations in parallel
             const participantIds = [socket.data.userId, ...data.participants];
-            
+
             // Create conversation document
             const conversationPromise = Conversation.create({
                 type: data?.type || "GroupDM",
@@ -53,7 +53,7 @@ export const handleConversationEvents = (socket: Socket) => {
                 { path: "participants.userId", select: "name profilePicture" },
                 { path: "createdBy", select: "name profilePicture" }
             ]);
-            
+
             // Convert to plain object for socket transmission
             const conversationToSend = populatedConversation.toObject ? populatedConversation.toObject() : populatedConversation;
 
@@ -91,6 +91,7 @@ export const handleConversationEvents = (socket: Socket) => {
             // Use lean() for faster query execution and projection to limit fields
             const conversations = await Conversation.find({
                 "participants.userId": socket.data.userId,
+                "metadata.totalMessages": { $gt: 0 },
                 status: "active",
             })
                 .populate("participants.userId", "name profilePicture status")
@@ -108,7 +109,7 @@ export const handleConversationEvents = (socket: Socket) => {
             });
         }
     });
-    
+
     // Add new event for getting conversation messages with pagination and sorting
     socket.on("getConversationMessages", async (data, _callback) => {
         try {
@@ -285,7 +286,7 @@ export const handleConversationEvents = (socket: Socket) => {
                         }
                     }
                 },
-                
+
                 // Update all new users to add the conversation to their recentConversations
                 {
                     updateMany: {
@@ -303,7 +304,7 @@ export const handleConversationEvents = (socket: Socket) => {
                     }
                 }
             ];
-            
+
             // Execute all operations in a single database call
             await Conversation.bulkWrite([bulkOperations[0]]);
             await User.bulkWrite([bulkOperations[1]]);
@@ -316,7 +317,7 @@ export const handleConversationEvents = (socket: Socket) => {
                 },
                 { path: "createdBy", select: "name profilePicture" },
             ]);
-            
+
             // Convert to plain object for socket transmission
             const conversationToSend = updatedConversation.toObject ? updatedConversation.toObject() : updatedConversation;
 
