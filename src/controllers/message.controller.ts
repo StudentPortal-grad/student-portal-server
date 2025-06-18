@@ -167,12 +167,8 @@ export const getMessages = asyncHandler(async (req: Request, res: Response, _nex
     await updateReadStatus(userId, conversation!._id.toString());
 
     // 5. Send response
-    if (messages.length > 0) {
-        res.success({ messages, pagination, conversation }, 'Messages retrieved successfully');
-    } else {
-        // If no messages, do not include the conversation object in the response.
-        res.success({ messages, pagination }, 'Messages retrieved successfully');
-    }
+    res.success({ messages, pagination, conversation }, 'Messages retrieved successfully');
+
 });
 
 /**
