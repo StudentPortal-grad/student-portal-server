@@ -3,6 +3,7 @@ import { IUser } from "./types";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { generateUsernameFromEmail } from "../utils/helpers";
 
 /* global process */
 interface IFriendship {
@@ -389,6 +390,25 @@ UserSchema.virtual("followingCount").get(function () {
 // Ensure virtuals are included when converting to JSON/object
 UserSchema.set("toJSON", { virtuals: true });
 UserSchema.set("toObject", { virtuals: true });
+
+// Pre-save middleware for generating username if not provided
+UserSchema.pre<IUser>("save", async function (next) {
+    if (this.isNew && !this.username) {
+        let username;
+        let isUnique = false;
+        const UserModel = this.constructor as any;
+
+        while (!isUnique) {
+            username = generateUsernameFromEmail(this.email);
+            const existingUser = await UserModel.findOne({ username });
+            if (!existingUser) {
+                isUnique = true;
+            }
+        }
+        this.username = username!;
+    }
+    next();
+});
 
 // Pre-save middleware for password validation and hashing
 UserSchema.pre("save", async function (next) {
