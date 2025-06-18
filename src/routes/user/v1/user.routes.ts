@@ -3,16 +3,15 @@ import { authenticate, authorize } from '@middleware/auth';
 import { validate } from '@middleware/validate';
 import { userValidation } from '@validations/userValidation';
 import { UserController } from '@controllers/user.controller';
+import * as blockValidation from '@validations/block.validation';
+import * as followValidation from '@validations/follow.validation';
+import * as blockController from '@controllers/block.controller';
+import * as followController from '@controllers/follow.controller';
+import { checkBlocked } from '@middleware/checkBlocked';
+import { preventSelfAction } from '@middleware/preventSelfAction.middleware';
 import meRoutes from './me.routes';
 import { uploadProfilePicture } from '@utils/uploadService';
 import friendRoutes from './friend.routes';
-import * as blockValidation from '@validations/block.validation';
-import * as blockController from '@controllers/block.controller';
-
-import * as followController from '@controllers/follow.controller';
-import * as followValidation from '@validations/follow.validation';
-import { checkBlocked } from '@middleware/checkBlocked';
-
 
 const router = Router();
 
@@ -139,19 +138,21 @@ router.patch(
 router.patch(
   '/:userId/block',
   validate(blockValidation.blockUser.params, 'params'),
+  preventSelfAction,
   blockController.blockUser
 );
 
 router.patch(
   '/:userId/unblock',
   validate(blockValidation.unblockUser.params, 'params'),
+  preventSelfAction,
   blockController.unblockUser
 );
 
 // Follow management
 
-router.post('/:userId/follow', validate(followValidation.followUser.params, 'params'), checkBlocked, followController.followUser);
-router.post('/:userId/unfollow', validate(followValidation.unfollowUser.params, 'params'), checkBlocked, followController.unfollowUser);
+router.post('/:userId/follow', validate(followValidation.followUser.params, 'params'), preventSelfAction, checkBlocked, followController.followUser);
+router.post('/:userId/unfollow', validate(followValidation.unfollowUser.params, 'params'), preventSelfAction, checkBlocked, followController.unfollowUser);
 
 // Get followers/following
 router.get('/:userId/followers', validate(followValidation.getFollowers.params, 'params'), validate(followValidation.getFollowers.query, 'query'), checkBlocked, followController.getFollowers);

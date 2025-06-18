@@ -11,12 +11,14 @@ import {
   removeFromRecentConversations,
   leaveConversation,
   deleteConversation,
+  clearConversationHistory,
   searchConversations,
 } from '@controllers/conversation.controller';
 import { authenticate } from '@middleware/auth';
 import { validate } from '@middleware/validate';
 import { conversationValidation } from '@validations/conversation.validation';
-import { uploadGroupImage } from '@utils/uploadService';
+import { uploadGroupImage, uploadMessageAttachments } from '@utils/uploadService';
+import { sendAttachment } from '@controllers/message.controller';
 
 const router = express.Router();
 
@@ -63,6 +65,9 @@ router.delete('/:id/members/:memberId', removeGroupMember);
 // Leave a conversation
 router.put('/:id/leave', leaveConversation);
 
+// Clear conversation history
+router.delete('/:id/clear', clearConversationHistory);
+
 // Update group image for a conversation
 router.patch('/:id/image', uploadGroupImage, updateGroupImage);
 
@@ -71,6 +76,13 @@ router.patch(
   '/recent/:id',
   validate(conversationValidation.updateRecentConversation),
   updateRecentConversation
+);
+
+// Send Message
+router.post(
+  "/:conversationId/message",
+  uploadMessageAttachments,
+  sendAttachment
 );
 
 // Leaving

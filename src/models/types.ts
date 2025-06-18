@@ -111,6 +111,10 @@ export interface IUser extends Document {
     followersCount?: number;
     followingCount?: number;
 
+    // For API responses
+    isFollowed?: boolean;
+    isBlocked?: boolean;
+
     // Instance methods
     generateAuthToken(): string;
     comparePassword(candidatePassword: string): Promise<boolean>;

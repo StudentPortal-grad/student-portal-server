@@ -11,7 +11,7 @@ export class UserController {
    */
   static getUsers = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      const { data, pagination } = await UserService.getUsers(req.query);
+      const { data, pagination } = await UserService.getUsers(req.query, req.user);
       res.paginated(data, pagination, 'Users retrieved successfully');
     }
   );
@@ -43,6 +43,7 @@ export class UserController {
 
       const result = await UserService.getUserById(
         new Types.ObjectId(req.params.userId),
+        req.user,
         selectFields,
         {
           populateFollowers: populateFollowers === 'true',
@@ -190,7 +191,8 @@ export class UserController {
       const { populateFollowers, populateFollowing } = req.query;
       const result = await UserService.getUserById(
         req.user!._id,
-        undefined, // No specific fields selection for getMe, can be adapted if needed
+        req.user!._id,
+        undefined, // No specific fields selection for getMe
         {
           populateFollowers: populateFollowers === 'true',
           populateFollowing: populateFollowing === 'true',
