@@ -59,7 +59,7 @@ const findOrCreateDmConversation = async (currentUserId: Types.ObjectId, recipie
             },
         }
     );
-    
+
     // Populate the newly created conversation
     await conversation.populate('participants.userId', 'name profilePicture status lastSeen');
 
@@ -152,7 +152,8 @@ export const getMessages = asyncHandler(async (req: Request, res: Response, _nex
         conversation = dmConversation;
 
         if (isNew) {
-            // For a new conversation, return the conversation doc and empty messages
+            // For a new conversation, return the conversation doc and empty messages.
+            // It's crucial for the client to receive the new conversation object.
             const pagination = getPaginationMetadata(0, { page: 1, limit: 20, sortBy: 'createdAt', sortOrder: 'desc' } as ParsedPaginationOptions);
             res.success({ messages: [], pagination, conversation }, 'Conversation created successfully');
             return;
@@ -165,8 +166,13 @@ export const getMessages = asyncHandler(async (req: Request, res: Response, _nex
     // 4. Update user's read status
     await updateReadStatus(userId, conversation!._id.toString());
 
-    // 5. Send response, always including the conversation object
-    res.success({ messages, pagination, conversation }, 'Messages retrieved successfully');
+    // 5. Send response
+    if (messages.length > 0) {
+        res.success({ messages, pagination, conversation }, 'Messages retrieved successfully');
+    } else {
+        // If no messages, do not include the conversation object in the response.
+        res.success({ messages, pagination }, 'Messages retrieved successfully');
+    }
 });
 
 /**

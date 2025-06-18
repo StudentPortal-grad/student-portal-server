@@ -39,6 +39,33 @@ export const createConversation = asyncHandler(
       );
     }
 
+    // If type is DM, check for existing conversation
+    if (type === 'DM') {
+      if (participants.length !== 1) {
+        throw new AppError('For a DM, exactly one other participant is required.', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
+      }
+      const recipientId = participants[0];
+      if (!Types.ObjectId.isValid(recipientId)) {
+        throw new AppError(`Invalid participant ID: ${recipientId}`, HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
+      }
+      if (userId.equals(recipientId)) {
+        throw new AppError('You cannot create a DM conversation with yourself.', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
+      }
+
+      const allParticipantIds = [userId, new Types.ObjectId(recipientId)];
+      const existingConversation = await Conversation.findOne({
+        type: 'DM',
+        'participants.userId': { $all: allParticipantIds, $size: 2 },
+      }).populate([
+        { path: 'participants.userId', select: 'name profilePicture status lastSeen' },
+        { path: 'createdBy', select: 'name profilePicture' },
+      ]);
+
+      if (existingConversation) {
+        return res.success({ conversation: existingConversation }, 'Conversation already exists.', HttpStatus.OK);
+      }
+    }
+
     // Validate all participant IDs
     for (const id of participants) {
       if (!Types.ObjectId.isValid(id)) {
@@ -50,18 +77,29 @@ export const createConversation = asyncHandler(
       }
     }
 
+    // Determine participant structure based on conversation type
+    let conversationParticipants;
+    if (type === 'DM') {
+        conversationParticipants = [
+            { userId },
+            { userId: new Types.ObjectId(participants[0]) }
+        ];
+    } else { // For GroupDM and other types
+        conversationParticipants = [
+            { userId, role: 'owner', isAdmin: true },
+            ...participants
+              .filter((id: string) => id !== userId.toString())
+              .map((id: string) => ({
+                userId: new Types.ObjectId(id),
+                role: 'member',
+              })),
+        ];
+    }
+
     // Create conversation document
     const conversation = await Conversation.create({
       type,
-      participants: [
-        { userId, role: 'owner', isAdmin: true },
-        ...participants
-          .filter((id: string) => id !== userId.toString())
-          .map((id: string) => ({
-            userId: new Types.ObjectId(id),
-            role: 'member',
-          })),
-      ],
+      participants: conversationParticipants,
       name,
       description,
       groupImage,
@@ -69,16 +107,19 @@ export const createConversation = asyncHandler(
     });
 
     // Update all users in a single batch operation
-    const participantIds = [userId, ...participants];
+    const allParticipantObjectIds = [userId, ...participants.map((id: string) => new Types.ObjectId(id))];
     await User.updateMany(
-      { _id: { $in: participantIds } },
+      { _id: { $in: allParticipantObjectIds } },
       {
         $push: {
           recentConversations: {
-            conversationId: conversation._id,
-            unreadCount: 0,
-            isPinned: false,
-            isMuted: false,
+            $each: [{
+              conversationId: conversation._id,
+              unreadCount: 0,
+              isPinned: false,
+              isMuted: false,
+            }],
+            $position: 0
           },
         },
       }
