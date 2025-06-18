@@ -62,7 +62,8 @@ export const createConversation = asyncHandler(
       ]);
 
       if (existingConversation) {
-        return res.success({ conversation: existingConversation }, 'Conversation already exists.', HttpStatus.OK);
+        res.success({ conversation: existingConversation }, 'Conversation already exists.', HttpStatus.OK);
+        return;
       }
     }
 
