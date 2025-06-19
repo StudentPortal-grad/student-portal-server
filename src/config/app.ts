@@ -9,11 +9,13 @@ import { errorHandler } from '../middleware/errorHandler';
 import routes from '../routes/index';
 import { responseHandler } from 'middleware/responseHandler';
 
-const app: Express = express();
+const app: Express = express() as any;
 const httpServer = createServer(app);
 
 // Initialize socket.io
-initializeSocket(httpServer);
+const io = initializeSocket(httpServer);
+
+app.set('io', io);
 
 app.use(express.json({ limit: '20kb' }));
 app.use(express.urlencoded({ extended: false, limit: '30mb' }));

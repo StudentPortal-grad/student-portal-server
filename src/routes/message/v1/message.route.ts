@@ -3,11 +3,14 @@ import {
     deleteMessage,
     editMessage,
     getMessages,
-    markMessageRead
+    deleteBulkMessages,
+    markMessageRead,
+    sendAttachment
 } from "@controllers/message.controller";
 import { authenticate } from "@middleware/auth";
 import { validate } from "@middleware/validate";
 import { messageValidation } from "@validations/message.validation";
+import { uploadMessageAttachments } from "@utils/uploadService";
 
 const router = express.Router();
 
@@ -33,6 +36,13 @@ router.delete(
     "/:messageId",
     validate(messageValidation.deleteMessage),
     deleteMessage
+);
+
+// Delete multiple messages
+router.delete(
+    '/bulk',
+    validate(messageValidation.deleteBulkMessages),
+    deleteBulkMessages
 );
 
 // Mark messages as read in a conversation

@@ -3,7 +3,7 @@ import { IMessage } from "./types";
 
 interface IAttachment {
     type: string;
-    resource?: string;
+    url?: string;
     thread?: Types.ObjectId;
     fileName?: string;
     fileSize?: number;
@@ -57,7 +57,7 @@ const MessageSchema = new Schema<IMessage>(
                         "audio",
                     ],
                 },
-                resource: String,
+                url: String,
                 fileName: String,
                 fileSize: Number,
                 mimeType: String,
@@ -136,6 +136,9 @@ const MessageSchema = new Schema<IMessage>(
         createdAt: {
             type: Date,
             default: Date.now,
+        },
+        metadata: {
+            type: Schema.Types.Mixed,
         },
     },
     { timestamps: true }

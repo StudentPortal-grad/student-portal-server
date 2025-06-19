@@ -1,9 +1,14 @@
 import { Router } from 'express';
-import { authenticate } from '@middleware/auth';
-import { authorize } from '@middleware/auth';
+import { authenticate, authorize } from '@middleware/auth';
 import { validate } from '@middleware/validate';
 import { userValidation } from '@validations/userValidation';
 import { UserController } from '@controllers/user.controller';
+import * as blockValidation from '@validations/block.validation';
+import * as followValidation from '@validations/follow.validation';
+import * as blockController from '@controllers/block.controller';
+import * as followController from '@controllers/follow.controller';
+import { checkBlocked } from '@middleware/checkBlocked';
+import { preventSelfAction } from '@middleware/preventSelfAction.middleware';
 import meRoutes from './me.routes';
 import { uploadProfilePicture } from '@utils/uploadService';
 import friendRoutes from './friend.routes';
@@ -37,7 +42,7 @@ router.get(
 // Get users with filtering, sorting, and pagination
 router.get(
   '/',
-  authorize('superadmin', 'admin', 'faculty'),
+  // authorize('superadmin', 'admin', 'faculty'),
   validate(userValidation.getUsersQuery),
   UserController.getUsers
 );
@@ -45,8 +50,9 @@ router.get(
 // Get specific user by ID
 router.get(
   '/:userId',
-  authorize('superadmin', 'admin', 'faculty'),
-  validate(userValidation.getUserById, 'params'),
+  // authorize('superadmin', 'admin', 'faculty'), // For getting profiles in mobile app search
+  validate(userValidation.getUserById.params, 'params'),
+  validate(userValidation.getUserById.query, 'query'),
   UserController.getUserById
 );
 
@@ -127,5 +133,39 @@ router.patch(
   validate(userValidation.updateUserRole),
   UserController.updateUserRole
 );
+
+// Block management
+router.patch(
+  '/:userId/block',
+  validate(blockValidation.blockUser.params, 'params'),
+  preventSelfAction,
+  blockController.blockUser
+);
+
+router.patch(
+  '/:userId/unblock',
+  validate(blockValidation.unblockUser.params, 'params'),
+  preventSelfAction,
+  blockController.unblockUser
+);
+
+// Follow management
+
+router.post('/:userId/follow', validate(followValidation.followUser.params, 'params'), preventSelfAction, checkBlocked, followController.followUser);
+router.post('/:userId/unfollow', validate(followValidation.unfollowUser.params, 'params'), preventSelfAction, checkBlocked, followController.unfollowUser);
+
+// Get followers/following
+router.get('/:userId/followers', validate(followValidation.getFollowers.params, 'params'), validate(followValidation.getFollowers.query, 'query'), checkBlocked, followController.getFollowers);
+router.get('/:userId/following', validate(followValidation.getFollowing.params, 'params'), validate(followValidation.getFollowing.query, 'query'), checkBlocked, followController.getFollowing);
+
+// Check following status
+router.get('/:userId/following/:targetUserId', validate(followValidation.isFollowing.params, 'params'), checkBlocked, followController.isFollowing);
+
+// Get mutual followers
+router.get('/:userId/followers/mutual', validate(followValidation.getMutualFollowers.params, 'params'), checkBlocked, followController.getMutualFollowers);
+
+// Get follow suggestions
+router.get('/suggestions', validate(followValidation.getFollowSuggestions.query, 'query'), followController.getFollowSuggestions);
+
 
 export default router;

@@ -2,11 +2,19 @@ import { Socket } from "socket.io";
 import User from "@models/User";
 import Conversation from "@models/Conversation";
 import Message from "@models/Message";
-import { SocketUtils } from "@utils/socketUtils";
-import { ConversationUtils } from "@utils/conversationUtils";
+import { SocketUtils } from "../../utils/socketUtils";
+import { ConversationUtils } from "../../utils/conversationUtils";
+import { ChatbotService } from "../chatbot.service";
+import { IConversation, IMessage } from "../../models/types";
+import { Types } from "mongoose";
 
 interface SendMessageData {
     conversationId: string;
+    content: string;
+}
+
+interface StartMessageData {
+    recipientId: string;
     content: string;
 }
 
@@ -26,7 +34,6 @@ export const handleMessageEvents = (socket: Socket) => {
                 return;
             }
 
-            // Check if user is participant
             if (
                 !(await SocketUtils.isConversationParticipant(
                     socket.data.userId,
@@ -40,18 +47,7 @@ export const handleMessageEvents = (socket: Socket) => {
                 );
             }
 
-            // Create message and update conversation in parallel
-            const messagePromise = Message.create({
-                senderId: socket.data.userId,
-                conversationId: data.conversationId,
-                content: data.content,
-            });
-
-            const conversationPromise = Conversation.findById(data.conversationId);
-
-            // Wait for both operations to complete
-            const [message, conversation] = await Promise.all([messagePromise, conversationPromise]);
-
+            const conversation = await Conversation.findById(data.conversationId);
             if (!conversation) {
                 return SocketUtils.emitError(
                     socket,
@@ -60,49 +56,98 @@ export const handleMessageEvents = (socket: Socket) => {
                 );
             }
 
-            // Use bulkWrite for better performance instead of multiple separate operations
-            // First, prepare the conversation update operation
-            const conversationUpdate = {
-                updateOne: {
-                    filter: { _id: data.conversationId },
-                    update: {
-                        $set: {
-                            lastMessage: message._id,
-                            "metadata.lastActivity": new Date()
-                        },
-                        $inc: { "metadata.totalMessages": 1 }
-                    }
-                }
-            };
-
-            // Execute the bulkWrite operation for the conversation update
-            await Conversation.bulkWrite([conversationUpdate]);
-
-            // Process any additional message-related updates that can't be included in bulkWrite
-            await ConversationUtils.processNewMessage(
-                conversation,
-                socket.data.userId as string,
-                data.conversationId,
-                message._id as string
-            );
-
-            // Populate message for broadcast using Model.populate() instead of a separate query
-            const populatedMessage = await Message.populate(message, {
-                path: "senderId",
-                select: "name profilePicture"
+            // --- Save User's Message ---
+            const userMessage = await Message.create({
+                senderId: socket.data.userId,
+                conversationId: data.conversationId,
+                content: data.content,
             });
 
-            // Convert to plain object for socket transmission
-            const messageToSend = populatedMessage.toObject ?
-                populatedMessage.toObject() : JSON.parse(JSON.stringify(populatedMessage));
+            const populatedUserMessage = await Message.populate(userMessage, {
+                path: "senderId",
+                select: "name profilePicture",
+            });
 
-            // Broadcast to other participants
-            socket.broadcast.to(data.conversationId).emit("newMessage", {
+            const messageToSend = populatedUserMessage.toObject();
+
+            // --- Update Conversation ---
+            const conversationUpdatePromise = Conversation.findByIdAndUpdate(data.conversationId, {
+                lastMessage: userMessage._id,
+                "metadata.lastActivity": new Date(),
+                $inc: { "metadata.totalMessages": 1 },
+            });
+
+            // Emit the user's own message back to them immediately
+            /*socket.emit("newMessage", {
                 message: messageToSend,
                 conversationId: data.conversationId,
-            });
+            });*/
+
+            // Await conversation update before proceeding
+            await conversationUpdatePromise;
+
+            // --- Branch Logic: Chatbot vs. Regular ---
+            if (conversation.type === 'CHATBOT') {
+                // --- Chatbot Logic ---
+                const chatbotUser = await ChatbotService.initializeChatbotUser();
+
+                // Emit typing indicator
+                socket.emit("typing", {
+                    userId: chatbotUser._id.toString(),
+                    conversationId: data.conversationId,
+                    isTyping: true,
+                });
+
+                try {
+                    // Process message and get bot response
+                    const botResponse = await ChatbotService.processUserMessage(
+                        conversation,
+                        userMessage
+                    );
+
+                    if (botResponse && botResponse.message) {
+                        const populatedBotMessage = await Message.populate(botResponse.message, {
+                            path: "senderId",
+                            select: "name profilePicture",
+                        });
+
+                        // Emit bot's message
+                        socket.emit("newMessage", {
+                            message: populatedBotMessage.toObject(),
+                            conversationId: data.conversationId,
+                        });
+
+                    }
+                } catch (e) {
+                    console.error("Chatbot processing error:", e);
+                    // Optionally send an error message to the user
+                } finally {
+                    // Stop typing indicator
+                    socket.emit("typing", {
+                        userId: chatbotUser._id.toString(),
+                        conversationId: data.conversationId,
+                        isTyping: false,
+                    });
+                }
+
+            } else {
+                // --- Regular Message Logic ---
+                // Broadcast to other participants
+                socket.broadcast.to(data.conversationId).emit("newMessage", {
+                    message: messageToSend,
+                    conversationId: data.conversationId,
+                });
+
+                await ConversationUtils.processNewMessage(
+                    conversation,
+                    socket.data.userId as string,
+                    data.conversationId,
+                    messageToSend._id.toString()
+                );
+            }
 
             SocketUtils.emitSuccess(socket, "messageSent", messageToSend);
+
         } catch (error) {
             console.error("Error sending message:", error);
             SocketUtils.emitError(socket, "messageSent");
@@ -238,6 +283,67 @@ export const handleMessageEvents = (socket: Socket) => {
         } catch (error) {
             console.error("Error marking message as read:", error);
             socket.emit("messageMarkedRead", { success: false });
+        }
+    });
+
+    socket.on("startMessage", async (data: StartMessageData, _callback) => {
+        try {
+            if (!SocketUtils.validateRequest(socket, data, ["recipientId", "content"])) {
+                return;
+            }
+
+            const { recipientId } = data;
+            const senderId = socket.data.userId;
+
+            if (senderId === recipientId) {
+                return SocketUtils.emitError(socket, "conversationStartFailed", "You cannot start a conversation with yourself.");
+            }
+
+            const existingConversation = await Conversation.findOne({
+                type: 'DM',
+                'participants.userId': { $all: [senderId, recipientId] }
+            });
+
+            if (existingConversation) {
+                await existingConversation.populate([
+                    { path: 'participants', select: 'name profilePicture status lastSeen' },
+                    { path: 'lastMessage', populate: { path: 'senderId', select: 'name profilePicture' } }
+                ]);
+                socket.emit('conversationStarted', existingConversation);
+                return;
+            }
+
+            const newConversation = new Conversation({
+                type: 'DM',
+                participants: [
+                    { userId: senderId, role: 'member' },
+                    { userId: recipientId, role: 'member' },
+                ],
+                createdBy: senderId,
+                'metadata.lastActivity': new Date(),
+            });
+
+            await newConversation.save();
+
+            const populatedConversation: IConversation | null = await Conversation.findById(newConversation._id)
+                .populate('participants', 'name profilePicture status lastSeen')
+                .populate({ path: 'lastMessage', populate: { path: 'senderId', select: 'name profilePicture' } });
+
+            if (!populatedConversation) {
+                return SocketUtils.emitError(socket, "conversationStartFailed", "Failed to create and retrieve conversation.");
+            }
+
+            const cleanConversation = populatedConversation.toObject();
+
+            // Notify sender that conversation has started
+            socket.emit('conversationStarted', cleanConversation);
+
+            // Notify recipient of new conversation/message request
+            socket.to(recipientId).emit('newConversation', cleanConversation);
+
+        } catch (error) {
+            console.error("Error starting conversation:", error);
+            SocketUtils.emitError(socket, "conversationStartFailed");
         }
     });
 };

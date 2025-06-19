@@ -25,6 +25,7 @@ import { uploadSingleResourceFile } from '@utils/uploadService';
 const router = express.Router();
 
 // Apply authentication middleware to all routes
+// TODO: Bulk Operation
 router.use(authenticate);
 
 // Public routes (still need authentication)

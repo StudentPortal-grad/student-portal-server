@@ -13,6 +13,7 @@ import asyncHandler from '@utils/asyncHandler';
  */
 export const getDashboardStats = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   // Run all queries in parallel for better performance
+  // TODO: Weekly statistics { curr: {mon: 10, tue: 20, }, ... }
   const [
     totalStudents,
     totalFaculty,

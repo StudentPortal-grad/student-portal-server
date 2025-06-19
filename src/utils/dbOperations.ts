@@ -543,7 +543,13 @@ export class DbOperations {
     }
 
     if (options.populate) {
-      queryBuilder.populate(options.populate);
+      if (Array.isArray(options.populate)) {
+        options.populate.forEach(p => {
+          queryBuilder.populate(p);
+        });
+      } else {
+        queryBuilder.populate(options.populate);
+      }
     }
 
     const [data, total] = await Promise.all([
@@ -553,7 +559,13 @@ export class DbOperations {
 
     return {
       data,
-      pagination: getPaginationMetadata(total, options),
+      pagination: getPaginationMetadata(total, {
+        ...options,
+        page,
+        limit,
+        sortBy: options.sortBy || 'createdAt',
+        sortOrder: options.sortOrder || 'desc',
+      }),
     };
   }
 }

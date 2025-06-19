@@ -9,7 +9,7 @@ import { uploadProfilePicture } from '@utils/uploadService';
 const router = Router();
 
 // Profile routes
-router.get('/', UserController.getMe);
+router.get('/', validate(userValidation.getMe, 'query'), UserController.getMe);
 router.patch(
   '/',
   uploadProfilePicture,
@@ -25,4 +25,4 @@ router.post(
   AuthController.changePassword
 );
 
-export default router; 
+export default router;

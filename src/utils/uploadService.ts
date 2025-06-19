@@ -220,6 +220,25 @@ export const uploadDiscussionAttachments = multer({
 
 // --- End New Configuration for Discussion Attachments ---
 
+// --- New Configuration for Message Attachments ---
+const messageAttachmentStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'student_portal/message_attachments',
+    resource_type: 'auto',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'odt', 'mp4', 'mov', 'avi', 'mkv', 'webm', 'mp3', 'wav'],
+  } as any,
+});
+
+export const uploadMessageAttachments = multer({
+  storage: messageAttachmentStorage,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB limit
+  },
+  fileFilter: attachmentFileFilter,
+}).array('attachments', 10);
+
+
 // Specific middleware for community icon and banner
 export const uploadCommunityImages = createUploadMiddleware(
   [

@@ -28,6 +28,10 @@ router.use("/dashboard", dashboardRoutes);
 router.use("/roles", roleRoutes);
 router.use("/notifications", notificationRoutes);
 
+router.get("/", (req, res, next) => {
+    res.success({}, "This is Version 1 of the API", 200)
+});
+
 router.use("*", (req, res, next) => {
     next(
         new AppError(

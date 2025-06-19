@@ -5,21 +5,38 @@ import asyncHandler from '@utils/asyncHandler';
 import { ResponseBuilder, HttpStatus } from '@utils/ApiResponse';
 
 /**
+ * Global search for discussions, resources, and users
+ * @route GET /api/v1/search
+ */
+export const globalSearch = asyncHandler(async (req: Request, res: Response) => {
+  const { q } = req.query;
+
+  if (typeof q !== 'string') {
+    throw new AppError('Search query must be a string.', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
+  }
+
+  const results = await SearchService.globalSearch(q);
+
+  res.success(results, 'Search results retrieved successfully');
+});
+
+
+/**
  * Search for peers
  * @route GET /api/v1/search/peers
  */
 export const searchPeers = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-  const userId = req.user?._id?.toString();
+  const user = req.user;
 
-  if (!userId) {
+  if (!user) {
     throw new AppError('User not authenticated', HttpStatus.UNAUTHORIZED, ErrorCodes.UNAUTHORIZED);
   }
 
   const { query } = req.query;
 
-  const peers = await SearchService.searchPeers(userId, query as string);
+  const peers = await SearchService.searchPeers(user, query as string);
 
-  res.success({ peers }, 'Peers retrieved successfully');
+    res.success({ peers }, 'Peers retrieved successfully');
 });
 
 /**

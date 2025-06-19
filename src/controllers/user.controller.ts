@@ -13,7 +13,7 @@ export class UserController {
    */
   static getUsers = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      const { data, pagination } = await UserService.getUsers(req.query);
+      const { data, pagination } = await UserService.getUsers(req.query, req.user);
       res.paginated(data, pagination, 'Users retrieved successfully');
     }
   );
@@ -40,12 +40,17 @@ export class UserController {
    */
   static getUserById = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      const fields = req.query.fields
-        ? String(req.query.fields).split(',')
-        : undefined;
+      const { fields, populateFollowers, populateFollowing } = req.query;
+      const selectFields = fields ? String(fields).split(',') : undefined;
+
       const result = await UserService.getUserById(
         new Types.ObjectId(req.params.userId),
-        fields
+        req.user,
+        selectFields,
+        {
+          populateFollowers: populateFollowers === 'true',
+          populateFollowing: populateFollowing === 'true'
+        }
       );
       res.success(result, 'User retrieved successfully');
     }
@@ -223,8 +228,17 @@ export class UserController {
    */
   static getMe = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      const user = req.user!;
-      res.success({ user }, 'Profile retrieved successfully');
+      const { populateFollowers, populateFollowing } = req.query;
+      const result = await UserService.getUserById(
+        req.user!._id,
+        req.user!._id,
+        undefined, // No specific fields selection for getMe
+        {
+          populateFollowers: populateFollowers === 'true',
+          populateFollowing: populateFollowing === 'true',
+        }
+      );
+      res.success(result, 'User retrieved successfully');
     }
   );
 

@@ -1,12 +1,9 @@
 import mongoose from 'mongoose';
-
-/* global process */
+import { config } from './index';
 
 const connection = async () => {
   try {
-    await mongoose.connect(
-      (process.env.DB_URI as string) || (process.env.DB_LOCAL as string)
-    );
+    await mongoose.connect(config.mongoose.url);
     console.log(`[database]: Database Connection established!`);
   } catch (error) {
     console.log(`[database]: Database connection error: ${error}`);

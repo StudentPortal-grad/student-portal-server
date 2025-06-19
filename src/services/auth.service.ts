@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { generateHashedOTP, generateUsernameFromEmail } from '@utils/helpers';
 import { IUser } from '../models/types';
 import { UserRepository } from '../repositories/user.repo';
+import { ChatbotService } from './chatbot.service';
 
 export class AuthService {
   /**
@@ -30,7 +31,8 @@ export class AuthService {
     }
 
     // Enforce only one superadmin in the database
-    if (userData.role === 'superadmin') {
+    // Disable For Testing For now
+    /*if (userData.role === 'superadmin') {
       const superadminExists = await User.exists({ role: 'superadmin' });
       if (superadminExists) {
         throw new AppError(
@@ -39,7 +41,7 @@ export class AuthService {
           ErrorCodes.ALREADY_EXISTS
         );
       }
-    }
+    }*/
 
     // Set level only for students, remove for other roles
     const userDataToSave = {
@@ -58,6 +60,12 @@ export class AuthService {
     await user.save();
 
     await EmailService.sendVerificationOTP(user.email, otp);
+
+    // Create chatbot conversation for students
+    if (user.role === 'student') {
+      // TODO: This is now a direct call, no longer queued
+      await ChatbotService.createChatbotConversation(user._id.toString());
+    }
 
     const token = user.generateAuthToken();
     

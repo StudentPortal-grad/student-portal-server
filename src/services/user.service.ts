@@ -6,7 +6,7 @@ import { EmailService } from '../utils/emailService';
 import { generateHashedOTP } from '@utils/helpers';
 import { DbOperations } from '../utils/dbOperations';
 import User from '../models/User';
-import { getPaginationOptions } from '@utils/pagination';
+import { getPaginationOptions, ParsedPaginationOptions } from '@utils/pagination';
 import { NotFoundError } from '../utils/errors';
 import { UploadService } from '../utils/uploadService';
 
@@ -14,13 +14,18 @@ export class UserService {
   /**
    * Get users with filtering, sorting, and pagination
    */
-  static async getUsers(query: any) {
+  // TODO: Get Profile Pic
+  static async getUsers(query: any, currentUser?: IUser) {
     const {
       role,
       search,
       status,
       sortBy = 'createdAt',
       sortOrder = 'desc',
+      populateFollowers,
+      populateFollowing,
+      isFollowed,
+      isBlocked,
       ...filters
     } = query;
 
@@ -36,21 +41,76 @@ export class UserService {
       ];
     }
 
-    const paginationOptions = getPaginationOptions({
-      ...query,
+    // Add conditional population
+    const populatePaths: any[] = [];
+    if (populateFollowers === 'true') {
+      populatePaths.push({
+        path: 'followers',
+        select: '_id name username profilePicture'
+      });
+    }
+    if (populateFollowing === 'true') {
+      populatePaths.push({
+        path: 'following',
+        select: '_id name username profilePicture'
+      });
+    }
+
+    const paginationOptions: ParsedPaginationOptions = getPaginationOptions({
+      page: query.page,
+      limit: query.limit,
       sortBy,
       sortOrder,
+      populate: populatePaths.length > 0 ? populatePaths : undefined,
     });
 
     // Add field selection
-    paginationOptions.select = '_id name email role createdAt';
+    paginationOptions.select = '_id name email role createdAt followers following profilePicture';
+    if (isBlocked === 'true') {
+      paginationOptions.select += ' blockedUsers';
+    }
 
-
-    return await DbOperations.findWithPagination(
+    const result = await DbOperations.findWithPagination(
       User,
       queryObj,
       paginationOptions
     );
+
+    if ((isFollowed === 'true' || isBlocked === 'true') && currentUser && result.data.length > 0) {
+        const followingSet = isFollowed === 'true' 
+            ? new Set(currentUser.following?.map(id => id.toString())) 
+            : new Set();
+
+        const users = result.data.map((user: any) => {
+            const userObj = user.toObject();
+
+            if (isFollowed === 'true') {
+                userObj.isFollowed = followingSet.has(user._id.toString());
+            }
+
+            if (isBlocked === 'true') {
+                const iBlockUser = currentUser.blockedUsers?.some((blockedId: any) => blockedId.equals(user._id)) ?? false;
+                const userBlocksMe = user.blockedUsers?.some((blockedId: any) => blockedId.equals(currentUser._id)) ?? false;
+                userObj.isBlocked = iBlockUser || userBlocksMe;
+            }
+
+            delete userObj.blockedUsers;
+            return userObj;
+        });
+
+        result.data = users;
+    }
+    
+    // Clean up followers array if not requested
+    if (populateFollowers !== 'true') {
+        result.data = result.data.map((user: any) => {
+            const userObj = user.toObject ? user.toObject() : user;
+            delete userObj.followers;
+            return userObj;
+        });
+    }
+
+    return result;
   }
 
   static async getSiblingStudents(currentUser: IUser, query: any) {
@@ -75,12 +135,12 @@ export class UserService {
       const searchRegex = { $regex: search, $options: 'i' };
       queryObj.$or = [
         { name: searchRegex },
-        { username: searchRegex },
         { email: searchRegex },
+        { username: searchRegex },
       ];
     }
 
-    const paginationOptions = getPaginationOptions({
+    const paginationOptions: ParsedPaginationOptions = getPaginationOptions({
       ...query,
       sortBy,
       sortOrder,
@@ -102,16 +162,66 @@ export class UserService {
    * @param fields - The fields to select (optional)
    * @returns The user object
    */
-  static async getUserById(userId: Types.ObjectId, fields?: string[]) {
+  static async getUserById(
+    userId: Types.ObjectId,
+    currentUser?: IUser,
+    fields?: string[],
+    options: { populateFollowers?: boolean; populateFollowing?: boolean } = {}
+  ) {
+    const { populateFollowers, populateFollowing } = options;
     // If fields are provided, use them; otherwise, select only the UI-needed fields
-    const selectFields = fields?.length
+    let selectFields = fields?.length
       ? fields.join(' ')
       : '_id name email role createdAt profilePicture profile status level';
-    const user = await User.findById(userId).select(selectFields);
+
+    // Ensure necessary fields are selected for isFollowed and isBlocked checks
+    if (currentUser) {
+        if (!selectFields.includes('followers')) selectFields += ' followers';
+        if (!selectFields.includes('blockedUsers')) selectFields += ' blockedUsers';
+    }
+
+    let query = User.findById(userId).select(selectFields);
+
+    if (populateFollowers) {
+      query = query.populate({
+        path: 'followers',
+        select: '_id name username profilePicture'
+      });
+    }
+
+    if (populateFollowing) {
+      query = query.populate({
+        path: 'following',
+        select: '_id name username profilePicture'
+      });
+    }
+
+    const user = await query;
     if (!user) {
       throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
     }
-    return { user };
+
+    const userObj = user.toObject();
+
+    if (currentUser) {
+        userObj.isFollowed = user.followers?.some((followerId: any) => followerId.equals(currentUser._id)) ?? false;
+
+        const iBlockUser = currentUser.blockedUsers?.some((blockedId: any) => blockedId.equals(user._id)) ?? false;
+        const userBlocksMe = user.blockedUsers?.some((blockedId: any) => blockedId.equals(currentUser._id)) ?? false;
+        userObj.isBlocked = iBlockUser || userBlocksMe;
+    }
+
+    // Clean up sensitive fields before returning
+    if (userObj.blockedUsers) {
+        delete userObj.blockedUsers;
+    }
+    // Clean up followers if not populated
+    if (!populateFollowers && userObj.followers) {
+        delete userObj.followers;
+    }
+
+
+    return { user: userObj };
   }
 
   /**
@@ -169,9 +279,9 @@ export class UserService {
     }
 
     // Handle profile picture update if it's being changed
-    if (updateData.profilePicture && 
-        user.profilePicture && 
-        user.profilePicture !== updateData.profilePicture) {
+    if (updateData.profilePicture &&
+      user.profilePicture &&
+      user.profilePicture !== updateData.profilePicture) {
       try {
         await UploadService.deleteFile(user.profilePicture);
       } catch (error) {
@@ -413,7 +523,7 @@ export class UserService {
     // Set suspension fields
     user.isSuspended = true;
     user.suspensionReason = suspensionData.reason;
-    
+
     // Set suspension duration if provided
     if (suspensionData.duration) {
       const suspendedUntil = new Date();

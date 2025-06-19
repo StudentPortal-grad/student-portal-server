@@ -1,4 +1,7 @@
+import Discussion from '@models/Discussion';
+import Resource from '@models/Resource';
 import User from '@models/User';
+import { IUser } from '@models/types';
 import { Types } from 'mongoose';
 import { AppError, ErrorCodes } from '@utils/appError';
 import { HttpStatus } from '@utils/ApiResponse';
@@ -9,26 +12,77 @@ declare global {
 }
 
 export class SearchService {
+
+  // TODO: Search about part of the user names not working
+  static async globalSearch(query: string): Promise<object> {
+    if (!query || query.trim().length < 2) {
+      throw new AppError(
+        'Search query must be at least 2 characters long.',
+        HttpStatus.BAD_REQUEST,
+        ErrorCodes.VALIDATION_ERROR
+      );
+    }
+
+    const searchQuery = { $text: { $search: query } };
+    const sortOrder = { score: { $meta: 'textScore' } };
+
+    const [discussions, resources, users] = await Promise.all([
+      Discussion.find(searchQuery)
+        .select({ 
+          title: 1, 
+          content: 1, 
+          creator: 1, 
+          createdAt: 1, 
+          score: { $meta: 'textScore' } 
+        })
+        .populate('creator', 'name profilePicture')
+        .sort(sortOrder)
+        .limit(10)
+        .lean(),
+      Resource.find(searchQuery)
+        .select({ 
+          title: 1, 
+          description: 1, 
+          uploader: 1, 
+          createdAt: 1, 
+          score: { $meta: 'textScore' } 
+        })
+        .populate('uploader', 'name profilePicture')
+        .sort(sortOrder)
+        .limit(10)
+        .lean(),
+      User.find({
+        ...searchQuery,
+        isChatbot: { $ne: true },
+        role: { $nin: ['faculty', 'superadmin'] },
+      })
+        .select({ 
+          name: 1, 
+          username: 1, 
+          profilePicture: 1, 
+          score: { $meta: 'textScore' } 
+        })
+        .sort(sortOrder)
+        .limit(10)
+        .lean(),
+    ]);
+
+    return { discussions, resources, users };
+  }
+
   /**
    * Search for peers
    */
-  static async searchPeers(userId: string, query?: string) {
-    // Get current user's level
-    const currentUser = await User.findById(userId)
-      .select('level')
-      .lean();
-
-    if (!currentUser) {
-      return [];
-    }
+  static async searchPeers(currentUser: IUser, query?: string) {
 
     // Create optimized query with index-friendly conditions
     const searchQuery: any = {
-      _id: { $ne: userId },
+      _id: { $ne: currentUser._id },
       role: 'student',
       $or: [
         { signupStep: 'completed' },
         { signupStep: 'verified' },
+        { signupStep: 'complete' }, // Handle inconsistent data
       ],
       isGraduated: false,
       level: currentUser.level,
@@ -36,19 +90,37 @@ export class SearchService {
 
     // Add text search if query provided
     if (query && query.length > 2) {
-      searchQuery.$or = [
-        ...searchQuery.$or,
-        { name: { $regex: query, $options: 'i' } },
-        { username: { $regex: query, $options: 'i' } },
-        { universityEmail: { $regex: query, $options: 'i' } },
-      ];
+      searchQuery.$text = { $search: query };
     }
 
+    const queryBuilder = User.find(searchQuery);
+
     // Use projection and lean for better performance
-    const peers = await User.find(searchQuery)
-      .select('name username profilePicture level status lastSeen college gpa profile.bio profile.interests')
-      .limit(20)
-      .lean();
+    if (query && query.length > 2) {
+      // When searching, project the score and sort by it
+      queryBuilder
+        .select({
+          name: 1,
+          username: 1,
+          profilePicture: 1,
+          level: 1,
+          status: 1,
+          lastSeen: 1,
+          college: 1,
+          gpa: 1,
+          'profile.bio': 1,
+          'profile.interests': 1,
+          score: { $meta: 'textScore' },
+        })
+        .sort({ score: { $meta: 'textScore' } });
+    } else {
+      // Default projection without search
+      queryBuilder.select(
+        'name username profilePicture level status lastSeen college gpa profile.bio profile.interests'
+      );
+    }
+
+    const peers = await queryBuilder.limit(20).lean();
 
     return peers;
   }
@@ -93,10 +165,10 @@ export class SearchService {
 
     // Add interests filter
     if (filters.interests) {
-      const interestsArray = Array.isArray(filters.interests) 
-        ? filters.interests 
+      const interestsArray = Array.isArray(filters.interests)
+        ? filters.interests
         : [filters.interests];
-      
+
       if (interestsArray.length > 0) {
         filterQuery['profile.interests'] = { $in: interestsArray };
       }

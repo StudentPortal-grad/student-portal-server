@@ -10,12 +10,15 @@ import {
   updateRecentConversation,
   removeFromRecentConversations,
   leaveConversation,
+  deleteConversation,
+  clearConversationHistory,
   searchConversations,
 } from '@controllers/conversation.controller';
 import { authenticate } from '@middleware/auth';
 import { validate } from '@middleware/validate';
 import { conversationValidation } from '@validations/conversation.validation';
-import { uploadGroupImage } from '@utils/uploadService';
+import { uploadGroupImage, uploadMessageAttachments } from '@utils/uploadService';
+import { sendAttachment } from '@controllers/message.controller';
 
 const router = express.Router();
 
@@ -32,6 +35,13 @@ router.post(
 
 // Get all conversations for the current user
 router.get('/', getConversations);
+
+// Delete a conversation and its messages
+router.delete(
+  '/:id',
+  validate(conversationValidation.deleteConversation, "params"),
+  deleteConversation
+);
 
 // Get recent conversations
 router.get('/recent', getRecentConversations);
@@ -55,6 +65,9 @@ router.delete('/:id/members/:memberId', removeGroupMember);
 // Leave a conversation
 router.put('/:id/leave', leaveConversation);
 
+// Clear conversation history
+router.delete('/:id/clear', clearConversationHistory);
+
 // Update group image for a conversation
 router.patch('/:id/image', uploadGroupImage, updateGroupImage);
 
@@ -65,7 +78,14 @@ router.patch(
   updateRecentConversation
 );
 
-// Remove conversation from recent list
-router.delete('/recent/:id', removeFromRecentConversations);
+// Send Message
+router.post(
+  "/:conversationId/message",
+  uploadMessageAttachments,
+  sendAttachment
+);
+
+// Leaving
+// router.delete('/:id', removeFromRecentConversations);
 
 export default router;

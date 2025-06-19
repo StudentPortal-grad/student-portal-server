@@ -49,4 +49,12 @@ export const messageValidation = {
       'any.invalid': 'Invalid conversation ID format',
     }),
   }),
+
+  // Delete bulk messages validation
+  deleteBulkMessages: Joi.object({
+    messageIds: Joi.array().items(objectId).min(1).required().messages({
+      'array.min': 'At least one message ID must be provided.',
+      'any.required': 'An array of message IDs is required.',
+    }),
+  }),
 };

@@ -1,35 +1,36 @@
-export interface PaginationOptions {
+export type PaginationOptions = {
   page?: number;
   limit?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
-  populate?: {
-    path: string;
-    select?: string;
-    populate?: any;
-  } | Array<{
-    path: string;
-    select?: string;
-    populate?: any;
-  }>;
-  select?: string | Record<string, number | boolean | object>;
-}
+  select?: string;
+  populate?: any;
+};
 
-export const getPaginationOptions = (query: any): PaginationOptions => {
+// A more specific type for the return value of getPaginationOptions
+export type ParsedPaginationOptions = Required<
+  Pick<PaginationOptions, 'page' | 'limit' | 'sortBy' | 'sortOrder'>
+> & {
+  select?: string;
+  populate?: any;
+};
+
+export const getPaginationOptions = (query: any): ParsedPaginationOptions => {
   return {
     page: Math.max(1, parseInt(query.page) || 1),
     limit: Math.max(1, Math.min(parseInt(query.limit) || 10, 100)),
     sortBy: query.sortBy || 'createdAt',
-    sortOrder: query.sortOrder === 'asc' ? 'asc' : 'desc'
+    sortOrder: query.sortOrder === 'asc' ? 'asc' : 'desc',
+    select: query.select,
+    populate: query.populate,
   };
 };
 
 export const getPaginationMetadata = (
   total: number,
-  options: PaginationOptions
+  options: ParsedPaginationOptions
 ) => {
-  const page = options.page || 1;
-  const limit = options.limit || 10;
+  const { page, limit } = options;
   const totalPages = Math.ceil(total / limit);
 
   return {

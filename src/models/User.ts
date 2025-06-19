@@ -3,6 +3,7 @@ import { IUser } from "./types";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { generateUsernameFromEmail } from "../utils/helpers";
 
 /* global process */
 interface IFriendship {
@@ -57,13 +58,13 @@ const UserSchema = new Schema<IUser>(
         university: {
             type: String,
             required: function (this: IUser) {
-                return this.signupStep === "completed";
+                return this.signupStep === "completed" && !this.isChatbot;
             },
         },
         college: {
             type: String,
             required: function (this: IUser) {
-                return this.signupStep === "completed";
+                return this.signupStep === "completed" && !this.isChatbot;
             },
         },
         email: {
@@ -74,7 +75,9 @@ const UserSchema = new Schema<IUser>(
         },
         password: {
             type: String,
-            required: true,
+            required: function (this: IUser) {
+                return !this.isChatbot;
+            },
             maxlength: 60,
             minlength: 8,
             select: false,
@@ -233,6 +236,24 @@ const UserSchema = new Schema<IUser>(
                 },
             },
         ],
+        followers: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "Users",
+            },
+        ],
+        following: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "Users",
+            },
+        ],
+        blockedUsers: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "Users",
+            },
+        ],
         recentConversations: [
             {
                 _id: false,
@@ -309,6 +330,29 @@ const UserSchema = new Schema<IUser>(
         fcmToken: {
             type: String,
             default: null,
+        },
+        // Chatbot specific fields
+        isChatbot: {
+            type: Boolean,
+            default: false,
+        },
+        botSettings: {
+            type: {
+                isActive: { type: Boolean, default: true },
+                language: { type: String, enum: ['ar', 'en'], default: 'ar' },
+                personalityType: { type: String, enum: ['formal', 'friendly', 'academic'], default: 'academic' },
+                contextLimit: { type: Number, default: 10 }
+            },
+            default: null
+        },
+        hasChatbotConversation: {
+            type: Boolean,
+            default: false,
+        },
+        chatbotConversationId: {
+            type: Schema.Types.ObjectId,
+            ref: "Conversation",
+            default: null
         }
     },
     {
@@ -330,6 +374,41 @@ UserSchema.index(
 // Add index for friends and muted conversations
 UserSchema.index({ "friends.userId": 1 });
 UserSchema.index({ "mutedConversations.conversationId": 1 });
+
+// Add text index for searching
+UserSchema.index({ name: 'text', username: 'text', universityEmail: 'text' });
+
+// Virtuals for followers and following counts
+UserSchema.virtual("followersCount").get(function () {
+    return this.followers?.length || 0;
+});
+
+UserSchema.virtual("followingCount").get(function () {
+    return this.following?.length || 0;
+});
+
+// Ensure virtuals are included when converting to JSON/object
+UserSchema.set("toJSON", { virtuals: true });
+UserSchema.set("toObject", { virtuals: true });
+
+// Pre-save middleware for generating username if not provided
+UserSchema.pre<IUser>("save", async function (next) {
+    if (this.isNew && !this.username) {
+        let username;
+        let isUnique = false;
+        const UserModel = this.constructor as any;
+
+        while (!isUnique) {
+            username = generateUsernameFromEmail(this.email);
+            const existingUser = await UserModel.findOne({ username });
+            if (!existingUser) {
+                isUnique = true;
+            }
+        }
+        this.username = username!;
+    }
+    next();
+});
 
 // Pre-save middleware for password validation and hashing
 UserSchema.pre("save", async function (next) {

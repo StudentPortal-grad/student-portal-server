@@ -99,6 +99,21 @@ export interface IUser extends Document {
         note?: string;
     }[];
     fcmToken?: string;
+    isChatbot?: boolean;
+    botSettings?: IChatbotSettings;
+    hasChatbotConversation?: boolean;
+    chatbotConversationId?: Types.ObjectId;
+
+    // Followers/Following/Blocking
+    followers?: Types.ObjectId[];
+    following?: Types.ObjectId[];
+    blockedUsers?: Types.ObjectId[];
+    followersCount?: number;
+    followingCount?: number;
+
+    // For API responses
+    isFollowed?: boolean;
+    isBlocked?: boolean;
 
     // Instance methods
     generateAuthToken(): string;
@@ -119,8 +134,25 @@ export interface IUser extends Document {
     getFriendStatus(userId: Types.ObjectId): string | null;
 }
 
+export interface IChatbotSettings {
+    isActive: boolean;
+    language: 'ar' | 'en';
+    personalityType: 'formal' | 'friendly' | 'academic';
+    contextLimit: number;
+}
+
+export interface IChatbotMetadata {
+    totalQuestions: number;
+    averageResponseTime: number;
+    lastProcessingTime: number;
+    preferredLanguage: 'ar' | 'en';
+    contextWindowSize: number;
+}
+
 export interface IConversation extends Document {
-    type: "DM" | "GroupDM";
+    _id: Types.ObjectId;
+    chatbotMetadata?: IChatbotMetadata;
+    type: "DM" | "GroupDM" | "CHATBOT";
     participants: {
         userId: Types.ObjectId;
         role: "owner" | "admin" | "member";
@@ -152,6 +184,7 @@ export interface IConversation extends Document {
     };
     createdAt: Date;
     updatedAt: Date;
+    chatbotSettings?: IChatbotSettings;
 
     // Instance methods
     addParticipant(userId: Types.ObjectId, role?: string): Promise<void>;
@@ -169,6 +202,7 @@ export interface IConversation extends Document {
 }
 
 export interface IMessage extends Document {
+    _id: Types.ObjectId;
     senderId: Types.ObjectId;
     conversationId: Types.ObjectId;
     content?: string;
@@ -212,6 +246,7 @@ export interface IMessage extends Document {
     };
     createdAt: Date;
     updatedAt: Date;
+    metadata?: any;
 }
 
 export interface INotification extends Document {
