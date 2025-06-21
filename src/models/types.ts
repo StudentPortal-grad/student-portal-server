@@ -252,15 +252,22 @@ export interface IMessage extends Document {
 }
 
 export interface INotification extends Document {
+    _id: Types.ObjectId;
     userId: Types.ObjectId;
     type: string;
     content: string;
-    status: "read" | "unread";
-    timestamp: Date;
+    status: 'read' | 'unread';
+    channel: 'fcm' | 'socket' | 'in-app' | 'all';
     metadata?: {
         event_id?: Types.ObjectId;
-        [key: string]: any;
+        action?: 'created' | 'updated' | 'deleted' | 'voted' | 'commented' | 'reported' | 'downloaded';
+        timestamp?: Date;
+        fcmToken?: string;
+        platform?: 'web' | 'mobile';
     };
+    action?: 'created' | 'updated' | 'deleted' | 'voted' | 'commented' | 'reported' | 'downloaded';
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 export interface IAttachment {

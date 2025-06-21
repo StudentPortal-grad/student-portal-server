@@ -5,8 +5,10 @@ import Message from "@models/Message";
 import { SocketUtils } from "../../utils/socketUtils";
 import { ConversationUtils } from "../../utils/conversationUtils";
 import { ChatbotService } from "../chatbot.service";
+import NotificationService from "../notification.service";
 import { IConversation, IMessage } from "../../models/types";
 import { Types } from "mongoose";
+import { getIO } from "../../config/socket";
 
 interface SendMessageData {
     conversationId: string;
@@ -77,12 +79,6 @@ export const handleMessageEvents = (socket: Socket) => {
                 $inc: { "metadata.totalMessages": 1 },
             });
 
-            // Emit the user's own message back to them immediately
-            /*socket.emit("newMessage", {
-                message: messageToSend,
-                conversationId: data.conversationId,
-            });*/
-
             // Await conversation update before proceeding
             await conversationUpdatePromise;
 
@@ -132,21 +128,45 @@ export const handleMessageEvents = (socket: Socket) => {
 
             } else {
                 // --- Regular Message Logic ---
-                // Broadcast to other participants
+                // Get other participants for notifications
+                if (!conversation) {
+                    return SocketUtils.emitError(
+                        socket,
+                        "messageSent",
+                        "Conversation not found"
+                    );
+                }
+                
+                const otherParticipants = conversation.participants
+                    .filter((p: any) => p.userId.toString() !== socket.data.userId)
+                    .map((p: any) => p.userId);
+
+                // Send success response to sender FIRST (before broadcast)
+                SocketUtils.emitSuccess(socket, "messageSent", messageToSend);
+
+                // Then broadcast to other participants
                 socket.broadcast.to(data.conversationId).emit("newMessage", {
                     message: messageToSend,
                     conversationId: data.conversationId,
                 });
 
                 await ConversationUtils.processNewMessage(
-                    conversation,
+                    conversation!,
                     socket.data.userId as string,
                     data.conversationId,
-                    messageToSend._id.toString()
+                    new Types.ObjectId(messageToSend._id.toString())
                 );
-            }
 
-            SocketUtils.emitSuccess(socket, "messageSent", messageToSend);
+                // Create notifications for other participants
+                if (otherParticipants.length > 0) {
+                    await NotificationService.createMessageNotification(
+                        messageToSend,
+                        conversation,
+                        populatedUserMessage.senderId,
+                        otherParticipants
+                    );
+                }
+            }
 
         } catch (error) {
             console.error("Error sending message:", error);
@@ -167,12 +187,12 @@ export const handleMessageEvents = (socket: Socket) => {
             }
 
             // Use findOneAndDelete to reduce queries
-            const message = await Message.findOneAndDelete({
+            const deletedMessage = await Message.findOneAndDelete({
                 _id: data.messageId,
                 senderId: socket.data.userId
             });
 
-            if (!message) {
+            if (!deletedMessage) {
                 return SocketUtils.emitError(
                     socket,
                     "messageDeleted",
@@ -216,7 +236,7 @@ export const handleMessageEvents = (socket: Socket) => {
                     $currentDate: { updatedAt: true }
                 },
                 { new: true }
-            );
+            ).populate('senderId', 'name');
 
             if (!message) {
                 return SocketUtils.emitError(
@@ -270,6 +290,12 @@ export const handleMessageEvents = (socket: Socket) => {
                         "recentConversations.$.unreadCount": 0,
                     },
                 }
+            );
+
+            // Mark conversation notifications as read
+            await NotificationService.markConversationNotificationsAsRead(
+                socket.data.userId,
+                data.conversationId
             );
 
             // Notify other participants

@@ -6,6 +6,8 @@ import { DbOperations } from "@utils/dbOperations";
 import { SocketService } from "@services/socket.service";
 import { SocketErrorService } from "@services/socketError.service";
 import { EventsManager } from '@utils/EventsManager';
+import NotificationService from '@services/notification.service';
+import { Types } from "mongoose";
 
 /* global process */
 
@@ -18,6 +20,7 @@ interface ServerToClientEvents {
     }) => void;
     notification: (data: any) => void;
     newMessage: (data: { message: any; conversationId: string }) => void;
+    messageSent: (data: { success: boolean; message?: any }) => void;
     messageRead: (data: {
         messageId: string;
         conversationId: string;
@@ -29,6 +32,7 @@ interface ServerToClientEvents {
         isTyping: boolean;
     }) => void;
     error: (data: { message: string; code?: string }) => void;
+    unreadCountUpdate: (data: { count: number }) => void;
 
     // New events
     conversationCreated: (data: { conversation: any }) => void;
@@ -196,6 +200,7 @@ const handleNotificationEvents = (
 
 const setupNotificationGlobalListener = (ioInstance: any) => {    
     EventsManager.on('notification:created', async (notification) => {
+      
       // Check how many sockets are in this room
       const sockets = await ioInstance.in(notification.userId.toString()).fetchSockets();
       
@@ -293,6 +298,10 @@ export const initializeSocket = (
 
             socket.join(userId);
 
+            // Automatically join user's notification room
+            // socket.join(userId); // REMOVED: This was causing duplicate connections
+            
+
             // Handle notification events
             socket.on('join-notifications', (joinUserId: string) => {
                 socket.join(joinUserId);
@@ -310,11 +319,16 @@ export const initializeSocket = (
                 // Handle user connection
                 await SocketService.handleUserConnection(userId, socket);
 
+                // Emit unread count on connection
+                await NotificationService.emitUserUnreadCount(new Types.ObjectId(userId));
+
                 // Set up event handlers
                 await SocketService.handleSocket(socket);
 
+                // Handle notification events
+                handleNotificationEvents(socket);
+
                 socket.on("disconnect", async () => {
-                    console.log(`User ${userId} disconnected`);
                     try {
                         await SocketService.handleUserDisconnection(userId);
                     } catch (_error) {

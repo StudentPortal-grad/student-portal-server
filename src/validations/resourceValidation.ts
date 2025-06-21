@@ -84,7 +84,9 @@ export const resourceValidation = {
 
   // Track resource download validation
   trackDownload: Joi.object({
-    resourceId: objectId.required()
+    params: Joi.object({
+      id: objectId.required()
+    })
   }),
 
   // Track resource view validation

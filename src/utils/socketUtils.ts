@@ -147,13 +147,19 @@ export class SocketUtils {
                 .lean();
 
             if (conversations.length > 0) {
-                // Join all rooms in a single operation instead of iterating
+                // Get current rooms to avoid duplicates
+                const currentRooms = Array.from(socket.rooms);
                 const roomIds = conversations.map(c => c._id.toString());
-                socket.join(roomIds);
-                console.log(`User ${userId} joined ${roomIds.length} conversation rooms`);
+                
+                // Filter out rooms the user is already in
+                const newRooms = roomIds.filter(roomId => !currentRooms.includes(roomId));
+                
+                if (newRooms.length > 0) {
+                    socket.join(newRooms);
+                }
             }
         } catch (error) {
-            console.error(`Error joining user ${userId} to conversation rooms:`, error);
+            console.error(`❌ Error joining user ${userId} to conversation rooms:`, error);
         }
     }
 

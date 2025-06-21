@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthorizationError } from '../utils/errors';
-import asyncHandler from '../utils/asyncHandler';
-import { UserService } from '../services/user.service';
+import asyncHandler from '@utils/asyncHandler';
+import { UserService } from '@services/user.service';
 import { Types } from 'mongoose';
+import notificationService from '@services/notification.service';
+
 export class UserController {
   /**
    * @route   GET /v1/users
@@ -80,6 +82,18 @@ export class UserController {
         new Types.ObjectId(req.params.userId),
         req.body
       );
+
+      // Create notification for user update
+      await notificationService.createNotification(
+        new Types.ObjectId(req.params.userId),
+        'PROFILE_UPDATED',
+        'Your profile has been updated',
+        {
+          updatedFields: Object.keys(req.body),
+          updatedBy: req.user?._id
+        }
+      );
+
       res.success(result, 'User updated successfully');
     }
   );
@@ -158,6 +172,19 @@ export class UserController {
         new Types.ObjectId(userId),
         status
       );
+
+      // Create notification for status change
+      await notificationService.createNotification(
+        new Types.ObjectId(userId),
+        'STATUS_CHANGED',
+        `Your account status has been changed to ${status}`,
+        {
+          newStatus: status,
+          changedBy: req.user?._id,
+          changedAt: new Date()
+        }
+      );
+
       res.success({ id: userId, status }, 'User status updated successfully');
     }
   );
@@ -173,6 +200,19 @@ export class UserController {
         new Types.ObjectId(req.params.userId),
         req.body.role
       );
+
+      // Create notification for role change
+      await notificationService.createNotification(
+        new Types.ObjectId(req.params.userId),
+        'ROLE_CHANGED',
+        `Your role has been changed to ${req.body.role}`,
+        {
+          newRole: req.body.role,
+          changedBy: req.user?._id,
+          changedAt: new Date()
+        }
+      );
+
       const user = result.user;
       res.success({
         user: {
@@ -214,6 +254,18 @@ export class UserController {
   static updateMe = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
       const result = await UserService.updateUser(req.user!._id, req.body);
+
+      // Create notification for self-profile update
+      await notificationService.createNotification(
+        req.user!._id,
+        'PROFILE_UPDATED',
+        'You have updated your profile',
+        {
+          updatedFields: Object.keys(req.body),
+          updatedAt: new Date()
+        }
+      );
+
       res.success(result, 'Profile updated successfully');
     }
   );
@@ -230,22 +282,6 @@ export class UserController {
   );
 
   /**
-   * @route   PATCH /v1/users/me/password
-   * @desc    Update current user password
-   */
-  static updateMyPassword = asyncHandler(
-    async (req: Request, res: Response, _next: NextFunction) => {
-      const { currentPassword, newPassword } = req.body;
-      const result = await UserService.updatePassword(
-        req.user!,
-        currentPassword,
-        newPassword
-      );
-      res.success(result, 'Password updated successfully');
-    }
-  );
-
-  /**
    * @route   PATCH /v1/users/me/email
    * @desc    Update current user email
    */
@@ -253,6 +289,18 @@ export class UserController {
     async (req: Request, res: Response, _next: NextFunction) => {
       const { newEmail } = req.body;
       const result = await UserService.initiateEmailChange(req.user!, newEmail);
+
+      // Create notification for email change
+      await notificationService.createNotification(
+        req.user!._id,
+        'EMAIL_CHANGE_INITIATED',
+        'Email change has been initiated. Please check your new email for verification.',
+        {
+          newEmail,
+          initiatedAt: new Date()
+        }
+      );
+
       res.success(result, 'Email change initiated successfully');
     }
   );
