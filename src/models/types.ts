@@ -255,10 +255,13 @@ export interface INotification extends Document {
     type: string;
     content: string;
     status: 'read' | 'unread';
+    channel: 'fcm' | 'socket' | 'in-app' | 'all';
     metadata?: {
         event_id?: Types.ObjectId;
         action?: 'created' | 'updated' | 'deleted' | 'voted' | 'commented' | 'reported' | 'downloaded';
         timestamp?: Date;
+        fcmToken?: string;
+        platform?: 'web' | 'mobile';
     };
     action?: 'created' | 'updated' | 'deleted' | 'voted' | 'commented' | 'reported' | 'downloaded';
     createdAt: Date;

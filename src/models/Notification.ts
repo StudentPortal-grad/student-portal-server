@@ -23,10 +23,20 @@ const NotificationSchema = new Schema<INotification>(
       enum: ['read', 'unread'],
       default: 'unread',
     },
+    channel: {
+      type: String,
+      enum: ['fcm', 'socket', 'in-app', 'all'],
+      default: 'all',
+    },
     metadata: {
       event_id: {
         type: Schema.Types.ObjectId,
         ref: 'Event',
+      },
+      fcmToken: String,
+      platform: {
+        type: String,
+        enum: ['web', 'mobile', 'desktop'],
       },
     },
     action: {
