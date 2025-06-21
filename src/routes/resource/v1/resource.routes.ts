@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate } from '@middleware/auth';
+import { authenticate, authorize } from '@middleware/auth';
 import { validate } from '@middleware/validate';
 import asyncHandler from '@utils/asyncHandler';
 import {
@@ -8,6 +8,7 @@ import {
   createResource,
   updateResource,
   deleteResource,
+  bulkDeleteResources,
   getResourceMetrics,
   voteResource,
   reportResource,
@@ -17,7 +18,8 @@ import {
   trackView,
   getRecommendedResources,
   editComment,
-  deleteComment
+  deleteComment,
+  downloadResource
 } from '@controllers/resource.controller';
 import { resourceValidation } from '../../../validations/resourceValidation';
 import { uploadSingleResourceFile } from '@utils/uploadService';
@@ -25,12 +27,12 @@ import { uploadSingleResourceFile } from '@utils/uploadService';
 const router = express.Router();
 
 // Apply authentication middleware to all routes
-// TODO: Bulk Operation
 router.use(authenticate);
 
 // Public routes (still need authentication)
 router.get('/', validate(resourceValidation.getResources), asyncHandler(getAllResources));
 router.get('/:id', asyncHandler(getResourceById));
+router.get('/:id/download', asyncHandler(downloadResource));
 router.get('/:id/comments', validate(resourceValidation.getResourceComments), asyncHandler(getResourceComments));
 
 // Admin/Dashboard routes
@@ -54,6 +56,13 @@ router.patch(
 router.delete(
   '/:id',
   asyncHandler(deleteResource)
+);
+
+router.delete(
+  '/bulk',
+  authorize('admin', 'superadmin', 'moderator'),
+  validate(resourceValidation.bulkDeleteResources),
+  asyncHandler(bulkDeleteResources)
 );
 
 // Resource interaction routes

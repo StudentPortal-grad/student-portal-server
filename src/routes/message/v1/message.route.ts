@@ -52,4 +52,12 @@ router.post(
     markMessageRead
 );
 
+// Send an attachment in a conversation
+router.post(
+    "/conversation/:conversationId/attachments",
+    uploadMessageAttachments,
+    validate(messageValidation.sendAttachment),
+    sendAttachment
+);
+
 export default router;

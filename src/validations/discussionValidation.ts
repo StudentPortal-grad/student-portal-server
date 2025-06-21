@@ -1,4 +1,13 @@
 import Joi from 'joi';
+import { Types } from 'mongoose';
+
+// Custom validator for MongoDB ObjectId
+const objectId = Joi.string().custom((value, helpers) => {
+  if (!Types.ObjectId.isValid(value)) {
+    return helpers.error('any.invalid');
+  }
+  return value;
+}, 'MongoDB ObjectId validation');
 
 const attachmentSchema = Joi.object({
   type: Joi.string().valid('document', 'image', 'video', 'audio', 'pdf', 'other', 'poll').required().messages({
@@ -201,6 +210,15 @@ export const discussionValidation = {
         'number.integer': 'Limit must be an integer',
         'number.min': 'Limit must be at least 1',
         'number.max': 'Limit cannot exceed 100'
+      })
+  }),
+
+  bulkDeleteDiscussions: Joi.object({
+    discussionIds: Joi.array().items(objectId).min(1).required()
+      .messages({
+        'array.base': 'discussionIds must be an array',
+        'array.min': 'At least one discussionId is required',
+        'any.required': 'discussionIds is required'
       })
   })
 };

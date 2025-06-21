@@ -115,6 +115,7 @@ const DiscussionSchema = new Schema<IDiscussion>(
     votes: [VoteSchema],
     status: { type: String, enum: ['open', 'closed', 'archived'], default: 'open' },
     reports: [ReportSchema],
+    isPinned: { type: Boolean, default: false },
   },
   {
     timestamps: true,

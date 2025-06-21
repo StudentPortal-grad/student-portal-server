@@ -9,14 +9,31 @@ import { ResponseBuilder, HttpStatus } from '@utils/ApiResponse';
  * @route GET /api/v1/search
  */
 export const globalSearch = asyncHandler(async (req: Request, res: Response) => {
-  // TODO: Make a type query to define what to search for
-  const { q } = req.query;
+  const { q, type } = req.query;
 
   if (typeof q !== 'string') {
     throw new AppError('Search query must be a string.', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
   }
 
-  const results = await SearchService.globalSearch(q);
+  let results;
+  if (!type) {
+    results = await SearchService.globalSearch(q);
+  } else {
+    switch (type) {
+      case 'discussions':
+        results = { discussions: await SearchService.globalDiscussionsSearch(q) };
+        break;
+      case 'resources':
+        results = { resources: await SearchService.globalResourcesSearch(q) };
+        break;
+      case 'users':
+        results = { users: await SearchService.globalUsersSearch(q) };
+        break;
+      default:
+        throw new AppError('Invalid search type', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
+    }
+  }
+
 
   res.success(results, 'Search results retrieved successfully');
 });

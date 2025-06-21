@@ -1,6 +1,7 @@
 import { Socket } from 'socket.io-client';
 import { Server } from 'socket.io';
 import http from 'http';
+import io from 'socket.io-client';
 
 /**
  * Helper utility for socket.io tests
@@ -37,7 +38,7 @@ export class SocketTestHelper {
       throw new Error('HTTP server not listening');
     }
     
-    const socket = require('socket.io-client')(`http://localhost:${address.port}`, {
+    const socket = io(`http://localhost:${address.port}`, {
       transports: ['websocket'],
       forceNew: true
     });

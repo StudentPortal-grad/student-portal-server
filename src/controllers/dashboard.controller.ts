@@ -13,7 +13,6 @@ import asyncHandler from '@utils/asyncHandler';
  */
 export const getDashboardStats = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   // Run all queries in parallel for better performance
-  // TODO: Weekly statistics { curr: {mon: 10, tue: 20, }, ... }
   const [
     totalStudents,
     totalFaculty,
@@ -66,7 +65,7 @@ export const getDashboardStats = asyncHandler(async (req: Request, res: Response
  */
 export const getUserCountHistory = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   const { period = 'month', role } = req.query;
-  
+
   // Determine start date based on period
   const startDate = new Date();
   if (period === 'week') {
@@ -83,7 +82,7 @@ export const getUserCountHistory = asyncHandler(async (req: Request, res: Respon
   const matchStage: any = {
     createdAt: { $gte: startDate }
   };
-  
+
   // Add role filter if specified
   if (role) {
     matchStage.role = role;
@@ -104,7 +103,7 @@ export const getUserCountHistory = asyncHandler(async (req: Request, res: Respon
     { $match: matchStage },
     {
       $group: {
-        _id: { 
+        _id: {
           date: { $dateToString: { format: dateFormat, date: '$createdAt' } },
           role: '$role'
         },
@@ -145,36 +144,36 @@ export const getUserCountHistory = asyncHandler(async (req: Request, res: Respon
 export const getRecentNotifications = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   const { limit = 5 } = req.query;
   const limitNum = parseInt(limit as string, 10);
-  
+
   // Get recent data from each collection (last 30 days)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  
+
   const [recentUsers, recentEvents, recentResources, recentCommunities] = await Promise.all([
     User.find({ createdAt: { $gte: thirtyDaysAgo } })
       .sort({ createdAt: -1 })
       .limit(limitNum)
       .select('name profilePicture role createdAt'),
-      
+
     Event.find({ createdAt: { $gte: thirtyDaysAgo } })
       .sort({ createdAt: -1 })
       .limit(limitNum)
       .select('title dateTime status createdAt')
       .populate('creatorId', 'name profilePicture'),
-      
+
     Resource.find({ createdAt: { $gte: thirtyDaysAgo } })
       .sort({ createdAt: -1 })
       .limit(limitNum)
       .select('title category createdAt')
       .populate('uploader', 'name profilePicture'),
-      
+
     Community.find({ createdAt: { $gte: thirtyDaysAgo } })
       .sort({ createdAt: -1 })
       .limit(limitNum)
       .select('name type createdAt')
       .populate('owner', 'name profilePicture')
   ]);
-  
+
   // Combine and sort all notifications by date
   const allNotifications = [
     ...recentUsers.map(user => ({
@@ -198,11 +197,11 @@ export const getRecentNotifications = asyncHandler(async (req: Request, res: Res
       createdAt: community.createdAt
     }))
   ];
-  
+
   // Sort by date (newest first) and limit
   const sortedNotifications = allNotifications
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .slice(0, limitNum);
-  
+
   res.success({ notifications: sortedNotifications }, 'Recent notifications retrieved successfully');
 });

@@ -314,6 +314,7 @@ export interface IDiscussion extends Document {
     votes: IVote[];
     status: 'open' | 'closed' | 'archived';
     reports: IReport[];
+    isPinned: boolean;
     createdAt: Date;
     updatedAt: Date;
     upvotesCount: number;

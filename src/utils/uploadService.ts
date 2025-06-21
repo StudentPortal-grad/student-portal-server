@@ -255,7 +255,7 @@ export class UploadService {
    * @param folder The folder to upload to
    * @returns The uploaded file URL
    */
-  static async uploadToCloudinary(
+  async uploadToCloudinary(
     file: string,
     folder: string = 'student_portal'
   ): Promise<string> {
@@ -285,16 +285,30 @@ export class UploadService {
    * Delete a file from Cloudinary
    * @param publicId The public ID of the file to delete
    */
-  static async deleteFromCloudinary(publicId: string): Promise<void> {
+  async deleteFile(publicId: string): Promise<any> {
     try {
-      await cloudinary.uploader.destroy(publicId);
+      const result = await cloudinary.uploader.destroy(publicId);
+      return result;
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred during file deletion';
+      console.error(`Failed to delete file ${publicId}:`, error);
       throw new AppError(
-        'Error deleting file from Cloudinary',
+        `Failed to delete file: ${message}`,
         500,
-        ErrorCodes.UPLOAD_ERROR,
-        error
+        ErrorCodes.INTERNAL_ERROR
       );
+    }
+  }
+
+  async deleteFiles(publicIds: string[]): Promise<any> {
+    if (!publicIds || publicIds.length === 0) {
+      return;
+    }
+    try {
+      const result = await cloudinary.api.delete_resources(publicIds);
+      return result;
+    } catch (error) {
+      console.error('Failed to delete files from Cloudinary:', error);
     }
   }
 
@@ -303,26 +317,9 @@ export class UploadService {
    * @param url The Cloudinary URL
    * @returns The public ID
    */
-  static getPublicIdFromUrl(url: string): string {
+  getPublicIdFromUrl(url: string): string {
     const splitUrl = url.split('/');
     const filename = splitUrl[splitUrl.length - 1];
     return `student_portal/${filename.split('.')[0]}`;
-  }
-
-  static async deleteFile(fileUrl: string): Promise<void> {
-    if (!fileUrl || fileUrl === 'https://via.placeholder.com/150') return;
-
-    try {
-      const publicId = this.getPublicIdFromUrl(fileUrl);
-      await cloudinary.uploader.destroy(publicId);
-    } catch (error) {
-      console.error('Error deleting file:', error);
-      throw new AppError(
-        'Error deleting file from storage',
-        500,
-        ErrorCodes.UPLOAD_ERROR,
-        error
-      );
-    }
   }
 }

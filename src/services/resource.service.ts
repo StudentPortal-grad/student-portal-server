@@ -1,9 +1,15 @@
 import Resource from '@models/Resource';
 import { IResource, IComment } from '@models/types';
 import { AppError, ErrorCodes } from '@utils/appError';
+import { UploadService } from '@utils/uploadService';
 import { Types } from 'mongoose';
 
 export class ResourceService {
+  private uploadService: UploadService;
+
+  constructor() {
+    this.uploadService = new UploadService();
+  }
   /**
    * Edit a comment on a resource.
    */
@@ -37,6 +43,36 @@ export class ResourceService {
     comment.content = content;
     await resource.save();
     return resource;
+  }
+
+  /**
+   * Delete a comment from a resource.
+   */
+  async bulkDeleteResources(resourceIds: string[]): Promise<{ deletedCount: number }> {
+    const resourcesToDelete = await Resource.find({
+      _id: { $in: resourceIds.map(id => new Types.ObjectId(id)) }
+    }).select('checksum');
+
+    if (resourcesToDelete.length > 0) {
+      const publicIds = resourcesToDelete
+        .map(resource => resource.checksum)
+        .filter(checksum => checksum && !checksum.includes('placeholder.com'));
+
+      if (publicIds.length > 0) {
+        try {
+          await this.uploadService.deleteFiles(publicIds);
+        } catch (error) {
+          console.error('Error deleting files from Cloudinary:', error);
+          // Decide if you want to throw or just log. For now, we log and continue.
+        }
+      }
+    }
+
+    const result = await Resource.deleteMany({
+      _id: { $in: resourceIds.map(id => new Types.ObjectId(id)) }
+    });
+
+    return { deletedCount: result.deletedCount || 0 };
   }
 
   /**

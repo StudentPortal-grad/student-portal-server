@@ -53,5 +53,10 @@ export const eventValidation = {
   // Update event image validation
   updateEventImage: Joi.object({
     eventImage: Joi.string().uri().required()
+  }),
+
+  // Bulk delete events validation
+  bulkDeleteEvents: Joi.object({
+    eventIds: Joi.array().items(objectId).min(1).required()
   })
 };

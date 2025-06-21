@@ -8,12 +8,11 @@ import { HttpStatus } from '@utils/ApiResponse';
 
 // Import types for socket.io global instance
 declare global {
+  // eslint-disable-next-line no-var
   var io: any;
 }
 
 export class SearchService {
-
-  // TODO: Search about part of the user names not working
   static async globalSearch(query: string): Promise<object> {
     if (!query || query.trim().length < 2) {
       throw new AppError(
@@ -23,51 +22,66 @@ export class SearchService {
       );
     }
 
-    const searchQuery = { $text: { $search: query } };
-    const sortOrder = { score: { $meta: 'textScore' } };
-
     const [discussions, resources, users] = await Promise.all([
-      Discussion.find(searchQuery)
-        .select({ 
-          title: 1, 
-          content: 1, 
-          creator: 1, 
-          createdAt: 1, 
-          score: { $meta: 'textScore' } 
-        })
-        .populate('creator', 'name profilePicture')
-        .sort(sortOrder)
-        .limit(10)
-        .lean(),
-      Resource.find(searchQuery)
-        .select({ 
-          title: 1, 
-          description: 1, 
-          uploader: 1, 
-          createdAt: 1, 
-          score: { $meta: 'textScore' } 
-        })
-        .populate('uploader', 'name profilePicture')
-        .sort(sortOrder)
-        .limit(10)
-        .lean(),
-      User.find({
-        ...searchQuery,
-        isChatbot: { $ne: true },
-        role: { $nin: ['faculty', 'superadmin'] },
-      })
-        .select({ 
-          name: 1, 
-          username: 1, 
-          profilePicture: 1, 
-          score: { $meta: 'textScore' } 
-        })
-        .sort(sortOrder)
-        .limit(10)
-        .lean(),
+      this.globalDiscussionsSearch(query),
+      this.globalResourcesSearch(query),
+      this.globalUsersSearch(query),
     ]);
 
     return { discussions, resources, users };
+  }
+
+  static async globalDiscussionsSearch(query: string) {
+    const searchQuery = { $text: { $search: query } };
+    const sortOrder = { score: { $meta: 'textScore' } };
+
+    return Discussion.find(searchQuery)
+      .select({
+        title: 1,
+        content: 1,
+        creator: 1,
+        createdAt: 1,
+        score: { $meta: 'textScore' },
+      })
+      .populate('creator', 'name profilePicture')
+      .sort(sortOrder)
+      .limit(10)
+      .lean();
+  }
+
+  static async globalResourcesSearch(query: string) {
+    const searchQuery = { $text: { $search: query } };
+    const sortOrder = { score: { $meta: 'textScore' } };
+
+    return Resource.find(searchQuery)
+      .select({
+        title: 1,
+        description: 1,
+        uploader: 1,
+        createdAt: 1,
+        score: { $meta: 'textScore' },
+      })
+      .populate('uploader', 'name profilePicture')
+      .sort(sortOrder)
+      .limit(10)
+      .lean();
+  }
+
+  static async globalUsersSearch(query: string) {
+    const regex = new RegExp(query, 'i'); // i for case-insensitive
+
+    return User.find({
+      $or: [{ name: regex }, { username: regex }],
+      isChatbot: { $ne: true },
+      role: { $nin: ['faculty', 'superadmin', 'chatbot'] },
+    })
+      .select({
+        name: 1,
+        username: 1,
+        profilePicture: 1,
+      })
+      .limit(10)
+      .lean();
   }
 
   /**

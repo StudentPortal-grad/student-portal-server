@@ -108,10 +108,25 @@ export class DiscussionRepository {
   }
 
   /**
+   * Find discussions by query
+   */
+  async find(query: any): Promise<IDiscussion[]> {
+    return Discussion.find(query).exec();
+  }
+
+  /**
    * Delete a discussion by ID
    */
   async deleteById(id: string): Promise<IDiscussion | null> {
     return Discussion.findByIdAndDelete(id).exec();
+  }
+
+  /**
+   * Delete multiple discussions by query
+   */
+  async deleteMany(query: any): Promise<{ deletedCount: number }> {
+    const result = await Discussion.deleteMany(query).exec();
+    return { deletedCount: result.deletedCount };
   }
 
   /**

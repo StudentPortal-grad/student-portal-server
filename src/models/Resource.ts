@@ -73,7 +73,7 @@ const ResourceSchema = new Schema<IResource>(
     visibility: {
       type: String,
       enum: ['public', 'community', 'private'],
-      default: 'community'
+      default: 'public'
     },
     category: {
       type: String,

@@ -1,4 +1,3 @@
-import { Socket } from 'socket.io-client';
 import { handleMessageEvents } from '../../src/services/socket/handleMessageEvents';
 import User from '../../src/models/User';
 import Conversation from '../../src/models/Conversation';

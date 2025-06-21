@@ -1,4 +1,4 @@
-import { Socket } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 import { Server } from 'socket.io';
 import http from 'http';
 import { handleSearchEvents } from '../../src/services/socket/handleSearchEvents';
@@ -17,7 +17,6 @@ jest.mock('../../src/utils/socketUtils', () => ({
 let httpServer: http.Server;
 let ioServer: Server;
 let clientSocket: Socket;
-let serverSocket: any;
 
 beforeAll(() => {
   // Set up HTTP and Socket.IO servers
@@ -27,7 +26,6 @@ beforeAll(() => {
 
   // Set up socket event handlers
   ioServer.on('connection', (socket) => {
-    serverSocket = socket;
     socket.data = { userId: 'user1' };
     handleSearchEvents(socket);
   });
@@ -117,7 +115,7 @@ describe.skip('handleSearchEvents', () => {
 
     it('should search peers successfully without query', (done): void => {
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -141,7 +139,7 @@ describe.skip('handleSearchEvents', () => {
 
     it('should search peers successfully with query', (done): void => {
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -186,7 +184,7 @@ describe.skip('handleSearchEvents', () => {
       } as any);
       
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -217,7 +215,7 @@ describe.skip('handleSearchEvents', () => {
       } as any);
       
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -256,7 +254,7 @@ describe.skip('handleSearchEvents', () => {
 
     it('should search peers by university filter successfully', (done) => {
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -282,7 +280,7 @@ describe.skip('handleSearchEvents', () => {
 
     it('should search peers by level filter successfully', (done) => {
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -308,7 +306,7 @@ describe.skip('handleSearchEvents', () => {
 
     it('should search peers by GPA range filter successfully', (done) => {
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -337,7 +335,7 @@ describe.skip('handleSearchEvents', () => {
 
     it('should search peers by interests filter successfully', (done) => {
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -375,7 +373,7 @@ describe.skip('handleSearchEvents', () => {
       } as any);
       
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -417,7 +415,7 @@ describe.skip('handleSearchEvents', () => {
 
     it('should search recommended peers successfully', (done) => {
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -450,7 +448,7 @@ describe.skip('handleSearchEvents', () => {
       } as any);
       
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -483,7 +481,7 @@ describe.skip('handleSearchEvents', () => {
       } as any);
       
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });

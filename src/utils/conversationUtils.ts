@@ -1,4 +1,5 @@
 import User from "@models/User";
+import { Types } from "mongoose";
 
 /**
  * Utility functions for conversation operations
@@ -14,7 +15,7 @@ export class ConversationUtils {
         const otherParticipants = conversation.participants
             .filter((p: any) => p.userId.toString() !== senderId)
             .map((p: any) => p.userId);
-        
+
         await User.updateMany(
             {
                 _id: { $in: otherParticipants },
@@ -56,9 +57,9 @@ export class ConversationUtils {
      * @param senderId The sender's user ID
      */
     static async addConversationToRecentIfMissing(
-        participantIds: string[], 
-        conversationId: string, 
-        messageId: string, 
+        participantIds: string[],
+        conversationId: string,
+        messageId: string,
         senderId: string
     ) {
         await User.updateMany(
@@ -88,19 +89,19 @@ export class ConversationUtils {
      * @param messageId The message ID
      */
     static async processNewMessage(
-        conversation: any, 
-        senderId: string, 
-        conversationId: string, 
-        messageId: string
+        conversation: any,
+        senderId: string,
+        conversationId: string,
+        _messageId: Types.ObjectId
     ) {
         // Extract participant IDs from the conversation
-        const participantIds = conversation.participants.map((p: any) => 
+        const participantIds = conversation.participants.map((p: any) =>
             p.userId.toString()
         );
-        
+
         // Get other participants (everyone except the sender)
         const otherParticipants = participantIds.filter((id: string) => id !== senderId);
-        
+
         // Prepare bulk operations for better performance
         const bulkOperations = [
             // 1. Update unread counts for other participants
@@ -115,7 +116,7 @@ export class ConversationUtils {
                     }
                 }
             },
-            
+
             // 2. Update sender's recent conversation
             {
                 updateOne: {
@@ -130,7 +131,7 @@ export class ConversationUtils {
                     }
                 }
             },
-            
+
             // 3. Add conversation to recent list for participants missing it - split into two operations
             // 3a. For the sender
             {
@@ -171,7 +172,7 @@ export class ConversationUtils {
                 }
             }
         ];
-        
+
         // Execute all operations in a single database call
         await User.bulkWrite(bulkOperations);
     }

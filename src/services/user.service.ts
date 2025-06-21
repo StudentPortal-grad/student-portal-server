@@ -16,7 +16,6 @@ export class UserService {
   /**
    * Get users with filtering, sorting, and pagination
    */
-  // TODO: Get Profile Pic
   static async getUsers(query: any, currentUser?: IUser) {
     const {
       role,
@@ -302,11 +301,15 @@ export class UserService {
     }
 
     // Handle profile picture update if it's being changed
-    if (updateData.profilePicture &&
+    if (
+      updateData.profilePicture &&
       user.profilePicture &&
-      user.profilePicture !== updateData.profilePicture) {
+      user.profilePicture !== updateData.profilePicture
+    ) {
       try {
-        await UploadService.deleteFile(user.profilePicture);
+        const uploadService = new UploadService();
+        const publicId = uploadService.getPublicIdFromUrl(user.profilePicture);
+        await uploadService.deleteFile(publicId);
       } catch (error) {
         console.error('Error deleting old profile picture:', error);
       }
@@ -316,6 +319,10 @@ export class UserService {
       new: true,
       runValidators: true,
     });
+
+    if (!updatedUser) {
+      throw new AppError('User not found after update', 404, ErrorCodes.NOT_FOUND);
+    }
 
     return { user: updatedUser };
   }
@@ -332,9 +339,11 @@ export class UserService {
     // Delete profile picture if exists
     if (user.profilePicture) {
       try {
-        await UploadService.deleteFile(user.profilePicture);
+        const uploadService = new UploadService();
+        const publicId = uploadService.getPublicIdFromUrl(user.profilePicture);
+        await uploadService.deleteFile(publicId);
       } catch (error) {
-        console.error('Error deleting profile picture:', error);
+        console.error(`Failed to delete profile picture for user ${userId}:`, error);
       }
     }
 

@@ -15,6 +15,7 @@ import {
   updateEventImage,
   createEvent,
   updateEvent,
+  bulkDeleteEvents,
   deleteEvent,
   createOrUpdateRSVP,
   getUserRSVP,
@@ -27,6 +28,7 @@ import {
   validateEventUpdate,
 } from '../../../validators/event.validator';
 import { uploadEventImage } from '../../../utils/uploadService';
+import asyncHandler from '@utils/asyncHandler';
 
 const router = Router();
 
@@ -99,6 +101,7 @@ router.patch(
 );
 
 // DELETE routes
+router.delete('/bulk', validate(eventValidation.bulkDeleteEvents), asyncHandler(bulkDeleteEvents));
 router.delete('/:id', deleteEvent);
 router.delete('/:eventId/rsvp', deleteRSVP);
 

@@ -4,6 +4,7 @@ import { SocketUtils } from '@utils/socketUtils';
 import { AppError, ErrorCodes } from '@utils/appError';
 // Import types for socket.io global instance
 declare global {
+  // eslint-disable-next-line no-var
   var io: any;
 }
 import mongoose, { Types } from 'mongoose';
@@ -106,7 +107,7 @@ export class FriendService {
   /**
    * Update friendship records
    */
-  static async updateFriendshipRecords(userId1: string, userId2: string, conversationId: string) {
+  static async updateFriendshipRecords(userId1: string, userId2: string, conversationId: Types.ObjectId) {
     // Add friend to both users' friends list
     await User.updateOne(
       { _id: userId1 },
@@ -209,7 +210,7 @@ export class FriendService {
     // Create DM conversation and update friendship records
     const conversation = await this.createDMConversation(recipientId, senderId);
 
-    await this.updateFriendshipRecords(recipientId, senderId, conversation._id as string);
+    await this.updateFriendshipRecords(recipientId, senderId, conversation._id);
 
     // Notify sender if online
     if (validation.senderSocketId) {

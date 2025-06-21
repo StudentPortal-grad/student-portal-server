@@ -2,8 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import { DiscussionService, DiscussionQueryParams } from '../services/discussion.service';
 import { Types } from 'mongoose';
 import { AppError, ErrorCodes } from '../utils/appError';
+import { DiscussionRepository } from '../repositories/discussion.repo';
+import { UploadService } from '../utils/uploadService';
 
-const discussionService = new DiscussionService();
+const discussionRepository = new DiscussionRepository();
+const uploadService = new UploadService();
+const discussionService = new DiscussionService(discussionRepository, uploadService);
 
 /**
  * Create a new discussion
@@ -261,6 +265,19 @@ export const deleteDiscussion = async (req: Request, res: Response, next: NextFu
 };
 
 /**
+ * Bulk delete discussions
+ */
+export const bulkDeleteDiscussions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { discussionIds } = req.body;
+    const deletedCount = await discussionService.bulkDeleteDiscussions(discussionIds);
+    res.success({ deletedCount }, `${deletedCount} discussions deleted successfully`);
+  } catch (error) {
+    next(new AppError(error instanceof Error ? error.message : 'An unknown error occurred', 500, ErrorCodes.INTERNAL_ERROR));
+  }
+};
+
+/**
  * Vote on a discussion
  */
 export const voteDiscussion = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -273,15 +290,10 @@ export const voteDiscussion = async (req: Request, res: Response, next: NextFunc
       return next(new AppError('User not authenticated', 401, ErrorCodes.UNAUTHORIZED));
     }
 
-    // Check if discussion exists
-    const discussion = await discussionService.getDiscussionById(id);
-    if (!discussion) {
+    const updatedDiscussion = await discussionService.voteDiscussion(id, userId.toString(), voteType);
+    if (!updatedDiscussion) {
       return next(new AppError('Discussion not found', 404, ErrorCodes.NOT_FOUND));
     }
-
-    // Add vote by passing the fetched discussion document instance
-    const mongooseUserId = new Types.ObjectId(userId as string); // Ensure userId is treated as string for conversion
-    const updatedDiscussion = await discussionService.voteDiscussion(discussion, mongooseUserId, voteType);
     res.success(updatedDiscussion, 'Vote recorded successfully');
   } catch (error) {
     next(new AppError(error instanceof Error ? error.message : 'An unknown error occurred', 500, ErrorCodes.INTERNAL_ERROR));
@@ -335,7 +347,7 @@ export const togglePinDiscussion = async (req: Request, res: Response, next: Nex
       return next(new AppError('You are not authorized to pin discussions', 403, ErrorCodes.FORBIDDEN));
     }
 
-    const discussion = await discussionService.togglePinDiscussion(id, pinned);
+    const discussion = await discussionService.pinDiscussion(id, pinned);
     if (!discussion) {
       return next(new AppError('Discussion not found', 404, ErrorCodes.NOT_FOUND));
     }

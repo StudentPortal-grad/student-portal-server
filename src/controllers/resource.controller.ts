@@ -12,8 +12,10 @@ import {
   AuthorizationError,
 } from '../utils/errors';
 import { ResourceService } from '../services/resource.service';
+import axios from 'axios';
 
 const resourceService = new ResourceService();
+const uploadService = new UploadService();
 
 
 /**
@@ -350,17 +352,12 @@ export const updateResource = async (
 
     // If a new file was uploaded and an old file existed, try to delete the old file from Cloudinary
     if (req.file && oldFilePublicId && oldFilePublicId !== req.file.filename) {
-      try {
-        console.log(`Attempting to delete old resource file from Cloudinary: ${oldFilePublicId}`);
-        await UploadService.deleteFromCloudinary(oldFilePublicId);
-        console.log(`Successfully deleted old resource file: ${oldFilePublicId}`);
-      } catch (cloudinaryError) {
+      await uploadService.deleteFile(oldFilePublicId).catch(cloudinaryError => {
         console.error(
           `Failed to delete old resource file ${oldFilePublicId} from Cloudinary:`,
           cloudinaryError
         );
-        // Do not fail the overall request if Cloudinary deletion fails, but log it.
-      }
+      });
     }
 
     res.success({ resource: updatedResource }, 'Resource updated successfully');
@@ -408,13 +405,10 @@ export const deleteResource = async (
     }
 
     // Delete file from storage if it exists
-    if (resource.fileUrl) {
-      try {
-        await UploadService.deleteFile(resource.fileUrl);
-      } catch (error) {
+    if (resource.checksum) {
+      await uploadService.deleteFile(resource.checksum).catch(error => {
         console.error('Error deleting file:', error);
-        // Continue with resource deletion even if file deletion fails
-      }
+      });
     }
 
     // Delete resource
@@ -424,6 +418,32 @@ export const deleteResource = async (
   } catch (_error) {
     next(
       new AppError('Failed to delete resource', 500, ErrorCodes.INTERNAL_ERROR)
+    );
+  }
+};
+
+/**
+ * Bulk delete resources
+ */
+export const bulkDeleteResources = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { resourceIds } = req.body;
+    const result = await resourceService.bulkDeleteResources(resourceIds);
+    res.success(result, `${result.deletedCount} resources deleted successfully.`);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return next(error);
+    }
+    next(
+      new AppError(
+        error instanceof Error ? error.message : 'Failed to bulk delete resources',
+        500,
+        ErrorCodes.INTERNAL_ERROR
+      )
     );
   }
 };
@@ -933,6 +953,60 @@ export const getRecommendedResources = async (
         error instanceof Error
           ? error.message
           : 'Failed to generate resource recommendations',
+        500,
+        ErrorCodes.INTERNAL_ERROR
+      )
+    );
+  }
+};
+
+/**
+ * Download a resource file
+ */
+export const downloadResource = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      throw new AuthorizationError('User not authenticated');
+    }
+
+    if (!Types.ObjectId.isValid(id)) {
+      throw new ValidationError('Invalid resource ID');
+    }
+
+    const resource = await Resource.findById(id);
+
+    if (!resource) {
+      throw new NotFoundError('Resource not found');
+    }
+
+    // Increment download count asynchronously
+    resource.incrementDownloads().catch(console.error);
+
+    // Fetch the file from the URL
+    const response = await axios({
+      method: 'GET',
+      url: resource.fileUrl,
+      responseType: 'stream',
+    });
+
+    // Set headers to trigger download
+    res.setHeader('Content-Disposition', `attachment; filename="${resource.originalFileName}"`);
+    res.setHeader('Content-Type', resource.mimeType);
+
+    // Pipe the file stream to the response
+    response.data.pipe(res);
+
+  } catch (error) {
+    next(
+      new AppError(
+        error instanceof Error ? error.message : 'Failed to download resource',
         500,
         ErrorCodes.INTERNAL_ERROR
       )

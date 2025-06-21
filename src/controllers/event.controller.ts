@@ -13,6 +13,9 @@ import {
 import { generateEventRecommendations } from '@utils/recommendationUtils';
 import asyncHandler from '../utils/asyncHandler';
 import { IEventDocument } from '../interfaces/event.interface';
+import { EventService } from '../services/event.service';
+
+const eventService = new EventService();
 
 /**
  * Get all events with pagination, filtering and sorting
@@ -593,44 +596,9 @@ export const updateEvent = asyncHandler(
   }
 );
 
-/**
- * Delete an event
- */
-export const deleteEvent = asyncHandler(
-  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
-    const { id } = req.params;
-    const userId = req.user?.id;
 
-    if (!userId) {
-      res.unauthorized('User not authenticated');
-      return;
-    }
 
-    if (!Types.ObjectId.isValid(id)) {
-      res.badRequest('Invalid event ID');
-      return;
-    }
 
-    const event = await Event.findById(id).exec();
-    if (!event) {
-      res.notFound('Event not found');
-      return;
-    }
-
-    if (event.creatorId.toString() !== userId) {
-      res.failure(
-        'Not authorized to delete this event',
-        ErrorCodes.FORBIDDEN,
-        HttpStatus.FORBIDDEN
-      );
-      return;
-    }
-
-    await Event.deleteOne({ _id: id });
-
-    res.success(null, 'Event deleted successfully');
-  }
-);
 
 /**
  * Create or update RSVP for an event
@@ -784,3 +752,29 @@ export const getEventRSVPs = asyncHandler(
     res.success({ rsvps: event.rsvps || [] }, 'RSVPs retrieved successfully');
   }
 );
+
+/**
+ * Delete an event
+ */
+export const deleteEvent = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    await eventService.deleteEvent(id);
+    res.success(null, 'Event deleted successfully.');
+  }
+);
+
+/**
+ * Bulk delete events
+ */
+export const bulkDeleteEvents = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { eventIds } = req.body;
+    const result = await eventService.bulkDeleteEvents(eventIds);
+    res.success(result, `${result.deletedCount} events deleted successfully.`);
+  }
+);
+
+
+
+

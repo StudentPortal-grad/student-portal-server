@@ -1,9 +1,8 @@
-import { Socket } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 import { Server } from 'socket.io';
 import http from 'http';
 import { handleFriendEvents } from '../../src/services/socket/handleFriendEvents';
 import User from '../../src/models/User';
-import Conversation from '../../src/models/Conversation';
 import { SocketUtils } from '../../src/utils/socketUtils';
 
 // Mock dependencies
@@ -19,7 +18,7 @@ jest.mock('../../src/utils/socketUtils', () => ({
 let httpServer: http.Server;
 let ioServer: Server;
 let clientSocket: Socket;
-let serverSocket: any;
+
 
 beforeAll(() => {
   // Set up HTTP and Socket.IO servers
@@ -29,7 +28,7 @@ beforeAll(() => {
 
   // Set up socket event handlers
   ioServer.on('connection', (socket) => {
-    serverSocket = socket;
+
     socket.data = { userId: 'user1' };
     handleFriendEvents(socket);
   });
@@ -93,7 +92,7 @@ describe.skip('handleFriendEvents', () => {
 
     it('should send a friend request successfully', (done): void => {
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -120,7 +119,7 @@ describe.skip('handleFriendEvents', () => {
       (SocketUtils.validateObjectId as jest.Mock).mockReturnValueOnce(false);
       
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -151,7 +150,7 @@ describe.skip('handleFriendEvents', () => {
       });
       
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -192,7 +191,7 @@ describe.skip('handleFriendEvents', () => {
 
     it('should accept a friend request successfully', (done): void => {
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -219,7 +218,7 @@ describe.skip('handleFriendEvents', () => {
       (SocketUtils.validateObjectId as jest.Mock).mockReturnValueOnce(false);
       
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -250,7 +249,7 @@ describe.skip('handleFriendEvents', () => {
       });
       
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -294,7 +293,7 @@ describe.skip('handleFriendEvents', () => {
 
     it('should retrieve friend requests successfully', (done): void => {
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -327,7 +326,7 @@ describe.skip('handleFriendEvents', () => {
       } as any);
       
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -370,7 +369,7 @@ describe.skip('handleFriendEvents', () => {
 
     it('should retrieve friends list successfully', (done): void => {
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });
@@ -403,7 +402,7 @@ describe.skip('handleFriendEvents', () => {
       } as any);
       
       // Connect client socket
-      clientSocket = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
+      clientSocket = io(`http://localhost:${(httpServer.address() as any).port}`, {
         transports: ['websocket'],
         forceNew: true
       });

@@ -57,4 +57,11 @@ export const messageValidation = {
       'any.required': 'An array of message IDs is required.',
     }),
   }),
+
+  // Send attachment validation
+  sendAttachment: Joi.object({
+    content: Joi.string().trim().max(5000).optional().messages({
+        'string.max': 'Message content cannot exceed 5000 characters',
+    }),
+  }),
 };

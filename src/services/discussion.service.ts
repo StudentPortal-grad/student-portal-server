@@ -1,9 +1,10 @@
 import { DiscussionRepository } from '../repositories/discussion.repo';
 import { Types } from 'mongoose';
 import Discussion from '../models/Discussion';
-import { IDiscussion, IReply, IVote } from '../models/types';
+import { IDiscussion, IReply, IVote, IAttachment } from '../models/types';
 import { ICustomPaginateResult } from '../repositories/discussion.repo';
 import { NotFoundError, AuthorizationError } from '../utils/errors';
+import { UploadService } from '../utils/uploadService';
 
 // Use type alias to avoid conflicts with the imported interfaces
 type RepoDiscussion = any;
@@ -21,9 +22,11 @@ export interface DiscussionQueryParams {
 
 export class DiscussionService {
   private discussionRepository: DiscussionRepository;
+  private uploadService: UploadService;
 
-  constructor() {
-    this.discussionRepository = new DiscussionRepository();
+  constructor(discussionRepository: DiscussionRepository, uploadService: UploadService) {
+    this.discussionRepository = discussionRepository;
+    this.uploadService = uploadService;
   }
 
   /**
@@ -32,6 +35,19 @@ export class DiscussionService {
   async createDiscussion(discussion: Partial<IDiscussion>): Promise<IDiscussion> {
     const result = await this.discussionRepository.create(discussion as unknown as RepoDiscussion);
     return result as unknown as IDiscussion;
+  }
+
+  /**
+   * Vote on a discussion
+   */
+  async voteDiscussion(discussionId: string, userId: string, voteType: 'up' | 'down'): Promise<IDiscussion | null> {
+    const discussion = await this.discussionRepository.findById(discussionId);
+    if (!discussion) {
+      throw new NotFoundError('Discussion not found');
+    }
+    const mongooseVoteType = voteType === 'up' ? 'upvote' : 'downvote';
+    await discussion.vote(new Types.ObjectId(userId), mongooseVoteType);
+    return discussion.save();
   }
 
   /**
@@ -100,6 +116,13 @@ export class DiscussionService {
   }
 
   /**
+   * Update a discussion
+   */
+  async updateDiscussion(discussionId: string, updateBody: Partial<IDiscussion>): Promise<IDiscussion | null> {
+    return this.discussionRepository.findByIdAndUpdate(discussionId, updateBody);
+  }
+
+  /**
    * Get all discussions with pagination and filtering
    */
   async getAllDiscussions(params: DiscussionQueryParams): Promise<{
@@ -161,41 +184,100 @@ export class DiscussionService {
   }
 
   /**
-   * Update a discussion
+   * Recursively collects all attachment URLs from a discussion and its replies.
+   * @param discussion - The discussion document.
+   * @returns An array of attachment URLs.
    */
-  async updateDiscussion(id: string, updateData: Partial<IDiscussion>): Promise<IDiscussion | null> {
-    const discussion = await this.discussionRepository.findByIdAndUpdate(id, updateData as unknown as RepoDiscussion);
+  private _collectAttachments(discussion: IDiscussion): IAttachment[] {
+    const attachments: IAttachment[] = [];
+
+    if (discussion.attachments && discussion.attachments.length > 0) {
+      attachments.push(...discussion.attachments);
+    }
+
+    const collectFromReplies = (replies: IReply[]) => {
+      for (const reply of replies) {
+        if (reply.attachments && reply.attachments.length > 0) {
+          attachments.push(...reply.attachments);
+        }
+        if (reply.replies && reply.replies.length > 0) {
+          collectFromReplies(reply.replies);
+        }
+      }
+    };
+
+    if (discussion.replies && discussion.replies.length > 0) {
+      collectFromReplies(discussion.replies);
+    }
+
+    return attachments;
+  }
+
+  /**
+   * Delete a discussion and its attachments.
+   */
+  async deleteDiscussion(id: string): Promise<boolean> {
+    const discussion = await Discussion.findById(id).lean();
     if (!discussion) {
       throw new NotFoundError('Discussion not found');
     }
-    return discussion as unknown as IDiscussion;
+
+    const attachments = this._collectAttachments(discussion as IDiscussion);
+    const publicIds = attachments.map(a => a.checksum).filter((cs): cs is string => !!cs);
+
+    if (publicIds.length > 0) {
+      await this.uploadService.deleteFiles(publicIds).catch((err: unknown) => {
+        console.error(`Failed to delete discussion attachments for ${id}:`, err);
+      });
+    }
+
+    await Discussion.findByIdAndDelete(id);
+    return true;
   }
 
   /**
-   * Delete a discussion
+   * Bulk delete discussions and their attachments.
+   * @param discussionIds - An array of discussion IDs to delete.
+   * @returns A promise that resolves to the number of deleted discussions.
    */
-  async deleteDiscussion(id: string): Promise<boolean> {
-    const result = await this.discussionRepository.deleteById(id);
-    return result !== null;
-  }
+  async bulkDeleteDiscussions(discussionIds: string[]): Promise<number> {
+    const discussions = await Discussion.find({
+      _id: { $in: discussionIds.map(id => new Types.ObjectId(id)) },
+    }).lean();
 
-  /**
-   * Vote on a discussion
-   */
-  async voteDiscussion(discussionDocument: IDiscussion, userId: Types.ObjectId, voteType: 'upvote' | 'downvote'): Promise<IDiscussion> {
-    await discussionDocument.vote(userId, voteType);
-    return discussionDocument;
+    const publicIds: string[] = [];
+    discussions.forEach(discussion => {
+      const attachments = this._collectAttachments(discussion as IDiscussion);
+      attachments.forEach(att => {
+        if (att.checksum) {
+          publicIds.push(att.checksum);
+        }
+      });
+    });
+
+    if (publicIds.length > 0) {
+      await this.uploadService.deleteFiles(publicIds).catch((err: unknown) => {
+        console.error(`Failed to bulk delete discussion attachments:`, err);
+      });
+    }
+
+    const result = await Discussion.deleteMany({
+      _id: { $in: discussionIds.map(id => new Types.ObjectId(id)) },
+    });
+
+    return result.deletedCount || 0;
   }
 
   /**
    * Pin or unpin a discussion
    */
-  async togglePinDiscussion(id: string, pinned: boolean): Promise<IDiscussion | null> {
-    const discussion = await this.discussionRepository.findByIdAndUpdate(id, { isPinned: pinned } as unknown as RepoDiscussion);
+  async pinDiscussion(discussionId: string, pinned: boolean): Promise<IDiscussion | null> {
+    const discussion = await this.discussionRepository.findById(discussionId);
     if (!discussion) {
       throw new NotFoundError('Discussion not found');
     }
-    return discussion as unknown as IDiscussion;
+    discussion.isPinned = pinned;
+    return discussion.save();
   }
 
   /**

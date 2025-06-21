@@ -1,5 +1,5 @@
 import { Socket } from "socket.io";
-import { Types, ObjectId } from "mongoose";
+import { Types } from "mongoose";
 import Conversation from "@models/Conversation";
 import User from "@models/User";
 import { getIO } from "@config/socket";

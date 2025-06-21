@@ -90,5 +90,10 @@ export const resourceValidation = {
   // Track resource view validation
   trackView: Joi.object({
     resourceId: objectId.required()
+  }),
+
+  // Bulk delete resources validation
+  bulkDeleteResources: Joi.object({
+    resourceIds: Joi.array().items(objectId).min(1).required()
   })
 };

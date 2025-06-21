@@ -17,6 +17,12 @@ module.exports = {
     es2021: true,
     jest: true,
   },
+  globals: {
+    module: 'readonly',
+    require: 'readonly',
+    process: 'readonly',
+    __dirname: 'readonly',
+  },
   rules: {
     'prettier/prettier': 'warn',
     '@typescript-eslint/no-unused-vars': [
@@ -30,5 +36,20 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'off',
     'no-undef': 'error',
   },
-  ignorePatterns: ['dist/', 'node_modules/', '*.js', '__tests__/'],
+  overrides: [
+    {
+      files: ['*.js'],
+      env: {
+        node: true,
+      },
+      parserOptions: {
+        sourceType: 'script',
+      },
+      rules: {
+        '@typescript-eslint/no-var-requires': 'off',
+        '@typescript-eslint/no-require-imports': 'off',
+      },
+    },
+  ],
+  ignorePatterns: ['dist/', 'node_modules/'],
 };

@@ -1,9 +1,8 @@
-import { Types } from 'mongoose';
 import Event from '@models/Event';
 import RSVP from '@models/RSVP';
 import User from '@models/User';
 import Resource from '@models/Resource';
-import { IEvent, IUser, IResource } from '@models/types';
+import { IEvent, IResource } from '@models/types';
 
 /**
  * Generate event recommendations for a user based on their interests and past event attendance
@@ -29,14 +28,14 @@ export const generateEventRecommendations = async (
 
   // Extract categories/topics from past events
   const eventIds = userRSVPs.map(rsvp => rsvp.eventId._id);
-  const pastEvents = await Event.find({ _id: { $in: eventIds } }).lean();
+  // const pastEvents = await Event.find({ _id: { $in: eventIds } }).lean();
 
   // Find upcoming events that match user's interests
   // 1. Events from the same communities
   // 2. Events with similar topics/categories
   // 3. Popular events (high attendance)
   const now = new Date();
-  
+
   // Base query: upcoming events not already RSVP'd
   const baseQuery = {
     dateTime: { $gt: now },
@@ -70,7 +69,7 @@ export const generateEventRecommendations = async (
 
   // Combine and deduplicate recommendations
   const recommendations = [...communityEvents];
-  
+
   // Add popular events that aren't already in recommendations
   popularEvents.forEach(event => {
     if (!recommendations.some(rec => rec._id.toString() === event._id.toString())) {
@@ -155,7 +154,7 @@ export const generateResourceRecommendations = async (
 
   // Combine and deduplicate recommendations
   const recommendations = [...categoryResources];
-  
+
   // Add tag-based resources that aren't already in recommendations
   tagResources.forEach(resource => {
     if (!recommendations.some(rec => rec._id.toString() === resource._id.toString())) {

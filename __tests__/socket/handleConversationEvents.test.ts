@@ -1,4 +1,3 @@
-import { Socket } from 'socket.io-client';
 import { handleConversationEvents } from '../../src/services/socket/handleConversationEvents';
 import User from '../../src/models/User';
 import Conversation from '../../src/models/Conversation';
@@ -29,12 +28,10 @@ jest.mock('../../src/utils/socketUtils', () => ({
 
 // Test setup with helper
 const socketHelper = new SocketTestHelper();
-let serverSocket: any;
 
 beforeAll(() => {
   // Set up HTTP and Socket.IO servers
   socketHelper.setupServer((socket: any) => {
-    serverSocket = socket;
     socket.data = { userId: 'user1' };
     handleConversationEvents(socket);
   });

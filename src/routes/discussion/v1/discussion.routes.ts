@@ -17,7 +17,8 @@ import {
   getDiscussionReplies,
   getTrendingDiscussions,
   editReply,
-  deleteReply
+  deleteReply,
+  bulkDeleteDiscussions
 } from '@controllers/discussion.controller';
 
 const router = express.Router();
@@ -73,6 +74,12 @@ router.patch('/:id',
 
 router.delete('/:id', 
   asyncHandler(deleteDiscussion)
+);
+
+router.delete('/bulk',
+  authorize('admin', 'superadmin', 'moderator'),
+  validate(discussionValidation.bulkDeleteDiscussions),
+  asyncHandler(bulkDeleteDiscussions)
 );
 
 router.post('/:id/vote', 
