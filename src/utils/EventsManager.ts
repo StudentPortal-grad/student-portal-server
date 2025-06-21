@@ -33,4 +33,4 @@ export class EventsManager {
   public static emit(event: string, ...args: any[]): void {
     EventsManager.getInstance().emitter.emit(event, ...args);
   }
-} 
+}

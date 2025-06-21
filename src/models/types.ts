@@ -99,6 +99,10 @@ export interface IUser extends Document {
         note?: string;
     }[];
     fcmToken?: string;
+    metadata?: {
+        platform?: string;
+        lastFCMUpdate?: Date;
+    };
     isChatbot?: boolean;
     botSettings?: IChatbotSettings;
     hasChatbotConversation?: boolean;

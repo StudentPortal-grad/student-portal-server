@@ -82,6 +82,20 @@ export const handleMessageEvents = (socket: Socket) => {
             // Await conversation update before proceeding
             await conversationUpdatePromise;
 
+            // --- Send Notification to Recipients ---
+            const recipients = conversation.participants
+                .map((p: any) => p.userId)
+                .filter((id: Types.ObjectId) => !id.equals(socket.data.userId));
+
+            if (recipients.length > 0 && conversation.type !== 'CHATBOT') {
+                await NotificationService.createMessageNotification(
+                    populatedUserMessage,
+                    conversation,
+                    populatedUserMessage.senderId, // sender object is populated
+                    recipients
+                );
+            }
+
             // --- Branch Logic: Chatbot vs. Regular ---
             if (conversation.type === 'CHATBOT') {
                 // --- Chatbot Logic ---

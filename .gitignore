@@ -4,3 +4,5 @@ dist/
 docs/*postman_collection.json
 
 test_*
+
+src/config/*.json

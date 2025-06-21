@@ -241,32 +241,22 @@ export const createResource = async (
     // Create resource
     const resource = await Resource.create(resourceData);
 
-    // Create notification for resource creator
-    await notificationService.createNotification(
-      new Types.ObjectId(userId),
-      'resource_created',
-      `You shared a new resource: ${title}`,
-      {
-        action: 'created',
-        timestamp: new Date()
-      }
-    );
-
-    // Notify all users about the new resource
-    const allUsers = await User.find().select('_id');
-    for (const user of allUsers) {
-      // Skip notification for the resource creator since they already got one
-      if (user._id.toString() !== userId) {
-        await notificationService.createNotification(
-          user._id,
-          'new_resource_shared',
-          `New ${category} resource shared: ${title}`,
+    // --- Notify Followers ---
+    const creator = await User.findById(userId).select('followers name');
+    if (creator && creator.followers && creator.followers.length > 0) {
+      const notificationPromises = creator.followers.map(followerId => {
+        return notificationService.createNotification(
+          followerId,
+          'new_resource',
+          `${creator.name} posted a new resource: "${resource.title}"`,
           {
-            action: 'created',
-            timestamp: new Date()
+            resourceId: resource._id,
+            creatorId: new Types.ObjectId(userId),
+            creatorName: creator.name
           }
         );
-      }
+      });
+      await Promise.all(notificationPromises);
     }
 
     res.success({ resource }, 'Resource created successfully', 201);

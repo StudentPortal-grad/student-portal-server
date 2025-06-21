@@ -3,7 +3,8 @@ import User from '../models/User';
 import { AppError, ErrorCodes } from '../utils/appError';
 import { HttpStatus } from '../utils/ApiResponse';
 import asyncHandler from '../utils/asyncHandler';
-import FCMUtils from '../utils/fcmUtils';
+import { fcmService } from '../services/fcm.service';
+import agenda from '../config/agenda';
 
 /**
  * Update user's FCM token
@@ -28,7 +29,7 @@ export const updateFCMToken = asyncHandler(async (req: Request, res: Response, n
 
     try {
         // Validate the FCM token with Firebase
-        const isValidToken = await FCMUtils.validateToken(fcmToken);
+        const isValidToken = await fcmService.validateToken(fcmToken);
         
         if (!isValidToken) {
             return next(new AppError('Invalid FCM token', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR));
@@ -51,19 +52,24 @@ export const updateFCMToken = asyncHandler(async (req: Request, res: Response, n
             return next(new AppError('User not found', HttpStatus.NOT_FOUND, ErrorCodes.NOT_FOUND));
         }
 
-        // Send a test notification to verify the token works
+        // Schedule a test notification to verify the token works
         try {
-            await FCMUtils.sendToToken(fcmToken, {
-                title: 'Token Updated',
-                body: 'Your push notification token has been successfully updated.',
-            }, {
-                type: 'token_update',
-                userId: userId.toString(),
-                timestamp: new Date().toISOString()
-            });
-        } catch (fcmError) {
-            console.warn('Failed to send test notification:', fcmError);
-            // Don't fail the request if test notification fails
+            const jobData = {
+                tokens: [fcmToken],
+                notification: {
+                    title: 'Token Updated',
+                    body: 'Your push notification token has been successfully updated.',
+                },
+                data: {
+                    type: 'token_update',
+                    userId: userId.toString(),
+                    timestamp: new Date().toISOString(),
+                },
+            };
+            await agenda.now('send-fcm-notification', jobData);
+        } catch (error) {
+            console.warn('Failed to schedule test notification job:', error);
+            // Don't fail the request if the job scheduling fails
         }
 
         res.success({ 
@@ -126,7 +132,7 @@ export const getFCMStatus = asyncHandler(async (req: Request, res: Response, nex
     }
 
     try {
-        const user = await User.findById(userId).select('fcmToken').lean();
+        const user = await User.findById(userId).select('fcmToken metadata.platform metadata.lastFCMUpdate').lean();
 
         if (!user) {
             return next(new AppError('User not found', HttpStatus.NOT_FOUND, ErrorCodes.NOT_FOUND));
@@ -137,7 +143,7 @@ export const getFCMStatus = asyncHandler(async (req: Request, res: Response, nex
 
         if (hasToken && user.fcmToken) {
             try {
-                tokenValid = await FCMUtils.validateToken(user.fcmToken);
+                tokenValid = await fcmService.validateToken(user.fcmToken);
                 
                 // If token is invalid, remove it
                 if (!tokenValid) {
@@ -152,8 +158,8 @@ export const getFCMStatus = asyncHandler(async (req: Request, res: Response, nex
         res.success({
             hasToken,
             tokenValid,
-            platform: null, // Not implemented in current schema
-            lastUpdate: null // Not implemented in current schema
+            platform: user.metadata?.platform || null,
+            lastUpdate: user.metadata?.lastFCMUpdate || null
         }, 'FCM status retrieved successfully');
 
     } catch (error) {
@@ -189,7 +195,7 @@ export const subscribeToTopic = asyncHandler(async (req: Request, res: Response,
             return next(new AppError('No FCM token found for user', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR));
         }
 
-        const response = await FCMUtils.subscribeToTopic([user.fcmToken], topic);
+        const response = await fcmService.subscribeToTopic([user.fcmToken], topic);
 
         res.success({
             topic,
@@ -230,7 +236,7 @@ export const unsubscribeFromTopic = asyncHandler(async (req: Request, res: Respo
             return next(new AppError('No FCM token found for user', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR));
         }
 
-        const response = await FCMUtils.unsubscribeFromTopic([user.fcmToken], topic);
+        const response = await fcmService.unsubscribeFromTopic([user.fcmToken], topic);
 
         res.success({
             topic,

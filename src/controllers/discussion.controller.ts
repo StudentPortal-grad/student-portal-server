@@ -4,6 +4,8 @@ import { Types } from 'mongoose';
 import { AppError, ErrorCodes } from '../utils/appError';
 import { DiscussionRepository } from '../repositories/discussion.repo';
 import { UploadService } from '../utils/uploadService';
+import NotificationService from '../services/notification.service';
+import User from '../models/User';
 
 const discussionRepository = new DiscussionRepository();
 const uploadService = new UploadService();
@@ -76,6 +78,25 @@ export const createDiscussion = async (req: Request, res: Response, next: NextFu
     }
 
     const discussion = await discussionService.createDiscussion(discussionData);
+
+    // --- Notify Followers ---
+    const creator = await User.findById(userId).select('followers name');
+    if (creator && creator.followers && creator.followers.length > 0) {
+      const notificationPromises = creator.followers.map(followerId => {
+        return NotificationService.createNotification(
+          followerId,
+          'new_discussion',
+          `${creator.name} posted a new discussion: "${discussion.title}"`,
+          {
+            discussionId: discussion._id,
+            creatorId: userId,
+            creatorName: creator.name
+          }
+        );
+      });
+      await Promise.all(notificationPromises);
+    }
+
     res.success(discussion, 'Discussion created successfully', 201);
   } catch (error) {
     next(new AppError(error instanceof Error ? error.message : 'An unknown error occurred', 500, ErrorCodes.INTERNAL_ERROR));
