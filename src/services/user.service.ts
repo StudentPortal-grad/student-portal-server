@@ -231,7 +231,8 @@ export class UserService {
       const posts = await Discussion.find({ creator: userId })
         .sort({ createdAt: -1 })
         .limit(limit)
-        .select('title createdAt communityId');
+        .select('title content attachments creator createdAt')
+        .populate('creator', 'name username profilePicture');
       userObj.posts = posts;
     }
 
@@ -239,7 +240,8 @@ export class UserService {
       const resources = await Resource.find({ uploader: userId })
         .sort({ createdAt: -1 })
         .limit(limit)
-        .select('title fileType createdAt');
+        .select('title fileUrl fileType createdAt')
+        .populate('uploader', 'name username profilePicture');
       userObj.resources = resources;
     }
 

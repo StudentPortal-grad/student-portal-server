@@ -191,14 +191,16 @@ export class UserController {
    */
   static getMe = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      const { populateFollowers, populateFollowing } = req.query;
+      const { populateFollowers, populateFollowing, showPosts, showResources } = req.query;
       const result = await UserService.getUserById(
         req.user!._id,
-        req.user!._id,
+        req.user!,
         undefined, // No specific fields selection for getMe
         {
           populateFollowers: populateFollowers === 'true',
           populateFollowing: populateFollowing === 'true',
+          showPosts: showPosts === 'true',
+          showResources: showResources === 'true',
         }
       );
       res.success(result, 'User retrieved successfully');
