@@ -8,8 +8,32 @@ import { HttpStatus } from "../utils/ApiResponse";
 import asyncHandler from "../utils/asyncHandler";
 import { getPaginationMetadata, ParsedPaginationOptions } from "../utils/pagination";
 import { IConversation } from "../models/types";
+import path from "path";
 
 // --- Helper Functions for Message Controller ---
+/**
+ * Determines the file type based on the file extension.
+ * @param fileName - The name of the file.
+ * @returns The determined file type (e.g., 'image', 'video', 'document').
+ */
+const getFileTypeFromExtension = (fileName: string): string => {
+  const extension = path.extname(fileName).toLowerCase();
+
+  const typeMap: { [key: string]: string[] } = {
+    image: ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'],
+    video: ['.mp4', '.mov', '.avi', '.mkv', '.webm'],
+    audio: ['.mp3', '.wav', '.ogg', '.m4a'],
+    document: ['.pdf', '.doc', '.docx', '.txt', '.ppt', '.pptx', '.xls', '.xlsx'],
+  };
+
+  for (const type in typeMap) {
+    if (typeMap[type].includes(extension)) {
+      return type;
+    }
+  }
+
+  return 'file'; // default
+};
 
 /**
  * Finds or creates a DM conversation between two users.
@@ -280,21 +304,13 @@ export const sendAttachment = asyncHandler(async (req: Request, res: Response, n
         return next(new AppError("No files were uploaded", HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR));
     }
 
-    const attachments = files.map(file => {
-        let fileType = 'file'; // default
-        if (file.mimetype.startsWith('image/')) fileType = 'image';
-        else if (file.mimetype.startsWith('video/')) fileType = 'video';
-        else if (file.mimetype.startsWith('audio/')) fileType = 'audio';
-        else if (file.mimetype === 'application/pdf') fileType = 'document';
-
-        return {
-            url: file.path,
-            fileName: file.originalname,
-            fileSize: file.size,
-            mimeType: file.mimetype,
-            type: fileType,
-        };
-    });
+    const attachments = files.map(file => ({
+      url: file.path,
+      fileName: file.originalname,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+      type: getFileTypeFromExtension(file.originalname),
+    }));
 
     const newMessage = await Message.create({
         senderId,
