@@ -255,6 +255,8 @@ export const sendAttachment = asyncHandler(async (req: Request, res: Response, n
     const senderId = req.user?._id;
     const files = req.files as Express.Multer.File[];
 
+    // TODO: GET File Type from the msg body
+
     if (!senderId) {
         return next(new AppError("User not authenticated", HttpStatus.UNAUTHORIZED, ErrorCodes.UNAUTHORIZED));
     }

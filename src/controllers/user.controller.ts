@@ -38,7 +38,7 @@ export class UserController {
    */
   static getUserById = asyncHandler(
     async (req: Request, res: Response, _next: NextFunction) => {
-      const { fields, populateFollowers, populateFollowing } = req.query;
+      const { fields, populateFollowers, populateFollowing, showPosts, showResources, limit } = req.query;
       const selectFields = fields ? String(fields).split(',') : undefined;
 
       const result = await UserService.getUserById(
@@ -47,7 +47,10 @@ export class UserController {
         selectFields,
         {
           populateFollowers: populateFollowers === 'true',
-          populateFollowing: populateFollowing === 'true'
+          populateFollowing: populateFollowing === 'true',
+          showPosts: showPosts === 'true',
+          showResources: showResources === 'true',
+          limit: limit ? parseInt(String(limit), 10) : undefined,
         }
       );
       res.success(result, 'User retrieved successfully');

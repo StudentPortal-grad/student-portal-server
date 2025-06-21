@@ -114,6 +114,8 @@ export interface IUser extends Document {
     // For API responses
     isFollowed?: boolean;
     isBlocked?: boolean;
+    posts?: IDiscussion[];
+    resources?: IResource[];
 
     // Instance methods
     generateAuthToken(): string;

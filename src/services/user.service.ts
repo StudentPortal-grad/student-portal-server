@@ -6,6 +6,8 @@ import { EmailService } from '../utils/emailService';
 import { generateHashedOTP } from '@utils/helpers';
 import { DbOperations } from '../utils/dbOperations';
 import User from '../models/User';
+import Discussion from '../models/Discussion';
+import Resource from '../models/Resource';
 import { getPaginationOptions, ParsedPaginationOptions } from '@utils/pagination';
 import { NotFoundError } from '../utils/errors';
 import { UploadService } from '../utils/uploadService';
@@ -77,37 +79,37 @@ export class UserService {
     );
 
     if ((isFollowed === 'true' || isBlocked === 'true') && currentUser && result.data.length > 0) {
-        const followingSet = isFollowed === 'true' 
-            ? new Set(currentUser.following?.map(id => id.toString())) 
-            : new Set();
+      const followingSet = isFollowed === 'true'
+        ? new Set(currentUser.following?.map(id => id.toString()))
+        : new Set();
 
-        const users = result.data.map((user: any) => {
-            const userObj = user.toObject();
+      const users = result.data.map((user: any) => {
+        const userObj = user.toObject();
 
-            if (isFollowed === 'true') {
-                userObj.isFollowed = followingSet.has(user._id.toString());
-            }
+        if (isFollowed === 'true') {
+          userObj.isFollowed = followingSet.has(user._id.toString());
+        }
 
-            if (isBlocked === 'true') {
-                const iBlockUser = currentUser.blockedUsers?.some((blockedId: any) => blockedId.equals(user._id)) ?? false;
-                const userBlocksMe = user.blockedUsers?.some((blockedId: any) => blockedId.equals(currentUser._id)) ?? false;
-                userObj.isBlocked = iBlockUser || userBlocksMe;
-            }
+        if (isBlocked === 'true') {
+          const iBlockUser = currentUser.blockedUsers?.some((blockedId: any) => blockedId.equals(user._id)) ?? false;
+          const userBlocksMe = user.blockedUsers?.some((blockedId: any) => blockedId.equals(currentUser._id)) ?? false;
+          userObj.isBlocked = iBlockUser || userBlocksMe;
+        }
 
-            delete userObj.blockedUsers;
-            return userObj;
-        });
+        delete userObj.blockedUsers;
+        return userObj;
+      });
 
-        result.data = users;
+      result.data = users;
     }
-    
+
     // Clean up followers array if not requested
     if (populateFollowers !== 'true') {
-        result.data = result.data.map((user: any) => {
-            const userObj = user.toObject ? user.toObject() : user;
-            delete userObj.followers;
-            return userObj;
-        });
+      result.data = result.data.map((user: any) => {
+        const userObj = user.toObject ? user.toObject() : user;
+        delete userObj.followers;
+        return userObj;
+      });
     }
 
     return result;
@@ -166,18 +168,24 @@ export class UserService {
     userId: Types.ObjectId,
     currentUser?: IUser,
     fields?: string[],
-    options: { populateFollowers?: boolean; populateFollowing?: boolean } = {}
+    options: {
+      populateFollowers?: boolean;
+      populateFollowing?: boolean;
+      showPosts?: boolean;
+      showResources?: boolean;
+      limit?: number;
+    } = {}
   ) {
-    const { populateFollowers, populateFollowing } = options;
+    const { populateFollowers, populateFollowing, showPosts, showResources, limit = 10 } = options;
     // If fields are provided, use them; otherwise, select only the UI-needed fields
     let selectFields = fields?.length
       ? fields.join(' ')
-      : '_id name email role createdAt profilePicture profile status level';
+      : '_id name email role createdAt profilePicture profile status level username following';
 
     // Ensure necessary fields are selected for isFollowed and isBlocked checks
     if (currentUser) {
-        if (!selectFields.includes('followers')) selectFields += ' followers';
-        if (!selectFields.includes('blockedUsers')) selectFields += ' blockedUsers';
+      if (!selectFields.includes('followers')) selectFields += ' followers';
+      if (!selectFields.includes('blockedUsers')) selectFields += ' blockedUsers';
     }
 
     let query = User.findById(userId).select(selectFields);
@@ -201,25 +209,40 @@ export class UserService {
       throw new AppError('User not found', 404, ErrorCodes.NOT_FOUND);
     }
 
-    const userObj = user.toObject();
+    const userObj: Record<string, any> = user.toObject();
 
     if (currentUser) {
-        userObj.isFollowed = user.followers?.some((followerId: any) => followerId.equals(currentUser._id)) ?? false;
+      userObj.isFollowed = user.followers?.some((followerId: any) => followerId.equals(currentUser._id)) ?? false;
 
-        const iBlockUser = currentUser.blockedUsers?.some((blockedId: any) => blockedId.equals(user._id)) ?? false;
-        const userBlocksMe = user.blockedUsers?.some((blockedId: any) => blockedId.equals(currentUser._id)) ?? false;
-        userObj.isBlocked = iBlockUser || userBlocksMe;
+      const iBlockUser = currentUser.blockedUsers?.some((blockedId: any) => blockedId.equals(user._id)) ?? false;
+      const userBlocksMe = user.blockedUsers?.some((blockedId: any) => blockedId.equals(currentUser._id)) ?? false;
+      userObj.isBlocked = iBlockUser || userBlocksMe;
     }
 
     // Clean up sensitive fields before returning
     if (userObj.blockedUsers) {
-        delete userObj.blockedUsers;
+      delete userObj.blockedUsers;
     }
     // Clean up followers if not populated
     if (!populateFollowers && userObj.followers) {
-        delete userObj.followers;
+      delete userObj.followers;
     }
 
+    if (showPosts) {
+      const posts = await Discussion.find({ creator: userId })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .select('title createdAt communityId');
+      userObj.posts = posts;
+    }
+
+    if (showResources) {
+      const resources = await Resource.find({ uploader: userId })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .select('title fileType createdAt');
+      userObj.resources = resources;
+    }
 
     return { user: userObj };
   }

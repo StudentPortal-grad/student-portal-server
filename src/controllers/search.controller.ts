@@ -9,6 +9,7 @@ import { ResponseBuilder, HttpStatus } from '@utils/ApiResponse';
  * @route GET /api/v1/search
  */
 export const globalSearch = asyncHandler(async (req: Request, res: Response) => {
+  // TODO: Make a type query to define what to search for
   const { q } = req.query;
 
   if (typeof q !== 'string') {
