@@ -8,6 +8,7 @@ import { HttpStatus } from "../utils/ApiResponse";
 import asyncHandler from "../utils/asyncHandler";
 import { getPaginationMetadata, ParsedPaginationOptions } from "../utils/pagination";
 import { IConversation } from "../models/types";
+import NotificationService from "../services/notification.service";
 
 // --- Helper Functions for Message Controller ---
 
@@ -372,7 +373,7 @@ export const deleteBulkMessages = asyncHandler(
  */
 export const markMessageRead = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const { conversationId } = req.params;
-    const userId = req.user?._id;
+    const userId = req.user!._id;
 
     if (!userId) {
         throw new AppError("User not authenticated", HttpStatus.UNAUTHORIZED, ErrorCodes.UNAUTHORIZED);
@@ -401,5 +402,35 @@ export const markMessageRead = asyncHandler(async (req: Request, res: Response, 
         throw new AppError("Conversation not found in recent list", HttpStatus.NOT_FOUND, ErrorCodes.NOT_FOUND);
     }
 
+    // Mark conversation notifications as read
+    await NotificationService.markConversationNotificationsAsRead(userId, new Types.ObjectId(conversationId));
+
     res.success(null, 'Messages marked as read');
+});
+
+/**
+ * Get unread message count for the authenticated user
+ * @route GET /api/v1/messages/unread
+ */
+export const getUnreadCount = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.user!._id;
+
+    if (!userId) {
+        throw new AppError("User not authenticated", HttpStatus.UNAUTHORIZED, ErrorCodes.UNAUTHORIZED);
+    }
+
+    // Get unread counts for each conversation
+    const user = await User.findById(userId).select('recentConversations');
+    const conversationUnreadCounts = user?.recentConversations?.map((conv: any) => ({
+        conversationId: conv.conversationId,
+        unreadCount: conv.unreadCount || 0
+    })) || [];
+
+    // Calculate total unread messages across all conversations
+    const totalUnreadMessages = conversationUnreadCounts.reduce((sum: number, conv: any) => sum + conv.unreadCount, 0);
+
+    res.success({
+        totalUnreadMessages,
+        conversationUnreadCounts
+    }, 'Message unread counts retrieved successfully');
 });

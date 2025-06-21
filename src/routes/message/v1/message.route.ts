@@ -5,7 +5,8 @@ import {
     getMessages,
     deleteBulkMessages,
     markMessageRead,
-    sendAttachment
+    sendAttachment,
+    getUnreadCount
 } from "@controllers/message.controller";
 import { authenticate } from "@middleware/auth";
 import { validate } from "@middleware/validate";
@@ -23,6 +24,9 @@ router.get(
     // validate(messageValidation.getMessages),
     getMessages
 );
+
+// Get unread message count
+router.get("/unread", getUnreadCount);
 
 // Edit a message
 router.patch(
