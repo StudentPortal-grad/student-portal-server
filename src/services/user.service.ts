@@ -232,6 +232,28 @@ export class UserService {
         { $match: { creator: userId } },
         { $sort: { createdAt: -1 } },
         { $limit: limit || 10 },
+        {
+          $addFields: {
+            upvotesCount: {
+              $size: {
+                $filter: {
+                  input: { $ifNull: ['$votes', []] },
+                  as: 'vote',
+                  cond: { $eq: ['$$vote.voteType', 'upvote'] }
+                }
+              }
+            },
+            downvotesCount: {
+              $size: {
+                $filter: {
+                  input: { $ifNull: ['$votes', []] },
+                  as: 'vote',
+                  cond: { $eq: ['$$vote.voteType', 'downvote'] }
+                }
+              }
+            }
+          }
+        }
       ];
 
       if (currentUser) {
@@ -246,12 +268,12 @@ export class UserService {
                         $filter: {
                           input: { $ifNull: ['$votes', []] },
                           as: 'vote',
-                          cond: { $eq: ['$$vote.userId', currentUser._id] },
-                        },
+                          cond: { $eq: ['$$vote.userId', currentUser._id] }
+                        }
                       },
-                      0,
-                    ],
-                  },
+                      0
+                    ]
+                  }
                 },
                 in: {
                   $cond: {
@@ -261,14 +283,14 @@ export class UserService {
                       $cond: {
                         if: { $eq: ['$$userVote.voteType', 'downvote'] },
                         then: -1,
-                        else: 0,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
+                        else: 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         });
       }
 
@@ -279,10 +301,10 @@ export class UserService {
             let: { creatorId: '$creator' },
             pipeline: [
               { $match: { $expr: { $eq: ['$_id', '$$creatorId'] } } },
-              { $project: { _id: 1, name: 1, username: 1, profilePicture: 1 } },
+              { $project: { _id: 1, name: 1, username: 1, profilePicture: 1 } }
             ],
-            as: 'creator',
-          },
+            as: 'creator'
+          }
         },
         { $unwind: '$creator' }
       );
@@ -295,6 +317,28 @@ export class UserService {
         { $match: { uploader: userId } },
         { $sort: { createdAt: -1 } },
         { $limit: options.limit || 10 },
+        {
+          $addFields: {
+            upvotesCount: {
+              $size: {
+                $filter: {
+                  input: { $ifNull: ['$votes', []] },
+                  as: 'vote',
+                  cond: { $eq: ['$$vote.voteType', 'upvote'] }
+                }
+              }
+            },
+            downvotesCount: {
+              $size: {
+                $filter: {
+                  input: { $ifNull: ['$votes', []] },
+                  as: 'vote',
+                  cond: { $eq: ['$$vote.voteType', 'downvote'] }
+                }
+              }
+            }
+          }
+        }
       ];
 
       if (currentUser) {
@@ -309,12 +353,12 @@ export class UserService {
                         $filter: {
                           input: { $ifNull: ['$votes', []] },
                           as: 'vote',
-                          cond: { $eq: ['$$vote.userId', currentUser._id] },
-                        },
+                          cond: { $eq: ['$$vote.userId', currentUser._id] }
+                        }
                       },
-                      0,
-                    ],
-                  },
+                      0
+                    ]
+                  }
                 },
                 in: {
                   $cond: {
@@ -324,14 +368,14 @@ export class UserService {
                       $cond: {
                         if: { $eq: ['$$userVote.voteType', 'downvote'] },
                         then: -1,
-                        else: 0,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
+                        else: 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         });
       }
 
@@ -342,10 +386,10 @@ export class UserService {
             let: { uploaderId: '$uploader' },
             pipeline: [
               { $match: { $expr: { $eq: ['$_id', '$$uploaderId'] } } },
-              { $project: { _id: 1, name: 1, username: 1, profilePicture: 1 } },
+              { $project: { _id: 1, name: 1, username: 1, profilePicture: 1 } }
             ],
-            as: 'uploader',
-          },
+            as: 'uploader'
+          }
         },
         { $unwind: '$uploader' }
       );

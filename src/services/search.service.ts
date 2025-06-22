@@ -37,6 +37,24 @@ export class SearchService {
 
     const addFieldsStage: any = {
       score: { $meta: 'textScore' },
+      upvotesCount: {
+        $size: {
+          $filter: {
+            input: { $ifNull: ['$votes', []] },
+            as: 'vote',
+            cond: { $eq: ['$$vote.voteType', 'upvote'] }
+          }
+        }
+      },
+      downvotesCount: {
+        $size: {
+          $filter: {
+            input: { $ifNull: ['$votes', []] },
+            as: 'vote',
+            cond: { $eq: ['$$vote.voteType', 'downvote'] }
+          }
+        }
+      }
     };
 
     const projectStage: any = {
@@ -44,10 +62,12 @@ export class SearchService {
       content: 1,
       createdAt: 1,
       score: 1,
+      upvotesCount: 1,
+      downvotesCount: 1,
       creator: {
         name: '$creator.name',
-        profilePicture: '$creator.profilePicture',
-      },
+        profilePicture: '$creator.profilePicture'
+      }
     };
 
     if (currVoteSpecified && userId) {
@@ -60,12 +80,12 @@ export class SearchService {
                   $filter: {
                     input: { $ifNull: ['$votes', []] },
                     as: 'vote',
-                    cond: { $eq: ['$$vote.userId', userId] },
-                  },
+                    cond: { $eq: ['$$vote.userId', userId] }
+                  }
                 },
-                0,
-              ],
-            },
+                0
+              ]
+            }
           },
           in: {
             $cond: {
@@ -75,12 +95,12 @@ export class SearchService {
                 $cond: {
                   if: { $eq: ['$$userVote.voteType', 'downvote'] },
                   then: -1,
-                  else: 0,
-                },
-              },
-            },
-          },
-        },
+                  else: 0
+                }
+              }
+            }
+          }
+        }
       };
       projectStage.currentVote = 1;
     }
@@ -95,11 +115,11 @@ export class SearchService {
           from: 'users',
           localField: 'creator',
           foreignField: '_id',
-          as: 'creator',
-        },
+          as: 'creator'
+        }
       },
       { $unwind: '$creator' },
-      { $project: projectStage },
+      { $project: projectStage }
     ];
 
     return Discussion.aggregate(aggregationPipeline);
@@ -111,6 +131,24 @@ export class SearchService {
 
     const addFieldsStage: any = {
       score: { $meta: 'textScore' },
+      upvotesCount: {
+        $size: {
+          $filter: {
+            input: { $ifNull: ['$votes', []] },
+            as: 'vote',
+            cond: { $eq: ['$$vote.voteType', 'upvote'] }
+          }
+        }
+      },
+      downVotesCount: {
+        $size: {
+          $filter: {
+            input: { $ifNull: ['$votes', []] },
+            as: 'vote',
+            cond: { $eq: ['$$vote.voteType', 'downvote'] }
+          }
+        }
+      }
     };
 
     const projectStage: any = {
@@ -118,10 +156,12 @@ export class SearchService {
       description: 1,
       createdAt: 1,
       score: 1,
+      upvotesCount: 1,
+      downVotesCount: 1,
       uploader: {
         name: '$uploader.name',
-        profilePicture: '$uploader.profilePicture',
-      },
+        profilePicture: '$uploader.profilePicture'
+      }
     };
 
     if (currVoteSpecified && userId) {
@@ -134,12 +174,12 @@ export class SearchService {
                   $filter: {
                     input: { $ifNull: ['$votes', []] },
                     as: 'vote',
-                    cond: { $eq: ['$$vote.userId', userId] },
-                  },
+                    cond: { $eq: ['$$vote.userId', userId] }
+                  }
                 },
-                0,
-              ],
-            },
+                0
+              ]
+            }
           },
           in: {
             $cond: {
@@ -149,12 +189,12 @@ export class SearchService {
                 $cond: {
                   if: { $eq: ['$$userVote.voteType', 'downvote'] },
                   then: -1,
-                  else: 0,
-                },
-              },
-            },
-          },
-        },
+                  else: 0
+                }
+              }
+            }
+          }
+        }
       };
       projectStage.currentVote = 1;
     }
@@ -169,11 +209,11 @@ export class SearchService {
           from: 'users',
           localField: 'uploader',
           foreignField: '_id',
-          as: 'uploader',
-        },
+          as: 'uploader'
+        }
       },
       { $unwind: '$uploader' },
-      { $project: projectStage },
+      { $project: projectStage }
     ];
 
     return Resource.aggregate(aggregationPipeline);
