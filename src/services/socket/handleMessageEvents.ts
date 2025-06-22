@@ -115,8 +115,8 @@ export const handleMessageEvents = (socket: Socket) => {
                         userMessage
                     );
 
-                    if (botResponse && botResponse.message) {
-                        const populatedBotMessage = await Message.populate(botResponse.message, {
+                    if (botResponse && botResponse.content) {
+                        const populatedBotMessage = await Message.populate(botResponse, {
                             path: "senderId",
                             select: "name profilePicture",
                         });
@@ -131,6 +131,20 @@ export const handleMessageEvents = (socket: Socket) => {
                 } catch (e) {
                     console.error("Chatbot processing error:", e);
                     // Optionally send an error message to the user
+                    socket.emit("newMessage", {
+                        message: {
+                            _id: new Types.ObjectId(),
+                            senderId: chatbotUser,
+                            conversationId: data.conversationId,
+                            content: 'عذراً، حدث خطأ أثناء معالجة طلبك. يرجى المحاولة مرة أخرى.',
+                            type: 'text',
+                            role: 'bot',
+                            status: 'delivered',
+                            createdAt: new Date(),
+                            updatedAt: new Date(),
+                        },
+                        conversationId: data.conversationId,
+                    });
                 } finally {
                     // Stop typing indicator
                     socket.emit("typing", {
@@ -150,7 +164,7 @@ export const handleMessageEvents = (socket: Socket) => {
                         "Conversation not found"
                     );
                 }
-                
+
                 const otherParticipants = conversation.participants
                     .filter((p: any) => p.userId.toString() !== socket.data.userId)
                     .map((p: any) => p.userId);

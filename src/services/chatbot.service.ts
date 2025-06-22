@@ -12,19 +12,19 @@ export class ChatbotService {
     private static readonly CHATBOT_NAME = config.chatbot.name;
     private static readonly CHATBOT_AVATAR = config.chatbot.avatar;
     private static readonly AI_API_URL = config.aiApi.url;
+    private static readonly CHATBOT_API_URL = config.aiApi.chatbotApiUrl;
 
     static async initializeChatbotUser(): Promise<IUser> {
         try {
             let chatbotUser = await User.findOne({
                 email: this.CHATBOT_EMAIL,
-                isChatbot: true
+                isChatbot: true,
             });
 
             if (!chatbotUser) {
                 chatbotUser = new User({
                     name: this.CHATBOT_NAME,
                     email: this.CHATBOT_EMAIL,
-                    // password: 'N/A_CHATBOT_USER',
                     isChatbot: true,
                     signupStep: 'completed',
                     role: 'admin',
@@ -34,8 +34,8 @@ export class ChatbotService {
                         isActive: true,
                         language: 'ar',
                         personalityType: 'academic',
-                        contextLimit: 10
-                    }
+                        contextLimit: 10,
+                    },
                 });
 
                 await chatbotUser.save();
@@ -44,12 +44,7 @@ export class ChatbotService {
 
             return chatbotUser;
         } catch (error) {
-            throw new AppError(
-                'Failed to initialize chatbot user',
-                500,
-                ErrorCodes.INTERNAL_ERROR,
-                error
-            );
+            throw new AppError('Failed to initialize chatbot user', 500, ErrorCodes.INTERNAL_ERROR, error);
         }
     }
 
@@ -98,7 +93,7 @@ export class ChatbotService {
                 'Failed to create chatbot conversation',
                 500,
                 ErrorCodes.INTERNAL_ERROR,
-                error
+                error,
             );
         }
     }
@@ -112,74 +107,61 @@ export class ChatbotService {
             senderId: chatbotUser._id,
             conversationId: conversationId,
             content: welcomeMessage,
-            status: 'delivered'
+            type: 'text',
+            role: 'bot',
+            status: 'delivered',
         });
 
         await message.save();
 
         await Conversation.findByIdAndUpdate(conversationId, {
             lastMessage: message._id,
-            'metadata.lastActivity': new Date()
+            'metadata.lastActivity': new Date(),
         });
     }
 
     static async processUserMessage(conversation: IConversation, userMessageDoc: IMessage): Promise<any> {
         try {
-            const startTime = performance.now();
-
             if (!conversation || conversation.type !== 'CHATBOT') {
-                throw new Error('Invalid chatbot conversation');
+                throw new AppError('Invalid chatbot conversation', 400, ErrorCodes.INVALID_INPUT);
             }
 
-            /*const contextLimit = conversation.chatbotMetadata?.contextWindowSize || 10;
-
-            const recentMessages = await Message.find({ conversationId })
-                .sort({ createdAt: -1 })
-                .limit(contextLimit)
-                .populate('senderId', 'name isChatbot')
-                .lean();
-
-            const context = recentMessages.reverse().map(msg => ({
-                role: (msg.senderId as any).isChatbot ? 'assistant' : 'user',
-                content: msg.content,
-                timestamp: msg.createdAt
-            }));*/
-
-            const aiResponse = await this.callAIChatAPI(userMessageDoc.content!);
-
-            const processingTime = performance.now() - startTime;
+            if (!userMessageDoc.content) {
+                // Should not happen, but as a safeguard
+                throw new AppError('Cannot process an empty message.', 400, ErrorCodes.INVALID_INPUT);
+            }
 
             const chatbotUser = await this.initializeChatbotUser();
-            const responseMessage = new Message({
-                senderId: chatbotUser._id,
+
+            const aiResponse = await this.callAIChatAPI(
+                userMessageDoc.content,
+            );
+
+            const chatbotMessage = new Message({
                 conversationId: conversation._id,
-                content: aiResponse.answer, // Use the answer from the placeholder response
-                status: 'delivered',
+                senderId: chatbotUser._id,
+                content: aiResponse.answer,
+                type: 'text',
+                role: 'bot',
                 metadata: {
-                    ...aiResponse,
-                    processingTime, // Add server-side processing time
-                }
+                    processing_time: aiResponse.processing_time,
+                    language: aiResponse.language,
+                    source_documents: aiResponse.sources,
+                    api_conversation_id: aiResponse.conversation_id,
+                },
             });
 
-            await responseMessage.save();
+            await chatbotMessage.save();
 
             await Conversation.findByIdAndUpdate(conversation._id, {
                 $set: {
-                    'chatbotMetadata.lastUserMessageId': userMessageDoc._id,
-                    'chatbotMetadata.lastBotMessageId': responseMessage._id,
-                    'chatbotMetadata.contextSummary': `Last message on ${new Date().toISOString()}` // Placeholder
-                }
+                    lastMessage: chatbotMessage._id,
+                    'chatbotMetadata.contextSummary': `Responded to: "${userMessageDoc.content.substring(0, 50)}..."`,
+                },
+                $inc: { messageCount: 1 },
             });
 
-            return {
-                message: responseMessage,
-                metadata: {
-                    confidence: aiResponse.confidence,
-                    processingTime: processingTime,
-                    sourceSection: aiResponse.source_section
-                }
-            };
-
+            return chatbotMessage;
         } catch (error) {
             const chatbotUser = await this.initializeChatbotUser();
             const errorMessageContent = 'عذراً، حدث خطأ أثناء معالجة طلبك. يرجى المحاولة مرة أخرى.';
@@ -188,9 +170,18 @@ export class ChatbotService {
                 senderId: chatbotUser._id,
                 conversationId: conversation._id,
                 content: errorMessageContent,
+                type: 'text',
+                role: 'bot',
                 status: 'delivered',
             });
+            console.log("Error message:", errorMessage);
             await errorMessage.save();
+
+            await Conversation.findByIdAndUpdate(conversation._id, {
+                $set: {
+                    lastMessage: errorMessage._id,
+                },
+            });
 
             if (error instanceof AppError) {
                 throw error;
@@ -200,92 +191,61 @@ export class ChatbotService {
                 'Error processing chatbot message',
                 500,
                 ErrorCodes.INTERNAL_ERROR,
-                error
+                error,
             );
         }
     }
 
     private static async callAIChatAPI(question: string): Promise<any> {
         try {
-            // --- UNCOMMENT THIS BLOCK TO USE THE ACTUAL API ---
-            /*
-            const chatApiUrl = new URL('/api/chat', config.aiApi.url).toString();
-            const response = await axios.post(chatApiUrl, {
-                question: question,
-            }, {
-                timeout: 30000,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${config.aiApi.key}`
-                }
-            });
-            return response.data;
-            */
-
-            // --- COMMENT OUT THE BLOCK BELOW WHEN USING THE ACTUAL API ---
-            // AI model is not running, returning placeholder response.
-            console.log('AI_MODEL_OFFLINE: Returning placeholder for callAIChatAPI');
-            return Promise.resolve({
-                question: question,
-                answer: "مرحباً! هذا رد تجريبي من المساعد الذكي. كيف يمكنني مساعدتك اليوم؟",
-                confidence: 0.99,
-                processing_time: 0.5,
-                source_section: 'Placeholder Section',
-                related_sections: [],
-                language: 'ar',
-                timestamp: new Date().toISOString(),
-                status: 'success',
-                api_version: '3.0.0'
-            });
-        } catch (error) {
-            throw new AppError(
-                'AI Chat API call failed',
-                500,
-                ErrorCodes.EXTERNAL_SERVICE_ERROR,
-                error
+            const queryApiUrl = new URL('/query', this.CHATBOT_API_URL).toString();
+            const response = await axios.post(
+                queryApiUrl,
+                {
+                    query: question,
+                    conversation_id: null,
+                },
+                {
+                    timeout: 30000,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                },
             );
+            return response.data;
+        } catch (error) {
+            console.error('AI Chat API call failed:', error);
+            throw new AppError('AI Chat API call failed', 500, ErrorCodes.EXTERNAL_SERVICE_ERROR, error);
         }
     }
 
-    private static async callAIConversationAPI(message: string, context: any[]): Promise<any> {
+    private static async callAIConversationAPI(
+        message: string,
+        conversationId: Types.ObjectId,
+    ): Promise<any> {
         try {
-            // --- UNCOMMENT THIS BLOCK TO USE THE ACTUAL API ---
-            /*
-            const conversationApiUrl = new URL('/api/conversation', config.aiApi.url).toString();
-            const response = await axios.post(conversationApiUrl, {
-                message: message,
-                context: context
-            }, {
-                timeout: 30000,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${config.aiApi.key}`
-                }
-            });
+            const queryApiUrl = new URL('/query', this.CHATBOT_API_URL).toString();
+            const response = await axios.post(
+                queryApiUrl,
+                {
+                    query: message,
+                    conversation_id: conversationId.toString(),
+                },
+                {
+                    timeout: 30000,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                },
+            );
             return response.data;
-            */
-
-            // --- COMMENT OUT THE BLOCK BELOW WHEN USING THE ACTUAL API ---
-            // AI model is not running, returning placeholder response.
-            console.log('AI_MODEL_OFFLINE: Returning placeholder for callAIConversationAPI');
-            return Promise.resolve({
-                question: message,
-                answer: "مرحباً! هذا رد تجريبي من المساعد الذكي. كيف يمكنني مساعدتك اليوم؟",
-                confidence: 0.99,
-                processing_time: 0.5,
-                source_section: 'Placeholder Section',
-                related_sections: [],
-                language: 'ar',
-                timestamp: new Date().toISOString(),
-                status: 'success',
-                api_version: '3.0.0'
-            });
         } catch (error) {
+            console.error('AI Conversation API call failed:', error);
             throw new AppError(
                 'AI Conversation API call failed',
                 500,
                 ErrorCodes.EXTERNAL_SERVICE_ERROR,
-                error
+                error,
             );
         }
     }
@@ -302,3 +262,4 @@ export class ChatbotService {
         return await this.createChatbotConversation(userId.toString());
     }
 }
+

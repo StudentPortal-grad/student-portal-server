@@ -1,0 +1,489 @@
+{
+	"info": {
+		"_postman_id": "18693d44-84b2-442d-a581-4b2dee88641d",
+		"name": "StudentPortal AI Chat API v2",
+		"description": "Postman collection for StudentPortal AI Chat API (RAG). Includes all routes with example requests and required data.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "42740539",
+		"_collection_link": "https://student-portal-3338.postman.co/workspace/student-portal-Workspace~fc473aca-c461-4434-8d46-f53606e5b68c/collection/42740539-18693d44-84b2-442d-a581-4b2dee88641d?action=share&source=collection_link&creator=42740539"
+	},
+	"item": [
+		{
+			"name": "Query Chatbot",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"query\": \"ما هو اسم الكلية؟\",\n  \"conversation_id\": null\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/query",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"query"
+					]
+				},
+				"description": "Query the chatbot with a user question."
+			},
+			"response": [
+				{
+					"name": "Success",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": ""
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "Text",
+					"header": [],
+					"cookie": [],
+					"body": "{\n  \"answer\": \"The exam schedule is ...\",\n  \"language\": \"en\",\n  \"sources\": [\"document 1\"],\n  \"processing_time\": 0.45,\n  \"conversation_id\": \"abc123\",\n  \"timestamp\": \"2025-06-22T09:03:53+03:00\"\n}"
+				},
+				{
+					"name": "Query Chatbot",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"What is the exam schedule?\",\n  \"conversation_id\": null\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/query",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"query"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "date",
+							"value": "Sun, 22 Jun 2025 07:32:31 GMT"
+						},
+						{
+							"key": "server",
+							"value": "uvicorn"
+						},
+						{
+							"key": "content-length",
+							"value": "271"
+						},
+						{
+							"key": "content-type",
+							"value": "application/json"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"answer\": \"I do not have enough information to answer your question.  No documents were provided containing an exam schedule.\\n\",\n    \"language\": \"en\",\n    \"sources\": [],\n    \"processing_time\": 0.9443042278289795,\n    \"conversation_id\": \"20250622103238\",\n    \"timestamp\": \"2025-06-22T10:32:38.626042\"\n}"
+				},
+				{
+					"name": "ar",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"ما هو اسم الكلية؟\",\n  \"conversation_id\": null\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/query",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"query"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "date",
+							"value": "Sun, 22 Jun 2025 07:40:45 GMT"
+						},
+						{
+							"key": "server",
+							"value": "uvicorn"
+						},
+						{
+							"key": "content-length",
+							"value": "317"
+						},
+						{
+							"key": "content-type",
+							"value": "application/json"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"answer\": \"ليس لدي معلومات كافية للإجابة على سؤالك.  لم يتم تزويدي بأي مستندات تحتوي على اسم الكلية.\\n\",\n    \"language\": \"ar\",\n    \"sources\": [],\n    \"processing_time\": 0.8605272769927979,\n    \"conversation_id\": \"20250622104050\",\n    \"timestamp\": \"2025-06-22T10:40:50.110298\"\n}"
+				},
+				{
+					"name": "Query Chatbot",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"ما هو اسم الكلية؟\",\n  \"conversation_id\": null\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/query",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"query"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "date",
+							"value": "Sun, 22 Jun 2025 17:39:46 GMT"
+						},
+						{
+							"key": "server",
+							"value": "uvicorn"
+						},
+						{
+							"key": "content-length",
+							"value": "638"
+						},
+						{
+							"key": "content-type",
+							"value": "application/json"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"answer\": \"اسم الكلية هو كلية الحاسبات والمعلومات، جامعة دمنهور. (المستند 1، 3، 4، 6، 7، 9، 10، 11، 12، 13، 14، 15)\\n\",\n    \"language\": \"ar\",\n    \"sources\": [\n        \"اللائحة.pdf\",\n        \"اللائحة.pdf\",\n        \"اللائحة.pdf\",\n        \"اللائحة.pdf\",\n        \"اللائحة.pdf\",\n        \"اللائحة.pdf\",\n        \"اللائحة.pdf\",\n        \"اللائحة.pdf\",\n        \"اللائحة.pdf\",\n        \"اللائحة.pdf\",\n        \"اللائحة.pdf\",\n        \"اللائحة.pdf\",\n        \"اللائحة.pdf\",\n        \"اللائحة.pdf\",\n        \"اللائحة.pdf\"\n    ],\n    \"processing_time\": 13.567201137542725,\n    \"conversation_id\": \"20250622204013\",\n    \"timestamp\": \"2025-06-22T20:40:13.284562\"\n}"
+				}
+			]
+		},
+		{
+			"name": "Upload PDF (Admin)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "api-key",
+						"value": "admin_secret_key"
+					},
+					{
+						"key": "Content-Type",
+						"value": "multipart/form-data"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "/G:/FACULTY_FILES/لائحة الكلية.pdf"
+						},
+						{
+							"key": "rebuild",
+							"value": "false",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{base_url}}/admin/upload-document",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"admin",
+						"upload-document"
+					]
+				},
+				"description": "Upload a PDF file and update the knowledge base (admin operation)."
+			},
+			"response": [
+				{
+					"name": "Success",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": ""
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "Text",
+					"header": [],
+					"cookie": [],
+					"body": "{\n  \"success\": true,\n  \"message\": \"PDF processed and added to knowledge base: example.pdf\",\n  \"file_name\": \"example.pdf\",\n  \"document_count\": 91,\n  \"timestamp\": \"2025-06-22T09:03:53+03:00\"\n}"
+				},
+				{
+					"name": "Upload PDF (Admin)",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "api-key",
+								"value": "admin_secret_key"
+							},
+							{
+								"key": "Content-Type",
+								"value": "multipart/form-data"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "/G:/FACULTY_FILES/لائحة الكلية.pdf"
+								},
+								{
+									"key": "rebuild",
+									"value": "false",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/upload-document",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"upload-document"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "date",
+							"value": "Sun, 22 Jun 2025 17:45:20 GMT"
+						},
+						{
+							"key": "server",
+							"value": "uvicorn"
+						},
+						{
+							"key": "content-length",
+							"value": "208"
+						},
+						{
+							"key": "content-type",
+							"value": "application/json"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"success\": true,\n    \"message\": \"Document processed and added to knowledge base: لائحة الكلية.pdf\",\n    \"file_name\": \"لائحة الكلية.pdf\",\n    \"document_count\": 187,\n    \"timestamp\": \"2025-06-22T20:45:44.431144\"\n}"
+				}
+			]
+		},
+		{
+			"name": "Rebuild Knowledge Base (Admin)",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "api-key",
+						"value": "admin_secret_key"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/admin/rebuild",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"admin",
+						"rebuild"
+					]
+				},
+				"description": "Rebuild the knowledge base from all PDFs in the data directory (admin operation)."
+			},
+			"response": [
+				{
+					"name": "Success",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": ""
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "Text",
+					"header": [],
+					"cookie": [],
+					"body": "{\n  \"success\": true,\n  \"message\": \"Knowledge base rebuilt with 91 documents\",\n  \"file_name\": \"all_pdfs\",\n  \"document_count\": 91,\n  \"timestamp\": \"2025-06-22T09:03:53+03:00\"\n}"
+				}
+			]
+		},
+		{
+			"name": "Get Conversations",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/conversations?limit=10",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"conversations"
+					],
+					"query": [
+						{
+							"key": "limit",
+							"value": "10"
+						}
+					]
+				},
+				"description": "Get list of recent conversations."
+			},
+			"response": [
+				{
+					"name": "Success",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": ""
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "Text",
+					"header": [],
+					"cookie": [],
+					"body": "{\n  \"conversations\": [\n    {\"id\": \"abc123\", \"last_message\": \"What is the exam schedule?\"}\n  ]\n}"
+				}
+			]
+		},
+		{
+			"name": "Delete Conversation (Admin)",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "api-key",
+						"value": "admin_secret_key"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/admin/conversations/abc123",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"admin",
+						"conversations",
+						"abc123"
+					]
+				},
+				"description": "Delete a specific conversation by ID (admin operation)."
+			},
+			"response": [
+				{
+					"name": "Success",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": ""
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "Text",
+					"header": [],
+					"cookie": [],
+					"body": "{\n  \"success\": true,\n  \"message\": \"Conversation abc123 deleted\"\n}"
+				}
+			]
+		},
+		{
+			"name": "Get System Info",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						""
+					]
+				},
+				"description": "Get system information and stats."
+			},
+			"response": [
+				{
+					"name": "Success",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": ""
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "Text",
+					"header": [],
+					"cookie": [],
+					"body": "{\n  \"name\": \"StudentPortal AI Chat\",\n  \"version\": \"1.0.0\",\n  \"document_count\": 91,\n  \"sources\": [\"document 1\", \"document 2\"],\n  \"last_updated\": \"2025-06-22T09:03:53+03:00\"\n}"
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080"
+		}
+	]
+}
