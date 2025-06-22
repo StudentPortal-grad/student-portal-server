@@ -54,16 +54,17 @@ router.patch(
 );
 
 router.delete(
+  '/bulk',
+  authorize('admin', 'superadmin', 'faculty'),
+  validate(resourceValidation.bulkDeleteResources),
+  asyncHandler(bulkDeleteResources)
+);
+
+router.delete(
   '/:id',
   asyncHandler(deleteResource)
 );
 
-router.delete(
-  '/bulk',
-  authorize('admin', 'superadmin', 'moderator'),
-  validate(resourceValidation.bulkDeleteResources),
-  asyncHandler(bulkDeleteResources)
-);
 
 // Resource interaction routes
 router.post(

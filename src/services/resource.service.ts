@@ -53,6 +53,8 @@ export class ResourceService {
       _id: { $in: resourceIds.map(id => new Types.ObjectId(id)) }
     }).select('checksum');
 
+    console.log(resourcesToDelete);
+
     if (resourcesToDelete.length > 0) {
       const publicIds = resourcesToDelete
         .map(resource => resource.checksum)

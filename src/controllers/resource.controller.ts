@@ -470,9 +470,12 @@ export const bulkDeleteResources = async (
 ) => {
   try {
     const { resourceIds } = req.body;
+    console.log(resourceIds);
     const result = await resourceService.bulkDeleteResources(resourceIds);
     res.success(result, `${result.deletedCount} resources deleted successfully.`);
+    console.log(result);
   } catch (error) {
+    console.log(error);
     if (error instanceof AppError) {
       return next(error);
     }
