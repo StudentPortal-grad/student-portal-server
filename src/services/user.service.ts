@@ -114,6 +114,15 @@ export class UserService {
     return result;
   }
 
+  static async getAllUserIds(): Promise<Types.ObjectId[]> {
+    const users = await User.find({}).select('_id').lean();
+    return users.map(user => user._id);
+  }
+
+  static async getSuperAdmin(): Promise<IUser | null> {
+    return DbOperations.findOne(User, { role: 'superadmin' });
+  }
+
   static async getSiblingStudents(currentUser: IUser, query: any) {
     if (!currentUser.level) {
       throw new NotFoundError('User level not set, cannot find siblings.');

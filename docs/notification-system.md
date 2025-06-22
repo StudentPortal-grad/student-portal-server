@@ -332,3 +332,170 @@ The notification system includes comprehensive testing:
 2. **Authorization** - Users can only access their own notifications
 3. **Input Validation** - All inputs are validated and sanitized
 4. **Rate Limiting** - Consider implementing rate limiting for notification creation 
+
+## FCM Push Notifications
+
+The system is configured to send push notifications via Firebase Cloud Messaging (FCM). The following section details the events that trigger push notifications and the data payload sent with each notification. This information is crucial for the client-side (Flutter) application to handle incoming notifications correctly.
+
+### FCM Payload Structure
+
+All FCM notifications share a common payload structure. The `data` object contains the specific details of the notification.
+
+```json
+{
+  "notification": {
+    "title": "Notification Title",
+    "body": "Notification body content."
+  },
+  "data": {
+    "notificationId": "<mongoose_object_id>",
+    "type": "<notification_type>",
+    // ... other type-specific data
+  }
+}
+```
+
+### Notification Events and Data Schemas
+
+Here are the different notification types and their corresponding data schemas:
+
+#### 1. New Message
+- **Type**: `new_message`
+- **Trigger**: A new message is received in a conversation.
+- **Description**: Notifies the user of a new message.
+- **Data Schema**:
+  ```json
+  {
+    "messageId": "<mongoose_object_id>",
+    "conversationId": "<mongoose_object_id>",
+    "senderId": "<mongoose_object_id>",
+    "senderName": "John Doe",
+    "conversationName": "Group Chat Name or Sender Name",
+    "conversationType": "private" | "group",
+    "action": "created",
+    "timestamp": "<iso_date_string>"
+  }
+  ```
+
+#### 2. New Follower
+- **Type**: `new_follower`
+- **Trigger**: A user gets a new follower.
+- **Description**: Notifies the user that someone has started following them.
+- **Data Schema**:
+  ```json
+  {
+    "followerId": "<mongoose_object_id>",
+    "followerName": "Jane Doe"
+  }
+  ```
+
+#### 3. New Discussion
+- **Type**: `new_discussion`
+- **Trigger**: A new discussion is created in a community the user is a member of.
+- **Description**: Notifies the user about a new discussion in their community.
+- **Data Schema**:
+  ```json
+  {
+    "discussionId": "<mongoose_object_id>",
+    "communityId": "<mongoose_object_id>",
+    "creatorName": "John Doe"
+  }
+  ```
+
+#### 4. New Resource
+- **Type**: `new_resource`
+- **Trigger**: A new resource is uploaded.
+- **Description**: Notifies subscribed users about a new resource.
+- **Data Schema**:
+  ```json
+  {
+    "resourceId": "<mongoose_object_id>",
+    "uploaderName": "Jane Doe"
+  }
+  ```
+
+#### 5. Discussion Reply
+- **Type**: `discussion_reply`
+- **Trigger**: A new reply is posted on a discussion the user is subscribed to or has participated in.
+- **Description**: Notifies the user of a new reply to a discussion.
+- **Data Schema**:
+  ```json
+  {
+    "discussionId": "<mongoose_object_id>",
+    "replyId": "<mongoose_object_id>",
+    "replierName": "John Doe"
+  }
+  ```
+
+#### 6. Resource Voted
+- **Type**: `resource_voted`
+- **Trigger**: A user's resource receives a vote.
+- **Description**: Notifies the user that their resource has been upvoted or downvoted.
+- **Data Schema**:
+  ```json
+  {
+    "resourceId": "<mongoose_object_id>",
+    "voterName": "Jane Doe",
+    "voteType": "upvote" | "downvote"
+  }
+  ```
+
+#### 7. Resource Reported
+- **Type**: `resource_reported`
+- **Trigger**: A user's resource is reported.
+- **Description**: Notifies the user that their resource has been reported.
+- **Data Schema**:
+  ```json
+  {
+    "resourceId": "<mongoose_object_id>",
+    "reporterName": "John Doe"
+  }
+  ```
+
+#### 8. New Comment on Resource
+- **Type**: `resource_comment`
+- **Trigger**: A new comment is added to a resource.
+- **Description**: Notifies the user of a new comment on their resource.
+- **Data Schema**:
+  ```json
+  {
+    "resourceId": "<mongoose_object_id>",
+    "commentId": "<mongoose_object_id>",
+    "commenterName": "Jane Doe"
+  }
+  ```
+
+#### 9. Welcome Notification
+- **Type**: `welcome`
+- **Trigger**: A new user registers.
+- **Description**: A welcome notification for new users.
+- **Data Schema**:
+  ```json
+  {
+    "message": "Welcome to the Student Portal!"
+  }
+  ```
+
+#### 10. New Event
+- **Type**: `new_event`
+- **Trigger**: A new event is created.
+- **Description**: Notifies all users about a new event.
+- **Data Schema**:
+  ```json
+  {
+    "eventId": "<mongoose_object_id>"
+  }
+  ```
+
+#### 11. New Event (Admin)
+- **Type**: `new_event_admin`
+- **Trigger**: A new event is created.
+- **Description**: Notifies superadmins about a new event for the dashboard.
+- **Data Schema**:
+  ```json
+  {
+    "eventId": "<mongoose_object_id>",
+    "creatorId": "<mongoose_object_id>",
+    "creatorName": "John Doe"
+  }
+  ```

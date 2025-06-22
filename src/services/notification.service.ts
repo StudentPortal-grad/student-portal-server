@@ -104,6 +104,10 @@ class NotificationService {
         return 'Resource Voted';
       case 'resource_reported':
         return 'Resource Reported';
+      case 'new_event':
+        return 'New Event';
+      case 'new_event_admin':
+        return 'New Event Alert (Admin)';
       default:
         return 'New Notification';
     }

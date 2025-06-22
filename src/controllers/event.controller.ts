@@ -12,6 +12,8 @@ import {
 } from '@utils/calendarUtils';
 import { generateEventRecommendations } from '@utils/recommendationUtils';
 import asyncHandler from '../utils/asyncHandler';
+import NotificationService from '../services/notification.service';
+import { UserService } from '../services/user.service';
 import { IEventDocument } from '../interfaces/event.interface';
 import { EventService } from '../services/event.service';
 
@@ -550,7 +552,50 @@ export const createEvent = asyncHandler(
       updatedAt: new Date(),
     });
 
-    res.success({ event }, 'Event created successfully', HttpStatus.CREATED);
+        res.success({ event }, 'Event created successfully', HttpStatus.CREATED);
+
+    // Asynchronously send notifications
+    (async () => {
+      try {
+        const creatorId = req.user!.id;
+
+        // Notify all users except the creator
+        const allUserIds = await UserService.getAllUserIds();
+        const notificationPromises = allUserIds
+          .filter(userId => userId.toString() !== creatorId)
+          .map(userId =>
+            NotificationService.createNotification(
+              userId,
+              'new_event',
+              `New Event: ${event.title}`,
+              { eventId: event._id.toString() },
+              'fcm'
+            )
+          );
+
+        // Notify the superadmin for the dashboard
+        const superAdmin = await UserService.getSuperAdmin();
+        if (superAdmin && superAdmin._id.toString() !== creatorId) {
+          notificationPromises.push(
+            NotificationService.createNotification(
+              superAdmin._id,
+              'new_event_admin',
+              `New event created by ${req.user?.name}: \"${event.title}\" `,
+              {
+                eventId: event._id.toString(),
+                creatorId: creatorId,
+                creatorName: req.user?.name,
+              },
+              'in-app'
+            )
+          );
+        }
+
+        await Promise.all(notificationPromises);
+      } catch (error) {
+        console.error('Failed to send new event notifications:', error);
+      }
+    })();
   }
 );
 
