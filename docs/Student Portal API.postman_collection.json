@@ -1,0 +1,1710 @@
+{
+	"info": {
+		"_postman_id": "ab53879f-cd13-4d65-a59a-f54f31902420",
+		"name": "Student Portal API",
+		"description": "Complete API collection for the Student Portal platform",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "42740539"
+	},
+	"item": [
+		{
+			"name": "1. Auth",
+			"item": [
+				{
+					"name": "Signup Superadmin",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstName\": \"Super\",\n    \"lastName\": \"Admin\",\n    \"email\": \"superadmin@example.com\",\n    \"password\": \"Password123!\",\n    \"role\": \"superadmin\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/signup",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"signup"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Successful Signup",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"firstName\": \"Super\",\n    \"lastName\": \"Admin\",\n    \"email\": \"superadmin@example.com\",\n    \"password\": \"Password123!\",\n    \"role\": \"superadmin\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/auth/signup",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"auth",
+										"signup"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"message\": \"User created successfully\",\n  \"data\": {\n    \"user\": {\n      \"_id\": \"60a1b2c3d4e5f6a7b8c9d0e1\",\n      \"firstName\": \"Super\",\n      \"lastName\": \"Admin\",\n      \"email\": \"superadmin@example.com\",\n      \"role\": \"superadmin\",\n      \"createdAt\": \"2025-04-24T12:34:56.789Z\",\n      \"updatedAt\": \"2025-04-24T12:34:56.789Z\"\n    },\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Login Superadmin",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"superadmin@example.com\",\n    \"password\": \"Password123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Successful Login",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email\": \"superadmin@example.com\",\n    \"password\": \"Password123!\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/auth/login",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"auth",
+										"login"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"user\": {\n      \"_id\": \"60a1b2c3d4e5f6a7b8c9d0e1\",\n      \"firstName\": \"Super\",\n      \"lastName\": \"Admin\",\n      \"email\": \"superadmin@example.com\",\n      \"role\": \"superadmin\",\n      \"createdAt\": \"2025-04-24T12:34:56.789Z\",\n      \"updatedAt\": \"2025-04-24T12:34:56.789Z\"\n    },\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Create Admin",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstName\": \"Admin\",\n    \"lastName\": \"User\",\n    \"email\": \"admin@example.com\",\n    \"password\": \"Password123!\",\n    \"role\": \"admin\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/signup",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"signup"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Successful Admin Creation",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"firstName\": \"Admin\",\n    \"lastName\": \"User\",\n    \"email\": \"admin@example.com\",\n    \"password\": \"Password123!\",\n    \"role\": \"admin\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/auth/signup",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"auth",
+										"signup"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"message\": \"User created successfully\",\n  \"data\": {\n    \"user\": {\n      \"_id\": \"60a1b2c3d4e5f6a7b8c9d0e2\",\n      \"firstName\": \"Admin\",\n      \"lastName\": \"User\",\n      \"email\": \"admin@example.com\",\n      \"role\": \"admin\",\n      \"createdAt\": \"2025-04-24T12:34:56.789Z\",\n      \"updatedAt\": \"2025-04-24T12:34:56.789Z\"\n    },\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Login Admin",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"Password123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Successful Login",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"Password123!\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/auth/login",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"auth",
+										"login"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"user\": {\n      \"_id\": \"60a1b2c3d4e5f6a7b8c9d0e2\",\n      \"firstName\": \"Admin\",\n      \"lastName\": \"User\",\n      \"email\": \"admin@example.com\",\n      \"role\": \"admin\",\n      \"createdAt\": \"2025-04-24T12:34:56.789Z\",\n      \"updatedAt\": \"2025-04-24T12:34:56.789Z\"\n    },\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"profile"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Successful Profile Retrieval",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/auth/profile",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"auth",
+										"profile"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"user\": {\n      \"_id\": \"60a1b2c3d4e5f6a7b8c9d0e1\",\n      \"firstName\": \"Super\",\n      \"lastName\": \"Admin\",\n      \"email\": \"superadmin@example.com\",\n      \"role\": \"superadmin\",\n      \"bio\": \"Dashboard administrator\",\n      \"createdAt\": \"2025-04-24T12:34:56.789Z\",\n      \"updatedAt\": \"2025-04-24T12:34:56.789Z\"\n    }\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstName\": \"Updated\",\n    \"lastName\": \"Admin\",\n    \"bio\": \"Dashboard administrator\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"profile"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Successful Profile Update",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"firstName\": \"Updated\",\n    \"lastName\": \"Admin\",\n    \"bio\": \"Dashboard administrator\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/auth/profile",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"auth",
+										"profile"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"message\": \"Profile updated successfully\",\n  \"data\": {\n    \"user\": {\n      \"_id\": \"60a1b2c3d4e5f6a7b8c9d0e1\",\n      \"firstName\": \"Updated\",\n      \"lastName\": \"Admin\",\n      \"email\": \"superadmin@example.com\",\n      \"role\": \"superadmin\",\n      \"bio\": \"Dashboard administrator\",\n      \"createdAt\": \"2025-04-24T12:34:56.789Z\",\n      \"updatedAt\": \"2025-04-24T12:45:00.123Z\"\n    }\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Enable MFA",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/mfa/enable",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"mfa",
+								"enable"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "MFA Enabled",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/auth/mfa/enable",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"auth",
+										"mfa",
+										"enable"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"message\": \"MFA enabled successfully\",\n  \"data\": {\n    \"secret\": \"ABCDEFGHIJKLMNOP\",\n    \"qrCode\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEAAQMAAABmvDolAAAABlBMVEX///8AAABVwtN+AAAA...\"\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Disable MFA",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/mfa/disable",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"mfa",
+								"disable"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "MFA Disabled",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/auth/mfa/disable",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"auth",
+										"mfa",
+										"disable"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"message\": \"MFA disabled successfully\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "2. Home",
+			"item": [
+				{
+					"name": "Get Aggregated Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dashboard/stats",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"stats"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Aggregated Stats",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/dashboard/stats",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"dashboard",
+										"stats"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"stats\": {\n      \"users\": {\n        \"total\": 1250,\n        \"active\": 980,\n        \"newThisMonth\": 75\n      },\n      \"communities\": {\n        \"total\": 48,\n        \"active\": 42,\n        \"newThisMonth\": 5\n      },\n      \"resources\": {\n        \"total\": 325,\n        \"newThisMonth\": 28\n      },\n      \"events\": {\n        \"total\": 62,\n        \"upcoming\": 23,\n        \"newThisMonth\": 12\n      }\n    }\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Get User Count History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dashboard/user-history?period=month&role=student",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"user-history"
+							],
+							"query": [
+								{
+									"key": "period",
+									"value": "month"
+								},
+								{
+									"key": "role",
+									"value": "student"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "User Count History",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/dashboard/user-history?period=month&role=student",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"dashboard",
+										"user-history"
+									],
+									"query": [
+										{
+											"key": "period",
+											"value": "month"
+										},
+										{
+											"key": "role",
+											"value": "student"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"history\": [\n      {\n        \"date\": \"2025-01-01\",\n        \"count\": 850\n      },\n      {\n        \"date\": \"2025-02-01\",\n        \"count\": 875\n      },\n      {\n        \"date\": \"2025-03-01\",\n        \"count\": 925\n      },\n      {\n        \"date\": \"2025-04-01\",\n        \"count\": 980\n      }\n    ]\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Recent Notifications",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dashboard/notifications?limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"notifications"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Recent Notifications",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/dashboard/notifications?limit=10",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"dashboard",
+										"notifications"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "10"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"notifications\": [\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0e3\",\n        \"type\": \"new_user\",\n        \"message\": \"New user John Smith joined the platform\",\n        \"createdAt\": \"2025-04-24T12:30:00.000Z\"\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0e4\",\n        \"type\": \"new_event\",\n        \"message\": \"New event 'JavaScript Workshop' was created\",\n        \"createdAt\": \"2025-04-23T15:45:00.000Z\"\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0e5\",\n        \"type\": \"new_resource\",\n        \"message\": \"New resource 'Introduction to TypeScript' was uploaded\",\n        \"createdAt\": \"2025-04-22T09:15:00.000Z\"\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0e6\",\n        \"type\": \"new_community\",\n        \"message\": \"New community 'Web Development' was created\",\n        \"createdAt\": \"2025-04-21T14:20:00.000Z\"\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0e7\",\n        \"type\": \"user_suspended\",\n        \"message\": \"User account was suspended for policy violation\",\n        \"createdAt\": \"2025-04-20T11:10:00.000Z\"\n      }\n    ]\n  }\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "3. User Management",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users?page=1&limit=10&role=student",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "role",
+									"value": "student"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "User List",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/users?page=1&limit=10&role=student",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"users"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "role",
+											"value": "student"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"users\": [\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0f1\",\n        \"firstName\": \"John\",\n        \"lastName\": \"Smith\",\n        \"email\": \"john.smith@example.com\",\n        \"role\": \"student\",\n        \"createdAt\": \"2025-04-15T10:30:00.000Z\",\n        \"isSuspended\": false\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0f2\",\n        \"firstName\": \"Jane\",\n        \"lastName\": \"Doe\",\n        \"email\": \"jane.doe@example.com\",\n        \"role\": \"student\",\n        \"createdAt\": \"2025-04-14T09:15:00.000Z\",\n        \"isSuspended\": false\n      }\n    ],\n    \"pagination\": {\n      \"total\": 980,\n      \"page\": 1,\n      \"limit\": 10,\n      \"pages\": 98\n    }\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Get User By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/:userId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								":userId"
+							],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "userId"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "User Details",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/users/:userId",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"users",
+										":userId"
+									],
+									"variable": [
+										{
+											"key": "userId",
+											"value": "60a1b2c3d4e5f6a7b8c9d0f1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"user\": {\n      \"_id\": \"60a1b2c3d4e5f6a7b8c9d0f1\",\n      \"firstName\": \"John\",\n      \"lastName\": \"Smith\",\n      \"email\": \"john.smith@example.com\",\n      \"role\": \"student\",\n      \"bio\": \"Computer Science student\",\n      \"createdAt\": \"2025-04-15T10:30:00.000Z\",\n      \"updatedAt\": \"2025-04-15T10:30:00.000Z\",\n      \"isSuspended\": false,\n      \"communities\": [\n        {\n          \"_id\": \"60a1b2c3d4e5f6a7b8c9d0a1\",\n          \"name\": \"Web Development\"\n        },\n        {\n          \"_id\": \"60a1b2c3d4e5f6a7b8c9d0a2\",\n          \"name\": \"JavaScript Study Group\"\n        }\n      ]\n    }\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"User\",\n  \"role\": \"student\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/:userId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								":userId"
+							],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "userId"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "User Updated",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"User\",\n  \"role\": \"student\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/users/:userId",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"users",
+										":userId"
+									],
+									"variable": [
+										{
+											"key": "userId",
+											"value": "60a1b2c3d4e5f6a7b8c9d0f1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"message\": \"User updated successfully\",\n  \"data\": {\n    \"user\": {\n      \"_id\": \"60a1b2c3d4e5f6a7b8c9d0f1\",\n      \"firstName\": \"Updated\",\n      \"lastName\": \"User\",\n      \"email\": \"john.smith@example.com\",\n      \"role\": \"student\",\n      \"bio\": \"Computer Science student\",\n      \"createdAt\": \"2025-04-15T10:30:00.000Z\",\n      \"updatedAt\": \"2025-04-24T12:45:00.123Z\"\n    }\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/:userId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								":userId"
+							],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "userId"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "User Deleted",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/users/:userId",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"users",
+										":userId"
+									],
+									"variable": [
+										{
+											"key": "userId",
+											"value": "60a1b2c3d4e5f6a7b8c9d0f1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"message\": \"User deleted successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Suspend User",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Violation of community guidelines\",\n  \"duration\": 30\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/:userId/suspend",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								":userId",
+								"suspend"
+							],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "userId"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "User Suspended",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"reason\": \"Violation of community guidelines\",\n  \"duration\": 30\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/users/:userId/suspend",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"users",
+										":userId",
+										"suspend"
+									],
+									"variable": [
+										{
+											"key": "userId",
+											"value": "60a1b2c3d4e5f6a7b8c9d0f1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"message\": \"User suspended successfully\",\n  \"data\": {\n    \"user\": {\n      \"_id\": \"60a1b2c3d4e5f6a7b8c9d0f1\",\n      \"firstName\": \"John\",\n      \"lastName\": \"Smith\",\n      \"email\": \"john.smith@example.com\",\n      \"role\": \"student\",\n      \"isSuspended\": true,\n      \"suspensionReason\": \"Violation of community guidelines\",\n      \"suspendedUntil\": \"2025-05-24T12:45:00.123Z\"\n    }\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Unsuspend User",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/:userId/unsuspend",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								":userId",
+								"unsuspend"
+							],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "userId"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "User Unsuspended",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/users/:userId/unsuspend",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"users",
+										":userId",
+										"unsuspend"
+									],
+									"variable": [
+										{
+											"key": "userId",
+											"value": "60a1b2c3d4e5f6a7b8c9d0f1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"message\": \"User unsuspended successfully\",\n  \"data\": {\n    \"user\": {\n      \"_id\": \"60a1b2c3d4e5f6a7b8c9d0f1\",\n      \"firstName\": \"John\",\n      \"lastName\": \"Smith\",\n      \"email\": \"john.smith@example.com\",\n      \"role\": \"student\",\n      \"isSuspended\": false\n    }\n  }\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Community Management",
+			"item": [
+				{
+					"name": "Get All Communities",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/communities",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"communities"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Communities List",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/communities",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"communities"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"communities\": [\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0a1\",\n        \"name\": \"Web Development\",\n        \"description\": \"A community for web developers\",\n        \"imageUrl\": \"https://example.com/images/web-dev.jpg\",\n        \"memberCount\": 45,\n        \"createdAt\": \"2025-01-15T08:30:00.000Z\"\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0a2\",\n        \"name\": \"JavaScript Study Group\",\n        \"description\": \"Learn JavaScript together\",\n        \"imageUrl\": \"https://example.com/images/js-group.jpg\",\n        \"memberCount\": 32,\n        \"createdAt\": \"2025-02-10T14:15:00.000Z\"\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0a3\",\n        \"name\": \"Data Science Club\",\n        \"description\": \"Exploring data science and machine learning\",\n        \"imageUrl\": \"https://example.com/images/data-science.jpg\",\n        \"memberCount\": 28,\n        \"createdAt\": \"2025-03-05T11:45:00.000Z\"\n      }\n    ],\n    \"total\": 3,\n    \"page\": 1,\n    \"limit\": 10\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Community by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/communities/:communityId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"communities",
+								":communityId"
+							],
+							"variable": [
+								{
+									"key": "communityId",
+									"value": "communityId"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Community Details",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/communities/:communityId",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"communities",
+										":communityId"
+									],
+									"variable": [
+										{
+											"key": "communityId",
+											"value": "60a1b2c3d4e5f6a7b8c9d0a1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"community\": {\n      \"_id\": \"60a1b2c3d4e5f6a7b8c9d0a1\",\n      \"name\": \"Web Development\",\n      \"description\": \"A community for web developers to share resources, discuss trends, and collaborate on projects.\",\n      \"imageUrl\": \"https://example.com/images/web-dev.jpg\",\n      \"memberCount\": 45,\n      \"createdAt\": \"2025-01-15T08:30:00.000Z\",\n      \"updatedAt\": \"2025-04-10T14:20:00.000Z\",\n      \"topics\": [\"HTML\", \"CSS\", \"JavaScript\", \"React\", \"Node.js\"],\n      \"visibility\": \"public\",\n      \"creator\": {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0f1\",\n        \"firstName\": \"John\",\n        \"lastName\": \"Smith\"\n      },\n      \"admins\": [\n        {\n          \"_id\": \"60a1b2c3d4e5f6a7b8c9d0f1\",\n          \"firstName\": \"John\",\n          \"lastName\": \"Smith\"\n        },\n        {\n          \"_id\": \"60a1b2c3d4e5f6a7b8c9d0f2\",\n          \"firstName\": \"Jane\",\n          \"lastName\": \"Doe\"\n        }\n      ]\n    }\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Community Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/communities/metrics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"communities",
+								"metrics"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Community Metrics Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/communities/metrics",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"communities",
+										"metrics"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"totalCommunities\": 15,\n    \"totalMembers\": 487,\n    \"topCommunities\": [\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0a1\",\n        \"name\": \"Web Development\",\n        \"memberCount\": 45\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0a2\",\n        \"name\": \"JavaScript Study Group\",\n        \"memberCount\": 32\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0a3\",\n        \"name\": \"Data Science Club\",\n        \"memberCount\": 28\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0a4\",\n        \"name\": \"Mobile App Development\",\n        \"memberCount\": 25\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0a5\",\n        \"name\": \"UI/UX Design Group\",\n        \"memberCount\": 22\n      }\n    ],\n    \"communitiesCreatedThisMonth\": 3,\n    \"activeDiscussions\": 28\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Community Growth Chart",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/communities/growth-chart?period=6months",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"communities",
+								"growth-chart"
+							],
+							"query": [
+								{
+									"key": "period",
+									"value": "6months"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Community Growth Chart Data",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/communities/growth-chart?period=6months",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"communities",
+										"growth-chart"
+									],
+									"query": [
+										{
+											"key": "period",
+											"value": "6months"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"labels\": [\"Nov 2024\", \"Dec 2024\", \"Jan 2025\", \"Feb 2025\", \"Mar 2025\", \"Apr 2025\"],\n    \"datasets\": [\n      {\n        \"label\": \"New Communities\",\n        \"data\": [2, 3, 4, 2, 1, 3]\n      },\n      {\n        \"label\": \"Total Members\",\n        \"data\": [320, 356, 389, 420, 452, 487]\n      },\n      {\n        \"label\": \"Active Discussions\",\n        \"data\": [15, 18, 22, 20, 25, 28]\n      }\n    ]\n  }\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Resource Management",
+			"item": [
+				{
+					"name": "Get All Resources",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/resources",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"resources"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Resources List",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/resources",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"resources"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"resources\": [\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0b1\",\n        \"title\": \"JavaScript Fundamentals Guide\",\n        \"description\": \"A comprehensive guide to JavaScript fundamentals for beginners\",\n        \"fileUrl\": \"https://example.com/files/javascript-guide.pdf\",\n        \"fileSize\": 2458000,\n        \"fileType\": \"pdf\",\n        \"tags\": [\"javascript\", \"programming\", \"beginner\"],\n        \"category\": \"tutorial\",\n        \"visibility\": \"public\",\n        \"downloadCount\": 125,\n        \"createdAt\": \"2025-01-20T09:15:00.000Z\"\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0b2\",\n        \"title\": \"React Project Structure Template\",\n        \"description\": \"A template for organizing React projects with best practices\",\n        \"fileUrl\": \"https://example.com/files/react-template.zip\",\n        \"fileSize\": 1245000,\n        \"fileType\": \"zip\",\n        \"tags\": [\"react\", \"template\", \"project structure\"],\n        \"category\": \"template\",\n        \"visibility\": \"public\",\n        \"downloadCount\": 87,\n        \"createdAt\": \"2025-02-05T14:30:00.000Z\"\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0b3\",\n        \"title\": \"Data Science with Python Cheatsheet\",\n        \"description\": \"Quick reference for common data science operations in Python\",\n        \"fileUrl\": \"https://example.com/files/data-science-cheatsheet.pdf\",\n        \"fileSize\": 1850000,\n        \"fileType\": \"pdf\",\n        \"tags\": [\"python\", \"data science\", \"cheatsheet\"],\n        \"category\": \"reference\",\n        \"visibility\": \"public\",\n        \"downloadCount\": 103,\n        \"createdAt\": \"2025-03-10T11:20:00.000Z\"\n      }\n    ],\n    \"total\": 3,\n    \"page\": 1,\n    \"limit\": 10\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Resource by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/resources/:resourceId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"resources",
+								":resourceId"
+							],
+							"variable": [
+								{
+									"key": "resourceId",
+									"value": "resourceId"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Resource Details",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/resources/:resourceId",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"resources",
+										":resourceId"
+									],
+									"variable": [
+										{
+											"key": "resourceId",
+											"value": "60a1b2c3d4e5f6a7b8c9d0b1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"resource\": {\n      \"_id\": \"60a1b2c3d4e5f6a7b8c9d0b1\",\n      \"title\": \"JavaScript Fundamentals Guide\",\n      \"description\": \"A comprehensive guide to JavaScript fundamentals for beginners. Covers variables, functions, objects, arrays, and more.\",\n      \"fileUrl\": \"https://example.com/files/javascript-guide.pdf\",\n      \"fileSize\": 2458000,\n      \"fileType\": \"pdf\",\n      \"tags\": [\"javascript\", \"programming\", \"beginner\"],\n      \"category\": \"tutorial\",\n      \"visibility\": \"public\",\n      \"downloadCount\": 125,\n      \"createdAt\": \"2025-01-20T09:15:00.000Z\",\n      \"updatedAt\": \"2025-04-10T15:30:00.000Z\",\n      \"uploader\": {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0f1\",\n        \"firstName\": \"John\",\n        \"lastName\": \"Smith\"\n      },\n      \"community\": {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0a1\",\n        \"name\": \"Web Development\"\n      }\n    }\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Resource Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/resources/metrics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"resources",
+								"metrics"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Resource Metrics Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/resources/metrics",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"resources",
+										"metrics"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"totalResources\": 42,\n    \"totalDownloads\": 2845,\n    \"resourcesByCategory\": {\n      \"tutorial\": 15,\n      \"template\": 8,\n      \"reference\": 12,\n      \"article\": 7\n    },\n    \"topResources\": [\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0b1\",\n        \"title\": \"JavaScript Fundamentals Guide\",\n        \"downloadCount\": 125\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0b3\",\n        \"title\": \"Data Science with Python Cheatsheet\",\n        \"downloadCount\": 103\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0b2\",\n        \"title\": \"React Project Structure Template\",\n        \"downloadCount\": 87\n      }\n    ],\n    \"resourcesAddedThisMonth\": 8\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Resource Categories Chart",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/resources/categories-chart",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"resources",
+								"categories-chart"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Resource Categories Chart Data",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/resources/categories-chart",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"resources",
+										"categories-chart"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"labels\": [\"Tutorial\", \"Template\", \"Reference\", \"Article\"],\n    \"datasets\": [\n      {\n        \"label\": \"Resource Count by Category\",\n        \"data\": [15, 8, 12, 7]\n      },\n      {\n        \"label\": \"Downloads by Category\",\n        \"data\": [1250, 580, 780, 235]\n      }\n    ]\n  }\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Event Management",
+			"item": [
+				{
+					"name": "Get All Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/events",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"events"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Events List",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/events",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"events"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"events\": [\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0c1\",\n        \"title\": \"JavaScript Workshop\",\n        \"description\": \"Learn JavaScript fundamentals and advanced concepts\",\n        \"dateTime\": \"2025-05-15T14:00:00.000Z\",\n        \"location\": \"Computer Lab 101\",\n        \"capacity\": 30,\n        \"attendeeCount\": 25,\n        \"status\": \"upcoming\",\n        \"visibility\": \"public\",\n        \"createdAt\": \"2025-04-01T10:30:00.000Z\"\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0c2\",\n        \"title\": \"Data Science Hackathon\",\n        \"description\": \"Compete in teams to solve real-world data problems\",\n        \"dateTime\": \"2025-06-10T09:00:00.000Z\",\n        \"location\": \"Innovation Hub\",\n        \"capacity\": 50,\n        \"attendeeCount\": 42,\n        \"status\": \"upcoming\",\n        \"visibility\": \"public\",\n        \"createdAt\": \"2025-04-05T11:45:00.000Z\"\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0c3\",\n        \"title\": \"Web Development Meetup\",\n        \"description\": \"Monthly meetup for web developers to network and share ideas\",\n        \"dateTime\": \"2025-05-05T18:30:00.000Z\",\n        \"location\": \"Student Center, Room 202\",\n        \"capacity\": 40,\n        \"attendeeCount\": 35,\n        \"status\": \"upcoming\",\n        \"visibility\": \"public\",\n        \"createdAt\": \"2025-04-10T09:20:00.000Z\"\n      }\n    ],\n    \"total\": 3,\n    \"page\": 1,\n    \"limit\": 10\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Event by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/events/:eventId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"events",
+								":eventId"
+							],
+							"variable": [
+								{
+									"key": "eventId",
+									"value": "eventId"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Event Details",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/events/:eventId",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"events",
+										":eventId"
+									],
+									"variable": [
+										{
+											"key": "eventId",
+											"value": "60a1b2c3d4e5f6a7b8c9d0c1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"event\": {\n      \"_id\": \"60a1b2c3d4e5f6a7b8c9d0c1\",\n      \"title\": \"JavaScript Workshop\",\n      \"description\": \"Learn JavaScript fundamentals and advanced concepts in this hands-on workshop. Bring your laptop and be ready to code! We'll cover variables, functions, objects, DOM manipulation, and modern ES6+ features.\",\n      \"dateTime\": \"2025-05-15T14:00:00.000Z\",\n      \"endDateTime\": \"2025-05-15T17:00:00.000Z\",\n      \"location\": \"Computer Lab 101\",\n      \"capacity\": 30,\n      \"attendeeCount\": 25,\n      \"status\": \"upcoming\",\n      \"visibility\": \"public\",\n      \"createdAt\": \"2025-04-01T10:30:00.000Z\",\n      \"updatedAt\": \"2025-04-15T11:20:00.000Z\",\n      \"organizer\": {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0f1\",\n        \"firstName\": \"John\",\n        \"lastName\": \"Smith\"\n      },\n      \"community\": {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0a1\",\n        \"name\": \"Web Development\"\n      },\n      \"tags\": [\"javascript\", \"programming\", \"workshop\"]\n    }\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Event Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/events/metrics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"events",
+								"metrics"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Event Metrics Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/events/metrics",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"events",
+										"metrics"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"totalEvents\": 25,\n    \"upcomingEvents\": 18,\n    \"pastEvents\": 7,\n    \"totalAttendees\": 532,\n    \"averageAttendance\": 21.28,\n    \"topEvents\": [\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0c2\",\n        \"title\": \"Data Science Hackathon\",\n        \"attendeeCount\": 42\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0c3\",\n        \"title\": \"Web Development Meetup\",\n        \"attendeeCount\": 35\n      },\n      {\n        \"_id\": \"60a1b2c3d4e5f6a7b8c9d0c1\",\n        \"title\": \"JavaScript Workshop\",\n        \"attendeeCount\": 25\n      }\n    ],\n    \"eventsCreatedThisMonth\": 5\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Event Attendance Chart",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/events/attendance-chart?period=6months",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"events",
+								"attendance-chart"
+							],
+							"query": [
+								{
+									"key": "period",
+									"value": "6months"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Event Attendance Chart Data",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/events/attendance-chart?period=6months",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"events",
+										"attendance-chart"
+									],
+									"query": [
+										{
+											"key": "period",
+											"value": "6months"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"labels\": [\"Nov 2024\", \"Dec 2024\", \"Jan 2025\", \"Feb 2025\", \"Mar 2025\", \"Apr 2025\"],\n    \"datasets\": [\n      {\n        \"label\": \"Events Created\",\n        \"data\": [3, 4, 5, 3, 5, 5]\n      },\n      {\n        \"label\": \"Total Attendees\",\n        \"data\": [65, 82, 95, 78, 110, 102]\n      },\n      {\n        \"label\": \"Average Attendance\",\n        \"data\": [21.7, 20.5, 19.0, 26.0, 22.0, 20.4]\n      }\n    ]\n  }\n}"
+						}
+					]
+				}
+			]
+		}
+	]
+}

@@ -40,13 +40,12 @@ export class DiscussionService {
   /**
    * Vote on a discussion
    */
-  async voteDiscussion(discussionId: string, userId: string, voteType: 'up' | 'down'): Promise<IDiscussion | null> {
+  async voteDiscussion(discussionId: string, userId: string, voteType: 'upvote' | 'downvote'): Promise<IDiscussion | null> {
     const discussion = await this.discussionRepository.findById(discussionId);
     if (!discussion) {
       throw new NotFoundError('Discussion not found');
     }
-    const mongooseVoteType = voteType === 'up' ? 'upvote' : 'downvote';
-    await discussion.vote(new Types.ObjectId(userId), mongooseVoteType);
+    await discussion.vote(new Types.ObjectId(userId), voteType);
     return discussion.save();
   }
 

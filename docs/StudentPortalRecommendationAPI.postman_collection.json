@@ -1,0 +1,247 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-4a3b-8c7d-1f2e3d4a5b6c",
+    "name": "StudentPortal Recommendation API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection for the StudentPortal Recommendation API."
+  },
+  "item": [
+    {
+      "name": "Initialize API",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"model_config_path\": \"recommendation/data/model_config.json\",\n    \"model_weights_path\": \"recommendation/data/model.pt\",\n    \"content_features_path\": \"recommendation/data/items.csv\",\n    \"topics_mapping_path\": \"recommendation/data/topics_mapping.json\",\n    \"device\": \"cpu\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/initialize",
+          "host": [ "{{base_url}}" ],
+          "path": [ "initialize" ]
+        }
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {},
+          "status": "OK",
+          "code": 200,
+          "body": "{\n    \"status\": \"success\",\n    \"message\": \"Advanced Recommendation API initialized successfully\",\n    \"num_contents\": 500,\n    \"num_topics\": 123,\n    \"max_preferences\": 10,\n    \"model_type\": \"AdvancedRecommendationModel\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Initialize Platform API",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"device\": \"cpu\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/initialize_platform",
+          "host": [ "{{base_url}}" ],
+          "path": [ "initialize_platform" ]
+        }
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {},
+          "status": "OK",
+          "code": 200,
+          "body": "{\n    \"status\": \"success\",\n    \"message\": \"Platform Recommendation API initialized successfully\",\n    \"model\": \"AdvancedRecommendationModel\",\n    \"discussions_loaded\": 1500,\n    \"topics_loaded\": 123\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get Personalized Recommendations",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"selected_topics\": [\"Education\", \"Technology Information\"],\n    \"topic_weights\": [1.0, 0.8],\n    \"num_recommendations\": 10,\n    \"user_id\": \"user123\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/recommendations/personalized",
+          "host": [ "{{base_url}}" ],
+          "path": [ "recommendations", "personalized" ]
+        }
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {},
+          "status": "OK",
+          "code": 200,
+          "body": "{\n    \"status\": \"success\",\n    \"recommendations\": [\n        {\"discussion_id\": \"disc_000123\", \"score\": 0.95, \"community\": \"technology\"},\n        {\"discussion_id\": \"disc_000456\", \"score\": 0.92, \"community\": \"education\"}\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get Available Topics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/topics",
+          "host": [ "{{base_url}}" ],
+          "path": [ "topics" ]
+        }
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {},
+          "status": "OK",
+          "code": 200,
+          "body": "{\n    \"status\": \"success\",\n    \"topics\": [\n        {\"id\": 0, \"name\": \"Education\"},\n        {\"id\": 1, \"name\": \"Technology Information\"}\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get Popular Recommendations",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"num_recommendations\": 15,\n    \"community_filter\": [\"ai_ml\", \"programming\"]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/recommendations/popular",
+          "host": [ "{{base_url}}" ],
+          "path": [ "recommendations", "popular" ]
+        }
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {},
+          "status": "OK",
+          "code": 200,
+          "body": "{\n    \"status\": \"success\",\n    \"recommendations\": [\n        {\"discussion_id\": \"disc_000789\", \"score\": 150, \"community\": \"ai_ml\"}\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get Similar Content",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"discussion_id\": \"disc_000123\",\n    \"num_recommendations\": 5\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/recommendations/similar",
+          "host": [ "{{base_url}}" ],
+          "path": [ "recommendations", "similar" ]
+        }
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {},
+          "status": "OK",
+          "code": 200,
+          "body": "{\n    \"status\": \"success\",\n    \"recommendations\": [\n        {\"discussion_id\": \"disc_000124\", \"score\": 0.88, \"community\": \"technology\"}\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": [ "{{base_url}}" ],
+          "path": [ "health" ]
+        }
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {},
+          "status": "OK",
+          "code": 200,
+          "body": "{\n    \"status\": \"ok\",\n    \"message\": \"Recommendation API is healthy\",\n    \"model_loaded\": true,\n    \"content_items\": 1500\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get Batch Recommendations",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"requests\": [\n        {\"selected_topics\": [\"Sports\"]},\n        {\"selected_topics\": [\"Science\", \"History\"], \"num_recommendations\": 5, \"user_id\": \"user456\"}\n    ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/recommendations/batch",
+          "host": [ "{{base_url}}" ],
+          "path": [ "recommendations", "batch" ]
+        }
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {},
+          "status": "OK",
+          "code": 200,
+          "body": "{\n    \"status\": \"success\",\n    \"results\": [\n        {\"status\": \"success\", \"recommendations\": []},\n        {\"status\": \"success\", \"recommendations\": []}\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get User-Based Recommendations",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"user_id\": 123,\n    \"num_recommendations\": 10,\n    \"include_stats\": true\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/recommendations/user_based",
+          "host": [ "{{base_url}}" ],
+          "path": [ "recommendations", "user_based" ]
+        }
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {},
+          "status": "OK",
+          "code": 200,
+          "body": "{\n    \"status\": \"success\",\n    \"user_id\": 123,\n    \"recommendations\": []\n}"
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000"
+    }
+  ]
+}
