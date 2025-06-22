@@ -33,11 +33,11 @@ export const getNotifications = asyncHandler(async (req: Request, res: Response,
         NotificationService.getUserUnreadCount(userId)
     ]);
 
-    const paginationOptions: ParsedPaginationOptions = { 
-        page: pageNum, 
-        limit: limitNum, 
-        sortBy: 'createdAt', 
-        sortOrder: 'desc' 
+    const paginationOptions: ParsedPaginationOptions = {
+        page: pageNum,
+        limit: limitNum,
+        sortBy: 'createdAt',
+        sortOrder: 'desc'
     };
     const pagination = getPaginationMetadata(total, paginationOptions);
 
@@ -135,4 +135,28 @@ export const markConversationNotificationsAsRead = asyncHandler(async (req: Requ
     );
 
     res.success(null, 'Conversation notifications marked as read');
-}); 
+});
+
+
+/**
+ * Test notification
+ * @route POST /api/v1/notifications/test
+ */
+export const testNotification = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    const { type, content, metadata } = req.body;
+
+    if (!type || !content) {
+        throw new AppError("Missing required fields", HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
+    }
+
+    const notification = {
+        _id: new Types.ObjectId(),
+        type,
+        content,
+        metadata
+    };
+
+    NotificationService.sendFCMNotification(req.user!.fcmToken!, notification);
+
+    res.success(null, 'Notification created successfully', HttpStatus.CREATED);
+});

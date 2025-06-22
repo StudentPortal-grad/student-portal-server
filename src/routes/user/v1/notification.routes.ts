@@ -6,6 +6,7 @@ import {
   markAllAsRead,
   createNotification,
   markConversationNotificationsAsRead,
+  testNotification,
 } from '../../../controllers/notification.controller';
 
 const router = Router();
@@ -26,5 +27,8 @@ router.patch('/read-all', markAllAsRead);
 
 // Mark conversation notifications as read
 router.patch('/conversation/:conversationId/read', markConversationNotificationsAsRead);
+
+// Test notification
+router.post('/test', testNotification);
 
 export default router;
