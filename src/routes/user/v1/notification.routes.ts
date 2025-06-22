@@ -27,4 +27,4 @@ router.patch('/read-all', markAllAsRead);
 // Mark conversation notifications as read
 router.patch('/conversation/:conversationId/read', markConversationNotificationsAsRead);
 
-export default router; 
+export default router;

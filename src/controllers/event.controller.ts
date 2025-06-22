@@ -586,7 +586,7 @@ export const createEvent = asyncHandler(
                 creatorId: creatorId,
                 creatorName: req.user?.name,
               },
-              'in-app'
+              'socket'
             )
           );
         }
