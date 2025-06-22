@@ -60,6 +60,7 @@ export const config = {
         url: envVars.AI_API_URL,
         key: envVars.AI_API_KEY,
         chatbotApiUrl: envVars.CHATBOT_API_URL,
+        recommendationApiUrl: envVars.RECOMMENDATION_API_URL,
     },
     cloudinary: {
         cloud_name: envVars.CLOUDINARY_CLOUD_NAME,

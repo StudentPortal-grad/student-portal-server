@@ -3,6 +3,7 @@ import { config } from './config';
 import connection from './config/db';
 import agenda from './config/agenda';
 import { defineNotificationJobs } from './jobs/notificationJobs';
+import { defineRecommendationJobs } from './jobs/recommendationJobs';
 
 const port = config.port;
 
@@ -18,9 +19,12 @@ const startServer = async () => {
 
   // 2. Define Agenda jobs
   defineNotificationJobs(agenda);
+  defineRecommendationJobs(agenda);
 
   // 3. Start Agenda scheduler
   await agenda.start();
+  // Schedule the recommendation system initialization job to run now
+  await agenda.now('initialize-recommendation-system', {});
   console.log('[server]: Agenda scheduler started.');
 
   // 4. Start the HTTP server

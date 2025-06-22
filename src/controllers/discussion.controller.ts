@@ -200,26 +200,47 @@ export const addReply = async (req: Request, res: Response, next: NextFunction):
  */
 export const getAllDiscussions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { page = 1, limit = 10, communityId, sortBy, sortOrder, search, currVoteSpecified } = req.query;
-    const userId = req.user?._id;
+    const {
+      page = 1,
+      limit = 10,
+      communityId,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+      search,
+      currVoteSpecified,
+      ai_enabled
+    } = req.query;
 
-    const params: DiscussionQueryParams = {
+    const queryParams: DiscussionQueryParams = {
       page: Number(page),
       limit: Number(limit),
-      communityId: communityId as string,
       sortBy: sortBy as string,
       sortOrder: sortOrder as 'asc' | 'desc',
-      search: search as string,
-      currVoteSpecified: currVoteSpecified === 'true',
-      userId: userId
     };
 
-    const result = await discussionService.getAllDiscussions(params);
+    if (communityId) {
+      queryParams.communityId = communityId as string;
+    }
 
-    res.success({
-      discussions: result.discussions,
-      pagination: result.pagination
-    }, 'Discussions retrieved successfully');
+    if (search) {
+      queryParams.search = search as string;
+    }
+
+    if (currVoteSpecified !== undefined) {
+      queryParams.currVoteSpecified = currVoteSpecified === 'true';
+      queryParams.userId = req.user?._id;
+    }
+
+    if (ai_enabled !== undefined) {
+        queryParams.ai_enabled = ai_enabled === 'true';
+        // Recommendations are personalized, so we need the user ID.
+        if (!queryParams.userId) {
+            queryParams.userId = req.user?._id;
+        }
+    }
+
+    const { discussions, pagination } = await discussionService.getAllDiscussions(queryParams);
+    res.success({ discussions, pagination }, 'Discussions retrieved successfully');
   } catch (error) {
     next(new AppError(error instanceof Error ? error.message : 'An unknown error occurred', 500, ErrorCodes.INTERNAL_ERROR));
   }

@@ -5,6 +5,7 @@ import { IDiscussion, IReply, IVote, IAttachment } from '../models/types';
 import { ICustomPaginateResult } from '../repositories/discussion.repo';
 import { NotFoundError, AuthorizationError } from '../utils/errors';
 import { UploadService } from '../utils/uploadService';
+import { RecommendationService } from './recommendation.service';
 
 // Use type alias to avoid conflicts with the imported interfaces
 type RepoDiscussion = any;
@@ -18,6 +19,7 @@ export interface DiscussionQueryParams {
   search?: string;
   currVoteSpecified?: boolean;
   userId?: Types.ObjectId;
+  ai_enabled?: boolean;
 }
 
 export class DiscussionService {
@@ -128,20 +130,26 @@ export class DiscussionService {
     discussions: IDiscussion[];
     pagination: ICustomPaginateResult<IDiscussion>;
   }> {
-    const { page, limit, communityId, sortBy = 'createdAt', sortOrder = 'desc', search, currVoteSpecified, userId } = params;
+    const { page, limit, communityId, sortBy = 'createdAt', sortOrder = 'desc', search, currVoteSpecified, userId, ai_enabled } = params;
+
+    let recommendations: IDiscussion[] = [];
+    if (ai_enabled && userId) {
+        // TODO: The user's selected topics should be fetched, for now using an empty array.
+        recommendations = await RecommendationService.getPersonalizedRecommendations(userId.toString(), []);
+    }
 
     // Build query
     const query: any = {};
-    if (params.communityId) {
-      query.communityId = new Types.ObjectId(params.communityId);
+    if (communityId) {
+      query.communityId = new Types.ObjectId(communityId);
     } else {
       // If no communityId is specified, fetch only global discussions
       query.communityId = { $exists: false };
     }
 
     // Add text search if provided
-    if (params.search) {
-      query.$text = { $search: params.search };
+    if (search) {
+      query.$text = { $search: search };
     }
 
     // Build sort
@@ -168,7 +176,7 @@ export class DiscussionService {
 
     // If current vote is specified, convert docs to plain objects and add the vote status
     if (currVoteSpecified && userId) {
-      discussions = docs.map(doc => {
+      discussions = docs.map((doc: IDiscussion) => {
         const plainDoc = doc.toObject();
         const vote = plainDoc.votes.find((v: IVote) => v.userId.equals(userId));
         plainDoc.currentVote = vote ? (vote.voteType === 'upvote' ? 1 : -1) : 0;
@@ -176,9 +184,14 @@ export class DiscussionService {
       });
     }
 
+    // Combine recommendations with the regular discussion list
+    // TODO: When recommendations are live, pagination logic will need to be adjusted
+    // to account for the combined list size.
+    const combinedDiscussions = [...recommendations, ...discussions];
+
     return {
-      discussions,
-      pagination: pagination as ICustomPaginateResult<IDiscussion>
+      discussions: combinedDiscussions,
+      pagination: { ...pagination, docs: combinedDiscussions } as ICustomPaginateResult<IDiscussion>,
     };
   }
 
