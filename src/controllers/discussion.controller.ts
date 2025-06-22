@@ -6,6 +6,7 @@ import { DiscussionRepository } from '../repositories/discussion.repo';
 import { UploadService } from '../utils/uploadService';
 import NotificationService from '../services/notification.service';
 import User from '../models/User';
+import { NotFoundError } from '@utils/errors';
 
 const discussionRepository = new DiscussionRepository();
 const uploadService = new UploadService();
@@ -117,11 +118,11 @@ export const getDiscussionById = async (req: Request, res: Response, next: NextF
       userId: userId,
     });
 
-    if (!discussion) {
-      return next(new AppError('Discussion not found', 404, ErrorCodes.NOT_FOUND));
-    }
     res.success(discussion, 'Discussion retrieved successfully');
   } catch (error) {
+    if (error instanceof NotFoundError) {
+      return next(new AppError('Discussion not found', 404, ErrorCodes.NOT_FOUND));
+    }
     next(new AppError(error instanceof Error ? error.message : 'An unknown error occurred', 500, ErrorCodes.INTERNAL_ERROR));
   }
 };
