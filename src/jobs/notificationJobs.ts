@@ -46,6 +46,16 @@ export const defineNotificationJobs = (agenda: Agenda) => {
       // If FCM is the required channel and the user has no token, abort.
       if (channel === 'fcm' && !user?.fcmToken) {
         console.warn(`[agenda]: User ${userId} has no FCM token. Skipping FCM notification.`);
+        const notification = await Notification.create({
+          userId: userObjectId,
+          type,
+          content,
+          metadata: {
+            platform: (user as any)?.metadata?.platform || 'web',
+            timestamp: new Date().toISOString(),
+          },
+        });
+        EventsManager.emit('notification:created', notification);
         return;
       }
 

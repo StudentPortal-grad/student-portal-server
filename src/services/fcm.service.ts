@@ -19,7 +19,7 @@ export class FCMService {
         body: notification.body,
         imageUrl: notification.imageUrl,
       },
-      // data: notification.data,
+      data: notification.data,
       android: {
         priority: 'high',
         notification: {
@@ -56,7 +56,7 @@ export class FCMService {
         body: notification.body,
         imageUrl: notification.imageUrl,
       },
-      // data: notification.data,
+      data: notification.data,
       android: {
         priority: 'high',
       },

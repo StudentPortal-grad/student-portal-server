@@ -60,9 +60,9 @@ class NotificationService {
           body: notification.content,
         },
         data: {
-          ...notification.metadata,
+          // ...notification.metadata,
           notificationId: notification._id.toString(),
-          type: notification.type,
+          // type: notification.type,
         },
       };
 
