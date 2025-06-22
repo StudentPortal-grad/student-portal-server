@@ -1,99 +1,61 @@
 # **Student Portal - Backend Documentation**
 
 ## **Overview**
-...
+A **Node.js/TypeScript backend** for a student portal featuring real-time communication, event management, and academic resource sharing.
 
 ---
 
 ## **Project Structure**
 ```
-server.ts                        # Main application entry point
 src/
-|── app.ts                        # Express app setup
-│
-├── config/                       # Configuration files
-│   ├── db.ts                     # Database connection
-│   ├── socket.ts                 # Socket.IO configuration
-│   ├── env.ts                     # Environment variables
-│   └── multer.ts           # File upload configuration
-│
-├── api/                          # REST API endpoints
-│   ├── controllers/              # Controllers for handling requests
-│   ├── routes/                   # API routes
-│
-├── middlewares/                  # Middleware for authentication, error handling, roles
-│
-├── models/                       # Mongoose models
-│   ├── Notification.ts
-│   ├── Conversation.ts
-│   ├── Message.ts
-│   ├── Resource.ts
-│   ├── RSVP.ts
-│   ├── Event.ts
-│   ├── User.ts
-│   ├── Discussion.ts
-│   ├── Community.ts
-│   └── Role.ts
-│
-├── sockets/                      # WebSocket handlers
-│   ├── chat.ts                   # Real-time chat functionality
-│   ├── notifications.ts          # Real-time notifications
-│   └── events.ts                 # Real-time event updates
-│
-├── scheduler/                    # Event scheduler
-│   └── eventScheduler.ts         # Handles event reminders
-│
-├── services/
-│   ├── auth.service.ts            # Authentication service
-│   ├── mailer.service.ts          # Email service for verification and notifications
-│   ├── otp.service.ts             # OTP generation and validation
-│   ├── uploader.service.ts        # File upload management
-│   ├── validator.service.ts       # Data validation functions
-│
-├── utils/                        # Utility functions
-│   ├── fileHelpers.ts           
-│   ├── asyncHandler.ts           
-│   ├── appError.ts
-│   ├── queryBuilder.ts           # Query filtering and sorting
-│
-│── view/
-│   ├── resetEmail.ts              # Email template for password reset
-│   └── verifyEmail.ts             # Email template for account verification
-└──
+├── config/           # Configuration files (DB, Socket, etc.)
+├── controllers/      # REST API controllers
+├── models/          # Mongoose data models
+├── routes/          # API route definitions
+├── services/        # Business logic services
+├── middleware/      # Express middleware
+├── utils/           # Utility functions
+├── jobs/            # Background job definitions
+├── validations/     # Input validation schemas
+└── types/           # TypeScript type definitions
 ```
 
 ---
 
 ## **Tech Stack**
-### **Backend Technologies**
-- **Node.js** & **Express.js** 
-- **TypeScript**
-- **Mongoose** 
-- **MongoDB**  
+### **Backend Core**
+- **Node.js** with **Express.js** framework
+- **TypeScript** → for type safety and better development experience
+- **MongoDB** with **Mongoose** ODM
+- **Socket.IO** → for real-time bidirectional communication
 
 ### **Authentication & Security**
-- **JWT (JSON Web Tokens)** → User authentication and session management.  
-- **OAuth 2.0 (Google Authentication)** → Enables Google Calendar event syncing.  
-- **bcryptjs** → Secure password hashing.  
-- **CORS** → Enhances API protection.  
+- **JWT** → for stateless authentication
+- **bcrypt** → for password hashing
+- **OAuth 2.0** → for Google Calendar integration
+- **CORS** and **Helmet** → for security headers
+- **Rate limiting** → for API protection
 
-### **Real-time Communication**
-- **Socket.IO** → WebSockets for real-time chat, notifications, and event updates.  
+### **File Handling & Storage**
+- **Multer** → for file upload handling
+- **Cloudinary** → for cloud storage and image processing
+- **Local file system** → fallback
 
-### **File Handling & Media Uploads**
-- **Multer** → Middleware for handling file uploads.  
-- **Cloud Storage (Local for now)** → Stores uploaded academic resources.  
+### **Background Processing**
+- **Agenda.js** → for job scheduling and background tasks
+- **Event-driven architecture** with custom event manager
+- **Batch operations** → for performance optimization
 
-### **Email & Notifications**
-- **Nodemailer** → Email verification, password reset, and event notifications.  
-- **Firebase Cloud Messaging (FCM)** → Push notifications for mobile apps.  
+### **Notifications & Communication**
+- **Firebase Cloud Messaging (FCM)** → for push notifications
+- **Nodemailer** → for email notifications
+- **Socket.IO** → for real-time in-app notifications
 
-### **Event Scheduling & Google Calendar Integration**
-- **Google Calendar API** → Syncs events and RSVP data.  
-- **Node-cron** → Schedules periodic tasks like event reminders.  
-
-### **Developer Tools**
-- **Postman** → API testing and debugging.   
+### **Development Tools**
+- **Jest** → for comprehensive testing
+- **ESLint** and **Prettier** → for code quality
+- **Nodemon** → for development hot-reloading
+- **TypeScript** compilation and type checking
 
 ---
 
