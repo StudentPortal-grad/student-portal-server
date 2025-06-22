@@ -1,11 +1,22 @@
+import { jest } from '@jest/globals';
 import { DiscussionService } from '../../src/services/discussion.service';
 import { DiscussionRepository } from '../../src/repositories/discussion.repo';
 import { UploadService } from '../../src/utils/uploadService';
 import { Types } from 'mongoose';
 import { IDiscussion, IAttachment, IReply } from '../../src/models/types';
 
-jest.mock('../../src/repositories/discussion.repo');
-jest.mock('../../src/utils/uploadService');
+jest.mock('../../src/repositories/discussion.repo', () => ({
+  DiscussionRepository: jest.fn().mockImplementation(() => ({
+    find: jest.fn(),
+    deleteMany: jest.fn(),
+  })),
+}));
+
+jest.mock('../../src/utils/uploadService', () => ({
+  UploadService: jest.fn().mockImplementation(() => ({
+    deleteFiles: jest.fn(),
+  })),
+}));
 
 describe('DiscussionService', () => {
   let discussionService: DiscussionService;
@@ -13,10 +24,10 @@ describe('DiscussionService', () => {
   let uploadService: jest.Mocked<UploadService>;
 
   beforeEach(() => {
+    jest.clearAllMocks();
     discussionRepository = new DiscussionRepository() as jest.Mocked<DiscussionRepository>;
     uploadService = new UploadService() as jest.Mocked<UploadService>;
     discussionService = new DiscussionService(discussionRepository, uploadService);
-    jest.clearAllMocks();
   });
 
   describe('bulkDeleteDiscussions', () => {

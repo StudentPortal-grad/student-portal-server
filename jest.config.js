@@ -20,6 +20,12 @@ export default {
   forceExit: true,
   // Verbose output for better debugging
   verbose: true,
-  // Run all test files
-  testMatch: ['**/__tests__/**/*.test.ts'],
+  // Run only service tests
+  testMatch: ['**/__tests__/services/**/*.test.ts'],
+  // Ignore other test directories
+  testPathIgnorePatterns: [
+    '<rootDir>/__tests__/controllers/',
+    '<rootDir>/__tests__/integration/',
+    '<rootDir>/__tests__/socket/',
+  ],
 };

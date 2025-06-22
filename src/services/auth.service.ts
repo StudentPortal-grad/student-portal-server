@@ -63,7 +63,7 @@ export class AuthService {
 
     // Create chatbot conversation for students
     if (user.role === 'student') {
-      // TODO: This is now a direct call, no longer queued
+
       await ChatbotService.createChatbotConversation(user._id.toString());
     }
 
