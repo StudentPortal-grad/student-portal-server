@@ -228,21 +228,129 @@ export class UserService {
     }
 
     if (showPosts) {
-      const posts = await Discussion.find({ creator: userId })
-        .sort({ createdAt: -1 })
-        .limit(limit)
-        .select('title content attachments creator createdAt')
-        .populate('creator', 'name username profilePicture');
-      userObj.posts = posts;
+      const postPipeline: any[] = [
+        { $match: { creator: userId } },
+        { $sort: { createdAt: -1 } },
+        { $limit: limit || 10 },
+      ];
+
+      if (currentUser) {
+        postPipeline.push({
+          $addFields: {
+            currentVote: {
+              $let: {
+                vars: {
+                  userVote: {
+                    $arrayElemAt: [
+                      {
+                        $filter: {
+                          input: { $ifNull: ['$votes', []] },
+                          as: 'vote',
+                          cond: { $eq: ['$$vote.userId', currentUser._id] },
+                        },
+                      },
+                      0,
+                    ],
+                  },
+                },
+                in: {
+                  $cond: {
+                    if: { $eq: ['$$userVote.voteType', 'upvote'] },
+                    then: 1,
+                    else: {
+                      $cond: {
+                        if: { $eq: ['$$userVote.voteType', 'downvote'] },
+                        then: -1,
+                        else: 0,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      postPipeline.push(
+        {
+          $lookup: {
+            from: 'users',
+            let: { creatorId: '$creator' },
+            pipeline: [
+              { $match: { $expr: { $eq: ['$_id', '$$creatorId'] } } },
+              { $project: { _id: 1, name: 1, username: 1, profilePicture: 1 } },
+            ],
+            as: 'creator',
+          },
+        },
+        { $unwind: '$creator' }
+      );
+
+      userObj.posts = await Discussion.aggregate(postPipeline);
     }
 
     if (showResources) {
-      const resources = await Resource.find({ uploader: userId })
-        .sort({ createdAt: -1 })
-        .limit(limit)
-        .select('title fileUrl fileType createdAt')
-        .populate('uploader', 'name username profilePicture');
-      userObj.resources = resources;
+      const resourcePipeline: any[] = [
+        { $match: { uploader: userId } },
+        { $sort: { createdAt: -1 } },
+        { $limit: options.limit || 10 },
+      ];
+
+      if (currentUser) {
+        resourcePipeline.push({
+          $addFields: {
+            currentVote: {
+              $let: {
+                vars: {
+                  userVote: {
+                    $arrayElemAt: [
+                      {
+                        $filter: {
+                          input: { $ifNull: ['$votes', []] },
+                          as: 'vote',
+                          cond: { $eq: ['$$vote.userId', currentUser._id] },
+                        },
+                      },
+                      0,
+                    ],
+                  },
+                },
+                in: {
+                  $cond: {
+                    if: { $eq: ['$$userVote.voteType', 'upvote'] },
+                    then: 1,
+                    else: {
+                      $cond: {
+                        if: { $eq: ['$$userVote.voteType', 'downvote'] },
+                        then: -1,
+                        else: 0,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      resourcePipeline.push(
+        {
+          $lookup: {
+            from: 'users',
+            let: { uploaderId: '$uploader' },
+            pipeline: [
+              { $match: { $expr: { $eq: ['$_id', '$$uploaderId'] } } },
+              { $project: { _id: 1, name: 1, username: 1, profilePicture: 1 } },
+            ],
+            as: 'uploader',
+          },
+        },
+        { $unwind: '$uploader' }
+      );
+
+      userObj.resources = await Resource.aggregate(resourcePipeline);
     }
 
     return { user: userObj };

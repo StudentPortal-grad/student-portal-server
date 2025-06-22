@@ -9,22 +9,25 @@ import { ResponseBuilder, HttpStatus } from '@utils/ApiResponse';
  * @route GET /api/v1/search
  */
 export const globalSearch = asyncHandler(async (req: Request, res: Response) => {
-  const { q, type } = req.query;
+  const { q, type, currVoteSpecified } = req.query;
 
   if (typeof q !== 'string') {
     throw new AppError('Search query must be a string.', HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
   }
 
+  const user = req.user;
+  const currVoteSpecifiedBool = currVoteSpecified === 'true';
+
   let results;
   if (!type) {
-    results = await SearchService.globalSearch(q);
+    results = await SearchService.globalSearch(q, user, currVoteSpecifiedBool);
   } else {
     switch (type) {
       case 'discussions':
-        results = { discussions: await SearchService.globalDiscussionsSearch(q) };
+        results = { discussions: await SearchService.globalDiscussionsSearch(q, user, currVoteSpecifiedBool) };
         break;
       case 'resources':
-        results = { resources: await SearchService.globalResourcesSearch(q) };
+        results = { resources: await SearchService.globalResourcesSearch(q, user, currVoteSpecifiedBool) };
         break;
       case 'users':
         results = { users: await SearchService.globalUsersSearch(q) };

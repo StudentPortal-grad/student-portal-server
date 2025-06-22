@@ -13,7 +13,7 @@ declare global {
 }
 
 export class SearchService {
-  static async globalSearch(query: string): Promise<object> {
+  static async globalSearch(query: string, user?: IUser, currVoteSpecified?: boolean): Promise<object> {
     if (!query || query.trim().length < 2) {
       throw new AppError(
         'Search query must be at least 2 characters long.',
@@ -23,48 +23,160 @@ export class SearchService {
     }
 
     const [discussions, resources, users] = await Promise.all([
-      this.globalDiscussionsSearch(query),
-      this.globalResourcesSearch(query),
+      this.globalDiscussionsSearch(query, user, currVoteSpecified),
+      this.globalResourcesSearch(query, user, currVoteSpecified),
       this.globalUsersSearch(query),
     ]);
 
     return { discussions, resources, users };
   }
 
-  static async globalDiscussionsSearch(query: string) {
+  static async globalDiscussionsSearch(query: string, user?: IUser, currVoteSpecified?: boolean) {
     const searchQuery = { $text: { $search: query } };
-    const sortOrder = { score: { $meta: 'textScore' } };
+    const userId = user ? new Types.ObjectId(user._id) : null;
 
-    return Discussion.find(searchQuery)
-      .select({
-        title: 1,
-        content: 1,
-        creator: 1,
-        createdAt: 1,
-        score: { $meta: 'textScore' },
-      })
-      .populate('creator', 'name profilePicture')
-      .sort(sortOrder)
-      .limit(10)
-      .lean();
+    const addFieldsStage: any = {
+      score: { $meta: 'textScore' },
+    };
+
+    const projectStage: any = {
+      title: 1,
+      content: 1,
+      createdAt: 1,
+      score: 1,
+      creator: {
+        name: '$creator.name',
+        profilePicture: '$creator.profilePicture',
+      },
+    };
+
+    if (currVoteSpecified && userId) {
+      addFieldsStage.currentVote = {
+        $let: {
+          vars: {
+            userVote: {
+              $arrayElemAt: [
+                {
+                  $filter: {
+                    input: { $ifNull: ['$votes', []] },
+                    as: 'vote',
+                    cond: { $eq: ['$$vote.userId', userId] },
+                  },
+                },
+                0,
+              ],
+            },
+          },
+          in: {
+            $cond: {
+              if: { $eq: ['$$userVote.voteType', 'upvote'] },
+              then: 1,
+              else: {
+                $cond: {
+                  if: { $eq: ['$$userVote.voteType', 'downvote'] },
+                  then: -1,
+                  else: 0,
+                },
+              },
+            },
+          },
+        },
+      };
+      projectStage.currentVote = 1;
+    }
+
+    const aggregationPipeline: any[] = [
+      { $match: searchQuery },
+      { $addFields: addFieldsStage },
+      { $sort: { score: { $meta: 'textScore' } } },
+      { $limit: 10 },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'creator',
+          foreignField: '_id',
+          as: 'creator',
+        },
+      },
+      { $unwind: '$creator' },
+      { $project: projectStage },
+    ];
+
+    return Discussion.aggregate(aggregationPipeline);
   }
 
-  static async globalResourcesSearch(query: string) {
+  static async globalResourcesSearch(query: string, user?: IUser, currVoteSpecified?: boolean) {
     const searchQuery = { $text: { $search: query } };
-    const sortOrder = { score: { $meta: 'textScore' } };
+    const userId = user ? new Types.ObjectId(user._id) : null;
 
-    return Resource.find(searchQuery)
-      .select({
-        title: 1,
-        description: 1,
-        uploader: 1,
-        createdAt: 1,
-        score: { $meta: 'textScore' },
-      })
-      .populate('uploader', 'name profilePicture')
-      .sort(sortOrder)
-      .limit(10)
-      .lean();
+    const addFieldsStage: any = {
+      score: { $meta: 'textScore' },
+    };
+
+    const projectStage: any = {
+      title: 1,
+      description: 1,
+      createdAt: 1,
+      score: 1,
+      uploader: {
+        name: '$uploader.name',
+        profilePicture: '$uploader.profilePicture',
+      },
+    };
+
+    if (currVoteSpecified && userId) {
+      addFieldsStage.currentVote = {
+        $let: {
+          vars: {
+            userVote: {
+              $arrayElemAt: [
+                {
+                  $filter: {
+                    input: { $ifNull: ['$votes', []] },
+                    as: 'vote',
+                    cond: { $eq: ['$$vote.userId', userId] },
+                  },
+                },
+                0,
+              ],
+            },
+          },
+          in: {
+            $cond: {
+              if: { $eq: ['$$userVote.voteType', 'upvote'] },
+              then: 1,
+              else: {
+                $cond: {
+                  if: { $eq: ['$$userVote.voteType', 'downvote'] },
+                  then: -1,
+                  else: 0,
+                },
+              },
+            },
+          },
+        },
+      };
+      projectStage.currentVote = 1;
+    }
+
+    const aggregationPipeline: any[] = [
+      { $match: searchQuery },
+      { $addFields: addFieldsStage },
+      { $sort: { score: { $meta: 'textScore' } } },
+      { $limit: 10 },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'uploader',
+          foreignField: '_id',
+          as: 'uploader',
+        },
+      },
+      { $unwind: '$uploader' },
+      { $project: projectStage },
+    ];
+
+    return Resource.aggregate(aggregationPipeline);
   }
 
   static async globalUsersSearch(query: string) {
