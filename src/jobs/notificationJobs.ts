@@ -16,6 +16,7 @@ export const defineNotificationJobs = (agenda: Agenda) => {
   // Job to send a pre-formatted FCM notification
   agenda.define<FcmNotificationJobData>('send-fcm-notification', async (job: Job<FcmNotificationJobData>) => {
     const { tokens, notification, data } = job.attrs.data;
+    console.log("data:", data);
     if (!tokens || tokens.length === 0) {
       console.warn('[agenda]: No tokens provided for FCM notification job.');
       return;
@@ -40,6 +41,14 @@ export const defineNotificationJobs = (agenda: Agenda) => {
       console.log(`[agenda]: Processing 'create-and-deliver-notification' for user ${userId}`);
       const user = await User.findById(userObjectId).select('fcmToken metadata.platform').lean();
 
+      console.log(`[agenda]: User ${userId} has FCM token: ${user?.fcmToken}`);
+
+      // If FCM is the required channel and the user has no token, abort.
+      if (channel === 'fcm' && !user?.fcmToken) {
+        console.warn(`[agenda]: User ${userId} has no FCM token. Skipping FCM notification.`);
+        return;
+      }
+
       let deliveryMethod: 'fcm' | 'socket' | 'in-app' | 'all' = 'in-app';
       if (channel === 'all') {
         if (user?.fcmToken) {
@@ -54,16 +63,23 @@ export const defineNotificationJobs = (agenda: Agenda) => {
         deliveryMethod = channel;
       }
 
+      // TODO: For all Users, To Get in REST
+      const sanitizedMetadata: { [key: string]: string } = {};
+      if (metadata) {
+        Object.keys(metadata).forEach(key => {
+          sanitizedMetadata[key] = String(metadata[key]);
+        });
+      }
+
       const notification = await Notification.create({
         userId: userObjectId,
         type,
         content,
         channel: deliveryMethod,
         metadata: {
-          ...metadata,
-          fcmToken: user?.fcmToken || null,
+          ...sanitizedMetadata,
           platform: (user as any)?.metadata?.platform || 'web',
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
         },
       });
 

@@ -19,7 +19,7 @@ export class FCMService {
         body: notification.body,
         imageUrl: notification.imageUrl,
       },
-      data: notification.data,
+      // data: notification.data,
       android: {
         priority: 'high',
         notification: {
@@ -56,7 +56,7 @@ export class FCMService {
         body: notification.body,
         imageUrl: notification.imageUrl,
       },
-      data: notification.data,
+      // data: notification.data,
       android: {
         priority: 'high',
       },
@@ -74,7 +74,8 @@ export class FCMService {
             console.error('Failed to send to token:', tokens[idx], resp.error);
           }
         });
-        await this.handleFailedTokens(failedTokens);
+        // TODO: Handle failed tokens
+        // await this.handleFailedTokens(failedTokens);
       }
 
       return response;
