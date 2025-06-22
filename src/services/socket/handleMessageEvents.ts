@@ -101,6 +101,9 @@ export const handleMessageEvents = (socket: Socket) => {
                 // --- Chatbot Logic ---
                 const chatbotUser = await ChatbotService.initializeChatbotUser();
 
+                SocketUtils.emitSuccess(socket, "messageSent", messageToSend);
+
+
                 // Emit typing indicator
                 socket.emit("typing", {
                     userId: chatbotUser._id.toString(),
