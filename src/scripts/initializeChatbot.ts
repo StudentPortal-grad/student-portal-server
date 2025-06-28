@@ -39,7 +39,7 @@ const initializeChatbotForUser = async (userId: string) => {
   }
 };
 
-const userId = "6849a12b5447c8e00a788811"
+const userId = "67fd5ca308e182fe61695699"
 if (!userId) {
   console.error('Please provide a user ID as a command-line argument.');
   console.log('Usage: ts-node src/scripts/initializeChatbot.ts <userId>');

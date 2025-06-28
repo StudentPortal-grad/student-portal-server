@@ -91,8 +91,11 @@ export const handleConversationEvents = (socket: Socket) => {
             // Use lean() for faster query execution and projection to limit fields
             const conversations = await Conversation.find({
                 "participants.userId": socket.data.userId,
-                "metadata.totalMessages": { $gt: 0 },
                 status: "active",
+                $or: [
+                    { type: "CHATBOT" },
+                    { "metadata.totalMessages": { $gt: 0 } },
+                ],
             })
                 .populate("participants.userId", "name profilePicture status")
                 .populate("lastMessage")

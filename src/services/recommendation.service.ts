@@ -15,7 +15,8 @@ export class RecommendationService {
         }
         try {
             console.log('Initializing recommendation system...');
-            const response = await axios.post(`${this.RECOMMENDATION_API_URL}/initialize_platform`, {
+            const baseUrl = this.RECOMMENDATION_API_URL.replace(/\/+$/, '');
+            const response = await axios.post(`${baseUrl}/initialize_platform`, {
                 device: 'cpu',
                 data_path: 'recommendation/data/topics_mapping.json',
                 model_config: 'recommendation/data/model_config_20250620_070646.json',
@@ -55,7 +56,8 @@ export class RecommendationService {
         console.log(`Fetching recommendations for user ${userId} with topics: ${selectedTopics.join(', ')}`);
 
         try {
-            const response = await axios.post(`${this.RECOMMENDATION_API_URL}/recommend_personalized_platform`, {
+            const baseUrl = this.RECOMMENDATION_API_URL.replace(/\/+$/, '');
+            const response = await axios.post(`${baseUrl}/recommend_personalized_platform`, {
                 user_id: userId,
                 selected_topics: selectedTopics,
                 topic_weights: [1.0, 0.8], // Example weights, adjust as needed
